@@ -1,0 +1,4 @@
+.hover\:scale-105:hover {
+  transform: scale(1.05);
+  z-index: 10;
+}
