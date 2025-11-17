@@ -124,6 +124,17 @@ npm install
 # or
 yarn
 
+### 2. Run the development server
+
+npm run dev
+# or
+yarn dev
+
+### 3. Then open this URL in your browser:
+
+http://localhost:3000
+
+
 ---
 
 📎 Using the App
