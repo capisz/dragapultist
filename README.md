@@ -1,6 +1,29 @@
-# Dragapultist – Pokémon TCG Analyzer
 
-![Dragapultist Preview](https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg)
+## Dragapultist – Pokémon TCG Analyzer 
+<img
+  src="https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg"
+  alt="Dragapultist Preview"
+  width="100"
+/>
+<img
+  src="https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg"
+  alt="Dragapultist Preview"
+  width="100"
+/>
+<img
+  src="https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg"
+  alt="Dragapultist Preview"
+  width="100"
+/><img
+  src="https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg"
+  alt="Dragapultist Preview"
+  width="100"
+/><img
+  src="https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg"
+  alt="Dragapultist Preview"
+  width="100"
+/>
+
 
 Dragapultist is an experimental tool for analyzing Pokémon TCG Live game exports.  
 Paste in a full game log and get a structured, replay-style view of turns, prizes, and key decisions so you can review games instead of scrolling through raw text.
