@@ -160,11 +160,6 @@ http://localhost:3000
 Right now Dragapultist is an evolving personal tool with a bigger vision.
 
 
-
-🤝 Contributing / Feedback
-
-Right now Dragapultist is an evolving personal tool with a bigger vision.
-
 If you:
 
 have ideas for features
@@ -179,3 +174,4 @@ feel free to open an issue or reach out via GitHub.
 
 ## 📄 License
 This project is open source.
+
