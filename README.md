@@ -154,8 +154,11 @@ yarn dev
 Then open:
 http://localhost:3000
 
-
 ---
+
+## 🤝 Contributing / Feedback
+Right now Dragapultist is an evolving personal tool with a bigger vision.
+
 
 
 🤝 Contributing / Feedback
@@ -174,7 +177,5 @@ feel free to open an issue or reach out via GitHub.
 
 ---
 
-
-📄 License
-
+## 📄 License
 This project is open source.
