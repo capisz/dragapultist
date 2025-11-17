@@ -1,5 +1,7 @@
 # Dragapultist – Pokémon TCG Analyzer
 
+![Dragapultist Preview](https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg)
+
 Dragapultist is an experimental tool for analyzing Pokémon TCG Live game exports.  
 Paste in a full game log and get a structured, replay-style view of turns, prizes, and key decisions so you can review games instead of scrolling through raw text.
 
@@ -54,7 +56,7 @@ As the project grows, the goal is to:
 
 ### Clone and install
 
-    git clone <https://github.com/capisz/dragapultist/>
+    git clone <YOUR_REPO_URL_HERE>
     cd dragapultist
     npm install
     # or: yarn
