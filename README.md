@@ -4,137 +4,180 @@ Dragapultist is a web app for analyzing **Pokémon TCG Live** game exports.
 
 Players paste in their game logs, and Dragapultist turns those raw lines into something closer to **chess notation for Pokémon TCG** – a structured record of decisions that can be searched, compared, and learned from.
 
-Ultimately, the goal is to make in-depth review of games as easy as clicking a link, instead of scribbling notes on paper or trying to remember every turn from memory.
+The goal is to make in-depth game review:
+
+- **Consistent** – games follow a common structure  
+- **Searchable** – you can look up patterns and matchups  
+- **Shareable** – other players can learn from your decisions  
+
+Instead of scribbling notes on paper or trying to remember every turn from memory, Dragapultist aims to make serious analysis feel as natural as using a modern app.
 
 ---
 
 ## ✨ What Dragapultist Does
 
-- 📥 **Paste Pokémon TCG Live exports** into a clean interface  
-- 🔍 **Parse and structure game data** so you can see meaningful patterns  
-- 📊 **Highlight decisions and turning points** (e.g. key plays, prize progression, tempo swings)  
-- 🧠 **Make game review repeatable** – like replaying a chess game from notation  
-- 🌐 **Lay groundwork for a shared database** of games and decisions that players can learn from
+Dragapultist is designed to bridge the gap between “I played a ton of games” and “I understand why my decisions matter.”
 
-Dragapultist is still early and evolving, but it’s built around one core idea:
+Key ideas:
 
-> Take something that’s tedious with pen and paper and make it simple, searchable, and sharable with a computer.
+- 📥 **Paste Pokémon TCG Live exports**  
+  - Take the raw export text from Pokémon TCG Live and drop it into a structured interface.  
+
+- 🔍 **Parse and structure game data**  
+  - Transform unstructured text into something closer to notation: turns, decisions, key moments, and outcomes.  
+
+- 📊 **Highlight decisions and turning points**  
+  - Focus not just on win/loss, but *why* – tempo swings, missed lines, resource trades, prize races, etc.  
+
+- 🧠 **Make game review repeatable**  
+  - Help you review games systematically instead of relying on occasional “I remember that one game where…”  
+
+- 🌐 **Lay groundwork for a shared database**  
+  - Over time, the vision is to build a library of games and decisions that players can explore, similar to how chess players study grandmaster games.
+
+Dragapultist is still early and evolving, but it’s built around one central idea:
+
+> Take a complex, pen-and-paper process and make it **simple, consistent, and powerful** with a computer.
 
 ---
 
 ## 🧠 How It Helps Players Improve
 
-The app is designed to help players:
+The app is meant to be a **training tool**, not just a log.
 
-- **Review games objectively** instead of relying on memory
-- **Compare lines of play** (e.g. what actually happened vs. what you *could* have done)
-- **Learn from others’ games** by looking at real, annotated logs
-- **Build a personal library of matchups** and decisions over time
+### 1. Turn games into structured data
 
-Long term, the vision is a **universal, shareable format** for Pokémon TCG games:
+Most Pokémon TCG improvement lives in vague impressions:
 
-- Similar to how **chess notation** lets players replay and study games from decades ago
-- A **database of real tournament games** that can be filtered by deck, matchup, or specific decisions
-- A place where players can **learn from each other’s choices**, not just from decklists
+- “This matchup feels bad.”
+- “I think I misplayed around turn 4.”
+- “Maybe I should have benched another basic.”
+
+Dragapultist encourages you to:
+
+- Record **who played what** (decks, matchups, roles).
+- Capture **what happened and when** (key decisions, turning points).
+- Build a **history** of your games that you can revisit and filter.
+
+### 2. Learn from patterns, not just results
+
+Because the app focuses on decisions and key moments, you can start to ask better questions, such as:
+
+- *In what kinds of positions do I lose tempo?*  
+- *What lines do I consistently choose in certain matchups?*  
+- *Are my losses mostly due to sequencing, resource management, or matchup selection?*
+
+Over time, a structured record helps you:
+
+- Spot recurring mistakes.
+- Validate whether a matchup is really bad or just played poorly.
+- Compare your choices to other players facing similar positions.
+
+### 3. Move toward a universal “notation” for Pokémon TCG
+
+In chess, **notation** lets players:
+
+- Record games in a compact and consistent way.
+- Replay games decades later.
+- Build massive databases of high-level play.
+
+Dragapultist is inspired by that idea for Pokémon TCG:
+
+- A **unified format** for logging games.
+- A way for teams, creators, and players to **share game data** easily.
+- A foundation for **community-based learning**, not just isolated testing groups.
 
 ---
 
 ## 🧰 Tech Stack
 
-Dragapultist is built with a modern React / TypeScript stack:
+Dragapultist is built with a modern web stack focused on developer productivity and strong typing.
 
-- **Next.js** – React framework for the app shell and routing  
-- **React + TypeScript** – strongly typed UI and logic  
-- **Tailwind CSS / custom SCSS** – responsive layout and styling  
-- **Client-side parsing** of Pokémon TCG Live export text
+Core tools and technologies:
 
-(Exact libraries and versions are in `package.json`.)
+- **React** – Component-based UI for a modular, interactive experience.  
+- **Next.js** – Framework on top of React that handles routing, builds, and potential server-side logic.  
+- **TypeScript** – Strong typing for safer and more maintainable front-end logic.  
+- **CSS / SCSS / utility classes** – For layout, typography, and theme consistency across the app.  
+- **Client-side parsing logic** – To interpret Pokémon TCG Live exports and present them in a structured way.
+
+(Exact versions and additional libraries are listed in `package.json` within the repo.)
+
+The stack is chosen so the app can:
+
+- Evolve rapidly as the idea grows.
+- Be deployed easily on platforms like Vercel.
+- Stay maintainable as more analysis features are added.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started (Local Development)
 
-> These steps assume you’ve already cloned the repo.
+These steps assume you’ve already cloned the repository from GitHub.
 
 ### 1. Install dependencies
+
+Use `npm` or `yarn`:
 
 ```bash
 npm install
 # or
 yarn
 
-npm run dev
-# or
-yarn dev
-
-http://localhost:3000
-
-You should see the Dragapultist interface and be able to paste in a Pokémon TCG Live export.
+---
 
 📎 Using the App
 
-Open Pokémon TCG Live and finish a game
+Here is a simple, repeatable workflow for using Dragapultist with your games:
 
-Copy the game log / export text (the same text you’d normally paste into a document)
+Play a game on Pokémon TCG Live.
 
-Paste it into Dragapultist in the input area
+Finish the match as normal (ladder, casual, testing account, etc.).
 
-Let the app parse and structure the game
+Copy the game log / export text.
 
-Use the UI to step through turns, decisions, and key moments
+Use the in-game export feature or log view to copy the text representing the game.
 
-As the project grows, the goal is to:
+This is usually the same text you might paste into a note or document if you were keeping your own records.
 
-Save these games in a common, shareable format
+Open Dragapultist.
 
-Allow search / filter by deck, matchup, or turn pattern
+Go to your deployed instance (or http://localhost:3000 if running locally).
 
-Make it easy to review your own games or other players’ games just by loading an export
+Paste the export into the input area.
 
-🗺️ Roadmap / Future Ideas
+The app will provide a text area where you can paste the entire game export.
 
-Some of the future directions for Dragapultist:
+Let the app parse and structure the game.
 
-⚙️ Automatic export ingestion
+The parsing logic will attempt to break down the raw text into turns, actions, and key elements.
 
-Pull game logs directly from Pokémon TCG Live so players don’t have to remember to copy & paste after each game.
+The goal is to turn the messy text into something that feels closer to an annotated replay.
 
-🧩 Richer parsing & annotation
+Review the game using the UI.
 
-Better recognition of sequences like setup turns, prize mapping, resource trade patterns, and tempo swings.
+Step through turns or phases in order.
 
-📚 Shared game database
+Look for key decisions, missed lines, or critical swings.
 
-Opt-in upload of anonymized or tagged game logs, so players can browse by archetype, matchup, or specific board states.
+Annotate or tag games as needed (depending on current feature set).
 
-🔍 Search & filters
+As the application evolves, the intended experience is:
 
-“Show me all games where Gardevoir ex beat Gholdengo”,
-or “Show me games where players whiffed turn-2 evolution with X deck.”
+Less time manually formatting or organizing the log.
 
-📈 Player tools
+More time actually thinking about your decisions and learning from your games.
 
-Matchup stats, common decision points, and tools to compare “my line” vs “theoretical best line” for a given board state.
+Long-term vision for usage
 
-If any of these sound exciting, ideas and feedback are very welcome.
+As Dragapultist matures, a common workflow might look like:
 
-🤝 Contributing / Feedback
+Finish a block of testing games.
 
-Right now Dragapultist is an evolving personal tool with a bigger vision.
+Paste or automatically sync exports into Dragapultist.
 
-If you:
+Flag particularly interesting or confusing games.
 
-have ideas for features
+Review those games before tournaments or league challenges.
 
-want to use it with your testing group
-
-or are interested in the “Pokémon TCG notation” problem
-
-feel free to open an issue or reach out via GitHub.
-
-📄 License & Disclaimer
-
-This project is open source. See the LICENSE file in this repository for details.
-
-Not affiliated with or endorsed by The Pokémon Company, Creatures Inc., GAME FREAK inc., or Nintendo.
-All Pokémon trademarks and images are the property of their respective owners; this project is a fan-made tool for players.
+Compare your decisions with teammates or other players using the same dataset.
