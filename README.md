@@ -54,7 +54,7 @@ As the project grows, the goal is to:
 
 ### Clone and install
 
-    git clone <YOUR_REPO_URL_HERE>
+    git clone <https://github.com/capisz/dragapultist/>
     cd dragapultist
     npm install
     # or: yarn
