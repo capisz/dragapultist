@@ -152,6 +152,8 @@ yarn dev
 Then open:
 http://localhost:3000
 
+---
+
 🤝 Contributing / Feedback
 
 Right now Dragapultist is an evolving personal tool with a bigger vision.
@@ -165,6 +167,7 @@ want to use it with your testing group
 or are interested in the “Pokémon TCG notation” problem
 
 feel free to open an issue or reach out via GitHub.
+---
 
 📄 License
 
