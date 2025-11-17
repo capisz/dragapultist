@@ -127,7 +127,9 @@ Some ideas for where Dragapultist is heading:
   - content creators
   - tools / other apps
 
+
 ---
+
 
 ## 🚀 Getting Started (Local Development)
 
@@ -152,7 +154,9 @@ yarn dev
 Then open:
 http://localhost:3000
 
+
 ---
+
 
 🤝 Contributing / Feedback
 
@@ -167,7 +171,9 @@ want to use it with your testing group
 or are interested in the “Pokémon TCG notation” problem
 
 feel free to open an issue or reach out via GitHub.
+
 ---
+
 
 📄 License
 
