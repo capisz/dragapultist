@@ -8,7 +8,6 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "Dragapultist Pokémon TCG Analyzer",
   description: "Analyze and build Pokémon TCG decks dynamically",
-  generator: "v0.app",
   icons: { icon: "/icon.svg" }
 }
 
