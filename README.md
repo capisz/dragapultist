@@ -1,25 +1,25 @@
 
 ## Dragapultist – Pokémon TCG Analyzer 
 <img
-  src="https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg"
+  src="dragapultpng-transparent.png"
   alt="Dragapultist Preview"
   width="100"
 />
 <img
-  src="https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg"
+  src="dragapultpng-transparent.png"
   alt="Dragapultist Preview"
   width="100"
 />
 <img
-  src="https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg"
+  src="dragapultpng-transparent.png"
   alt="Dragapultist Preview"
   width="100"
 /><img
-  src="https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg"
+  src="dragapultpng-transparent.png"
   alt="Dragapultist Preview"
   width="100"
 /><img
-  src="https://i.pinimg.com/1200x/20/ad/1d/20ad1d24fef0b5f9e8003c895f603bc9.jpg"
+  src="dragapultpng-transparent.png"
   alt="Dragapultist Preview"
   width="100"
 />
