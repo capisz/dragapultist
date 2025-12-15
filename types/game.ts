@@ -18,10 +18,9 @@ export interface GameSummary {
   tags?: { text: string; color: string }[]
   userAceSpecs?: string[]
   opponentAceSpecs?: string[]
-}
 
-export interface GameTurn {
-  turnNumber: number
-  userActions: string[]
-  opponentActions: string[]
+  // NEW
+  winnerPrizePath?: string[]            // e.g. ["Wellspring Mask Ogerpon ex", "Mew ex", ...]
+  userArchetype?: string | null         // archetype id (e.g. "raging-bolt-ogerpon")
+  opponentArchetype?: string | null     // archetype id
 }

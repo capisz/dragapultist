@@ -1,27 +1,16 @@
-import { cookies } from "next/headers"
-import { AuthHeader } from "@/components/auth/auth-header"
+// app/page.tsx
 import { PokemonTCGAnalyzer } from "@/components/pokemon-tcg-analyzer"
-import { Footer } from "@/components/footer"
-import type { User } from "@/types/auth"
-
-// In a real app, you'd want to fetch this from your database
-const mockUsers: Record<string, User> = {}
+import { AuthHeader } from "@/components/auth/auth-header"
 
 export default function Home() {
-  const userId = cookies().get("userId")?.value
-  const user = userId ? mockUsers[userId] : undefined
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F8F6F2] to-[#F0EDE5] dark:from-[#1A1E24] dark:to-[#15181D]">
-      <div className="max-w-7xl mx-auto">
-        <div className="relative">
-          <AuthHeader />
-          <main>
-            <PokemonTCGAnalyzer />
-          </main>
-          <Footer />
-        </div>
+    <div className="min-h-screen">
+      {/* Keep header constrained, keep analyzer/footer full-width */}
+      <div className="max-w-6xl mx-auto px-4 py-2 md:py-6 space-y-1 md:space-y-0">
+        <AuthHeader />
       </div>
+
+      <PokemonTCGAnalyzer />
     </div>
   )
 }

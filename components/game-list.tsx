@@ -1,290 +1,274 @@
+// components/game-list.tsx
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table"
+import { useEffect, useRef, useState } from "react"
+import type { GameSummary } from "@/types/game"
 import { Button } from "@/components/ui/button"
-import { ArrowUpDown, ArrowUp, ArrowDown, Trash2, Undo } from "lucide-react"
-import type { GameSummary } from "../types/game"
+import { cn } from "@/lib/utils"
+import { ChevronDown, ChevronUp } from "lucide-react"
+import { formatArchetypeLabel } from "@/utils/archetype-mapping"
 
-const scrollbarStyles = `
-.custom-scrollbar {
-  overflow-y: auto;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.5) rgba(229, 231, 235, 0.1);
+type SortConfig = {
+  key: keyof GameSummary
+  direction: "asc" | "desc"
 }
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(229, 231, 235, 0.1);
-  border-radius: 100px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(156, 163, 175, 0.5);
-  border-radius: 100px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(156, 163, 175, 0.7);
-}
-
-/* Dark mode styles */
-.dark .custom-scrollbar {
-  scrollbar-color: rgba(75, 85, 99, 0.5) rgba(31, 41, 55, 0.1);
-}
-
-.dark .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(31, 41, 55, 0.1);
-}
-
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(75, 85, 99, 0.5);
-}
-
-.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(75, 85, 99, 0.7);
-}
-
-/* Hide default scrollbar buttons */
-.custom-scrollbar::-webkit-scrollbar-button {
-  display: none;
-}
-
-/* Deleted row styles */
-.deleted-row {
-  position: relative;
-}
-
-.deleted-row::after {
-  content: '';
-  position: absolute;
-  left: 50px; /* Width of the first cell */
-  right: 0;
-  top: 50%;
-  border-top: 2px solid #ef4444;
-  z-index: 1;
-}
-
-.deleted-row > *:not(:first-child) {
-  opacity: 0.5;
-}
-`
 
 interface GameListProps {
   games: GameSummary[]
   onSelectGame: (game: GameSummary) => void
   onDeleteGame: (id: string) => void
-  sortConfig: { key: keyof GameSummary; direction: "asc" | "desc" }
+  sortConfig: SortConfig
   onSort: (key: keyof GameSummary) => void
+  showTags?: boolean
 }
 
-export function GameList({ games: initialGames, onSelectGame, onDeleteGame, sortConfig, onSort }: GameListProps) {
-  const [games, setGames] = useState(initialGames)
-  const [deletedRows, setDeletedRows] = useState<Record<string, number>>({})
+export function GameList({
+  games,
+  onSelectGame,
+  onDeleteGame,
+  sortConfig,
+  onSort,
+  showTags = true,
+}: GameListProps) {
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const deleteTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    setGames(initialGames)
-  }, [initialGames])
-
-  useEffect(() => {
-    const timers: Record<string, NodeJS.Timeout> = {}
-
-    Object.entries(deletedRows).forEach(([id, timestamp]) => {
-      const remainingTime = timestamp + 10000 - Date.now()
-      if (remainingTime > 0) {
-        timers[id] = setTimeout(() => {
-          setDeletedRows((prev) => {
-            const { [id]: _, ...rest } = prev
-            return rest
-          })
-          setGames((prevGames) => prevGames.filter((game) => game.id !== id))
-          onDeleteGame(id) // Call onDeleteGame when item is permanently deleted
-        }, remainingTime)
-      } else {
-        setDeletedRows((prev) => {
-          const { [id]: _, ...rest } = prev
-          return rest
-        })
-        setGames((prevGames) => prevGames.filter((game) => game.id !== id))
-        onDeleteGame(id) // Call onDeleteGame for immediate deletions
+    return () => {
+      if (deleteTimerRef.current) {
+        clearTimeout(deleteTimerRef.current)
       }
-    })
-
-    return () => {
-      Object.values(timers).forEach((timer) => clearTimeout(timer))
     }
-  }, [deletedRows, onDeleteGame])
-
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      Object.keys(deletedRows).forEach((id) => {
-        setGames((prevGames) => prevGames.filter((game) => game.id !== id))
-        onDeleteGame(id) // Call onDeleteGame when unloading the page
-      })
-    }
-
-    window.addEventListener("beforeunload", handleBeforeUnload)
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload)
-    }
-  }, [deletedRows, onDeleteGame])
-
-  const deleteRow = useCallback((id: string) => {
-    setDeletedRows((prev) => ({ ...prev, [id]: Date.now() }))
   }, [])
 
-  const undoDelete = useCallback((id: string) => {
-    setDeletedRows((prev) => {
-      const { [id]: _, ...rest } = prev
-      return rest
-    })
-  }, [])
-
-  const calculateWinRate = useCallback(
-    (pokemon: string) => {
-      const pokemonGames = games.filter((g) => g.userMainAttacker.includes(pokemon) && !deletedRows[g.id])
-      const wins = pokemonGames.filter((g) => g.userWon).length
-      const losses = pokemonGames.length - wins
-      return `${wins} - ${losses}`
-    },
-    [games, deletedRows],
-  )
-
-  const getSortIcon = (key: keyof GameSummary) => {
-    if (sortConfig && sortConfig.key === key) {
-      return sortConfig.direction === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+  const startDeleteTimer = (id: string) => {
+    // second click within 3s → confirm delete
+    if (pendingDeleteId === id) {
+      if (deleteTimerRef.current) {
+        clearTimeout(deleteTimerRef.current)
+        deleteTimerRef.current = null
+      }
+      setPendingDeleteId(null)
+      onDeleteGame(id)
+      return
     }
-    return <ArrowUpDown className="h-4 w-4" />
+
+    setPendingDeleteId(id)
+    if (deleteTimerRef.current) {
+      clearTimeout(deleteTimerRef.current)
+    }
+    deleteTimerRef.current = setTimeout(() => {
+      setPendingDeleteId(null)
+    }, 3000)
   }
 
-  const headers: { key: keyof GameSummary; label: string }[] = [
-    { key: "date", label: "Date" },
-    { key: "userMainAttacker", label: "Your Main Attacker" },
-    { key: "opponentMainAttacker", label: "Opponent Main Attacker" },
-    { key: "userWon", label: "Result" },
-    { key: "damageDealt", label: "Damage Dealt" },
-    { key: "userPrizeCardsTaken", label: "Prize Cards Taken" },
-    { key: "turns", label: "Turns" },
-    { key: "wentFirst", label: "Went First" },
-    { key: "userAceSpecs", label: "ACE SPEC Used" },
-  ]
+  const renderSortableHeader = (label: string, key: keyof GameSummary) => {
+    const isActive = sortConfig.key === key
+    const Icon = sortConfig.direction === "asc" ? ChevronUp : ChevronDown
+
+    return (
+      <button
+        type="button"
+        onClick={() => onSort(key)}
+        className={cn(
+          "inline-flex items-center gap-1 text-[11px] font-semibold tracking-[0.08em] uppercase",
+          "text-slate-700 hover:text-slate-900",
+          "dark:text-slate-200 dark:hover:text-white",
+        )}
+      >
+        <span>{label}</span>
+        {isActive && <Icon className="h-3 w-3" aria-hidden="true" />}
+      </button>
+    )
+  }
+
+  // Container: closer to page background, not pitch-black
+  const containerClasses = cn(
+    "overflow-hidden rounded-3xl border",
+    "border-slate-200 bg-slate-50",
+    "dark:border-slate-600/40 dark:bg-slate-700/40",
+  )
+
+  // Header band: slightly darker than rows in both modes
+  const headerClasses = cn(
+    "grid grid-cols-[1.1fr,1.3fr,2.4fr,1.3fr,0.9fr,1.2fr,1.5fr] items-center px-4 py-2.5",
+    "bg-slate-200/60 text-slate-800 border-b border-slate-200",
+    "dark:bg-slate-600/90 dark:text-slate-50 dark:border-slate-800",
+  )
+
+  // Rows a bit lighter than header in dark mode
+  const rowClasses = cn(
+    "grid grid-cols-[1.1fr,1.3fr,2.4fr,1.3fr,0.9fr,1.2fr,1.5fr] items-center px-4 py-2.5 text-[13px] border-t",
+    "border-slate-200 bg-white hover:bg-slate-50 text-slate-900",
+    "dark:border-slate-800/60 dark:bg-slate-800/85 dark:hover:bg-slate-700/80 dark:text-slate-50",
+  )
+
+  const resultPillClasses = (win: boolean) =>
+    cn(
+      "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold border",
+      win
+        ? [
+            "border-emerald-500 text-emerald-700 bg-emerald-50",
+            "dark:border-emerald-400 dark:text-emerald-200 dark:bg-emerald-500/10",
+          ]
+        : [
+            "border-rose-400 text-rose-700 bg-rose-50",
+            "dark:border-rose-300 dark:text-rose-200 dark:bg-rose-500/10",
+          ],
+    )
+
+  const deleteButtonClasses = (isPending: boolean) =>
+    cn(
+      "rounded-full px-3 py-1 text-xs font-semibold border transition-colors",
+      isPending
+        ? [
+            "border-rose-500 bg-rose-100 text-rose-700",
+            "dark:border-rose-400 dark:bg-rose-500/25 dark:text-rose-50",
+          ]
+        : [
+            "border-rose-400 bg-rose-50 text-rose-600 hover:bg-rose-100",
+            "dark:border-rose-400 dark:bg-transparent dark:text-rose-200 dark:hover:bg-rose-500/20",
+          ],
+    )
+
+  const viewButtonClasses = cn(
+    "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
+    "border-slate-300 bg-white text-slate-800 hover:bg-slate-100",
+    "dark:border-slate-500 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800",
+  )
+
+  const labelPillClasses = (variant: "you" | "opp") =>
+    cn(
+      "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
+      variant === "you"
+        ? [
+            "bg-emerald-100 text-emerald-700",
+            "dark:bg-emerald-500/20 dark:text-emerald-200",
+          ]
+        : [
+            "bg-rose-100 text-rose-700",
+            "dark:bg-rose-500/20 dark:text-rose-200",
+          ],
+    )
 
   return (
-    <>
-      <style>{scrollbarStyles}</style>
-      <div className="rounded-lg border dark:border-[#333740] overflow-auto custom-scrollbar max-h-[calc(100vh-200px)]">
-        <Table>
-          <thead className="bg-gray-900 text-white dark:bg-[#1A1E24]">
-            <TableRow>
-              <TableHead className="w-[50px]"></TableHead>
-              {headers.map(({ key, label }) => (
-                <TableHead key={key} className="bg-gray-900 text-white font-semibold h-10 p-0 dark:bg-[#1A1E24]">
-                  <Button
-                    variant="ghost"
-                    onClick={() => onSort(key)}
-                    className="w-full h-full text-white hover:text-white/80 hover:bg-gray-800 transition-all hover:scale-105 dark:hover:bg-[#333740]"
-                  >
-                    {label}
-                    {getSortIcon(key)}
-                  </Button>
-                </TableHead>
-              ))}
-            </TableRow>
-          </thead>
-          <TableBody>
-            {games.map((game, index) => (
-              <TableRow
-                key={game.id}
-                className={`${
-                  index % 2 === 0 ? "bg-gray-100 dark:bg-[#2A2F38]" : "bg-white dark:bg-[#1E2328]"
-                } hover:bg-blue-100 dark:hover:bg-[#333740] cursor-pointer ${
-                  deletedRows[game.id] ? "deleted-row cursor-default" : "cursor-pointer"
-                }`}
-                onClick={() => {
-                  if (!deletedRows[game.id]) {
-                    onSelectGame(game)
-                  }
-                }}
-              >
-                <TableCell className="w-[50px]">
-                  {deletedRows[game.id] ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        undoDelete(game.id)
-                      }}
-                      className="hover:bg-transparent transition-transform duration-200 hover:scale-110"
-                    >
-                      <Undo className="h-4 w-4 text-gray-500 dark:text-white" />
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        deleteRow(game.id)
-                      }}
-                      className="hover:bg-transparent transition-transform duration-200 hover:scale-110"
-                    >
-                      <Trash2 className="h-4 w-4 text-gray-500 dark:text-white" />
-                    </Button>
-                  )}
-                </TableCell>
-                <TableCell className="font-medium text-gray-900 dark:text-white">{game.date}</TableCell>
-                <TableCell className="text-gray-900 dark:text-white">
-                  {game.userMainAttacker.replace(/^.*'s\s/, "")} ({calculateWinRate(game.userMainAttacker)})
-                </TableCell>
-                <TableCell className="text-gray-900 dark:text-white">
-                  {game.opponentMainAttacker.replace(/^.*'s\s/, "")}
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={game.userWon ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}
-                  >
-                    {game.userWon ? "Won" : "Lost"}
-                    {game.userConceded && " (You conceded)"}
-                    {game.opponentConceded && " (Opponent conceded)"}
-                  </span>
-                </TableCell>
-                <TableCell className="text-gray-900 dark:text-white">{game.damageDealt}</TableCell>
-                <TableCell className="text-gray-900 dark:text-white">
-                  {game.userPrizeCardsTaken} - {game.opponentPrizeCardsTaken}
-                </TableCell>
-                <TableCell className="text-gray-900 dark:text-white">{game.turns}</TableCell>
-                <TableCell className="text-gray-900 dark:text-white">{game.wentFirst ? "Yes" : "No"}</TableCell>
-                <TableCell className="text-gray-900 dark:text-white">
-                  {game.userAceSpecs && game.userAceSpecs.length > 0 ? (
-                    <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded">
-                      {game.userAceSpecs[0]}
-                      {game.userAceSpecs.length > 1 ? ` +${game.userAceSpecs.length - 1}` : ""}
-                    </span>
-                  ) : (
-                    <span className="text-gray-400 dark:text-gray-500">None</span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+    <div className={containerClasses}>
+      {/* Header */}
+      <div className={headerClasses}>
+        <div>{renderSortableHeader("Date", "date")}</div>
+        <div>{renderSortableHeader("Opponent", "opponent")}</div>
+        <div className="text-[11px] font-semibold tracking-[0.08em] uppercase">
+          Matchup 
+        </div>
+        <div>{renderSortableHeader("Result", "userWon")}</div>
+        <div className="text-right">
+          {renderSortableHeader("Turns", "turns")}
+        </div>
+        <div className="text-right text-[11px] font-semibold tracking-[0.08em] uppercase">
+          Prize trade
+        </div>
+        <div className="text-right text-[11px] font-semibold tracking-[0.08em] uppercase">
+          Actions
+        </div>
       </div>
-    </>
-  )
-}
 
-function getContrastColor(hexColor: string) {
-  const r = Number.parseInt(hexColor.slice(1, 3), 16)
-  const g = Number.parseInt(hexColor.slice(3, 5), 16)
-  const b = Number.parseInt(hexColor.slice(5, 7), 16)
-  const yiq = (r * 299 + g * 587 + b * 114) / 1000
-  return yiq >= 128 ? "black" : "white"
+      {/* Rows */}
+      {games.map((game) => {
+        const userLabel = formatArchetypeLabel(game.userArchetype)
+        const oppLabel = formatArchetypeLabel(game.opponentArchetype)
+        const isPendingDelete = pendingDeleteId === game.id
+
+        return (
+          <div key={game.id} className={rowClasses}>
+            {/* Date */}
+            <div className="tabular-nums">{game.date}</div>
+
+            {/* Opponent */}
+            <div className="font-medium">{game.opponent}</div>
+
+            {/* Matchup – archetypes */}
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className={labelPillClasses("you")}>You</span>
+                <span>{userLabel}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={labelPillClasses("opp")}>Opp</span>
+                <span>{oppLabel}</span>
+              </div>
+            </div>
+
+            {/* Result */}
+            <div className="flex justify-start md:justify-center">
+              <span className={resultPillClasses(game.userWon)}>
+                {game.userWon ? "Win" : "Loss"}
+                <span className="ml-2 text-[11px] font-normal opacity-80">
+                  {game.wentFirst ? "(went first)" : "(went second)"}
+                </span>
+              </span>
+            </div>
+
+            {/* Turns */}
+            <div className="text-right tabular-nums">
+              {game.turns}{" "}
+              <span className="text-[11px] opacity-70">turns</span>
+            </div>
+
+            {/* Prize trade */}
+            <div className="text-right">
+              {game.userPrizeCardsTaken} – {game.opponentPrizeCardsTaken}{" "}
+              <span className="text-[11px] opacity-70"></span>
+            </div>
+
+            {/* Tags + Actions */}
+            <div className="flex items-center justify-end gap-2">
+              {showTags && (
+                <div className="flex flex-wrap gap-1 justify-end mr-1">
+                  {game.tags?.map((tag) => (
+                    <span
+                      key={tag.text}
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-full text-[11px] font-medium border",
+                        "bg-slate-50 dark:bg-slate-900/80",
+                      )}
+                      style={{
+                        borderColor: tag.color,
+                        color: tag.color,
+                      }}
+                    >
+                      {tag.text}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <Button
+                type="button"
+                onClick={() => onSelectGame(game)}
+                className={viewButtonClasses}
+                variant="outline"
+              >
+                View
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => startDeleteTimer(game.id)}
+                className={deleteButtonClasses(isPendingDelete)}
+                variant="outline"
+              >
+                {isPendingDelete ? "Confirm" : "Delete"}
+              </Button>
+            </div>
+          </div>
+        )
+      })}
+
+      {games.length === 0 && (
+        <div className="px-4 py-4 text-sm text-slate-600 dark:text-slate-300">
+          No games yet. Import a log to get started.
+        </div>
+      )}
+    </div>
+  )
 }

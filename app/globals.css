@@ -156,3 +156,17 @@ body {
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: rgba(75, 85, 99, 0.5);
 }
+
+.mascot-bob {
+  animation: mascot-bob 2.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes mascot-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px); /* adjust amplitude if you want more/less bob */
+  }
+}
