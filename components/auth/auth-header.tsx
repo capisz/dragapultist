@@ -182,7 +182,7 @@ export function AuthHeader() {
               className="relative w-10 h-10 rounded-none transition-transform duration-200 hover:scale-110 hover:bg-transparent border-none shadow-none"
             >
               <img
-                src={darkMode ? "/lunatone.png" : "/solrock.png"}
+                src={darkMode ? "/Lunatone.png" : "/Solrock.png"}
                 alt={darkMode ? "Switch to light mode" : "Switch to dark mode"}
                 className="w-full h-full object-contain bg-transparent hover:opacity-70 hover:border-transparent opacity-60 mascot-bob"
               />
