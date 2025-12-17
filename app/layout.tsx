@@ -16,18 +16,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      
-<body
-  className={cn(
-    GeistSans.className,
-    "min-h-dvh antialiased transition-colors duration-300",
-    // Light: slightly darker top/bottom, base in the middle
-    "bg-gradient-to-b from-[#cadbed] via-[#d9ebff] to-[#cadbed] text-slate-900",
-    // Dark: slightly darker top/bottom, base in the middle
-    "dark:bg-gradient-to-b dark:from-[#304c6d] dark:via-[#345275] dark:to-[#304c6d] dark:text-slate-50",
-  )}
->
-
+      <body
+        className={cn(
+          GeistSans.className,
+          "min-h-dvh antialiased",
+          "bg-[#d9ebff] text-slate-900",
+          "dark:bg-[#345275] dark:text-slate-50"
+        )}
+      >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <div className="min-h-dvh flex flex-col">
             {/* If you have a header/nav, render it here */}
