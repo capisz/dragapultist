@@ -77,17 +77,23 @@ function CandidateSprite({
 
 function ArchetypeIconPair({ archetypeId, size = 26 }: { archetypeId: string | null; size?: number }) {
   const slots = getArchetypeIconCandidatePaths(archetypeId)
+
+  const slotA = slots?.[0]?.length ? slots[0] : [FALLBACK_ICON]
+  const slotB = slots?.[1]?.length ? slots[1] : null
+
+  // Tailwind -ml-1 = 0.25rem = 4px
+  const overlapPx = 4
+  const totalW = size * 2 - overlapPx
+
   return (
-    <div className="flex items-center gap-0">
-      {slots.slice(0, 2).map((cands, i) => (
-        <CandidateSprite
-          key={`${archetypeId ?? "unknown"}-${i}`}
-          candidates={cands.length ? cands : [FALLBACK_ICON]}
-          alt="icon"
-          size={size}
-          className={i === 0 ? "" : "-ml-1"}
-        />
-      ))}
+    <div className="flex items-center" style={{ width: totalW }}>
+      <CandidateSprite candidates={slotA} alt="icon" size={size} />
+
+      {slotB ? (
+        <CandidateSprite candidates={slotB} alt="icon" size={size} className="-ml-1" />
+      ) : (
+        <span aria-hidden className="-ml-1 shrink-0" style={{ width: size, height: size }} />
+      )}
     </div>
   )
 }
@@ -178,10 +184,25 @@ export function PlayerDatabasePanel() {
   const matchupPanelBg = "bg-black/10 dark:bg-slate-950/22"
   const matchupRowHover = "hover:bg-black/8 dark:hover:bg-slate-950/18"
 
+  
+
   return (
+    
     <div className="space-y-4">
-      {/* Search row */}
+      
+     <header className="space-y-1">
+  <h2 className="text-xl font-semibold tracking-tight text-slate-700/80 dark:text-sky-100">
+    Player Database
+  </h2>
+  <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
+    Search for players in our database to view their saved games and archetype win-rate breakdowns.
+  </p>
+</header>
+
+
+      
       <div className="flex flex-wrap gap-2 items-center">
+        
         <Input
           placeholder="Search by PTCGL username (e.g. azulgg)"
           value={query}
@@ -281,10 +302,11 @@ export function PlayerDatabasePanel() {
                   {topDeckStats.length > 0 ? (
                     <div
                       className={cn(
-                        "rounded-2xl overflow-hidden",
-                        "bg-black/6 ring-1 ring-black/10",
-                        "dark:bg-slate-950/12 dark:ring-white/10",
-                      )}
+    "rounded-2xl overflow-hidden",
+    "bg-black/6 ring-1 ring-black/10",
+    "divide-y divide-black/10",
+    "dark:bg-slate-950/12 dark:ring-white/10 dark:divide-white/10",
+  )}
                     >
                       {topDeckStats.map((d, i) => {
                         const losses = d.games - d.wins
@@ -337,65 +359,68 @@ export function PlayerDatabasePanel() {
                             >
                               <div className="overflow-hidden">
                                 {isSelected && (
-                                  <div className="px-3 pb-3">
+                                  <div className={cn(
+        "border-t border-black/10 dark:border-white/10",
+        "bg-black/6 dark:bg-slate-950/18",
+        "px-3 py-3",
+      )}>
                                     {breakdownLoading[dk] ? (
                                       <div className="text-xs text-slate-600 dark:text-slate-200/70 py-2">
                                         Loading…
                                       </div>
                                     ) : breakdowns[dk] ? (
                                       <div
-                                        className={cn(
-                                          "rounded-2xl p-2",
-                                          matchupPanelBg,
-                                          "ring-1 ring-black/10 dark:ring-white/10",
-                                        )}
-                                      >
-                                        <div className="text-[11px] text-slate-700 dark:text-slate-200/80 tabular-nums px-1 pb-1">
-                                          {breakdowns[dk]!.wins}/{breakdowns[dk]!.games} wins •{" "}
-                                          {breakdowns[dk]!.winRate.toFixed(1)}%
-                                        </div>
+  className={cn(
+    "rounded-2xl overflow-hidden",
+    // slightly lighter than the selected deck row
+    "bg-black/6 dark:bg-slate-950/16",
+    "ring-1 ring-black/10 dark:ring-white/10",
+  )}
+>
+  {/* summary row (aligned) */}
+  <div className="px-3 py-2 text-[11px] text-slate-700 dark:text-slate-200/80 tabular-nums border-b border-black/10 dark:border-white/10">
+    {breakdowns[dk]!.wins}/{breakdowns[dk]!.games} wins • {breakdowns[dk]!.winRate.toFixed(1)}%
+  </div>
 
-                                        {breakdowns[dk]!.matchups.length === 0 ? (
-                                          <div className="text-xs text-slate-600 dark:text-slate-200/70 p-2">
-                                            No matchup data recorded for this deck yet.
-                                          </div>
-                                        ) : (
-                                          <div className="rounded-xl overflow-hidden">
-                                            {breakdowns[dk]!.matchups.slice(0, 8).map((m, mi) => {
-                                              const mid =
-                                                canonicalizeArchetypeId(m.opponentArchetypeId) ??
-                                                m.opponentArchetypeId ??
-                                                null
+  {breakdowns[dk]!.matchups.length === 0 ? (
+    <div className="px-3 py-3 text-xs text-slate-600 dark:text-slate-200/70">
+      No matchup data recorded for this deck yet.
+    </div>
+  ) : (
+    <div className="divide-y divide-black/10 dark:divide-white/10">
+      {breakdowns[dk]!.matchups.slice(0, 8).map((m, mi) => {
+        const mid =
+          canonicalizeArchetypeId(m.opponentArchetypeId) ?? m.opponentArchetypeId ?? null
 
-                                              return (
-                                                <div
-                                                  key={`${dk}-m-${mi}-${mid ?? "__unknown__"}`}
-                                                  className={cn(
-                                                    "flex items-center justify-between gap-3 px-3 py-2 text-sm",
-                                                    "text-slate-800 dark:text-slate-100",
-                                                    matchupRowHover,
-                                                    "transition-colors",
-                                                  )}
-                                                >
-                                                  <div className="flex items-center gap-2 min-w-0">
-                                                    <ArchetypeIconPair archetypeId={mid} size={22} />
-                                                    <span className="truncate">
-                                                      vs {formatArchetypeLabel(mid)}
-                                                    </span>
-                                                  </div>
+        return (
+          <div
+            key={`${dk}-m-${mi}-${mid ?? "__unknown__"}`}
+            className={cn(
+              // very slightly lighter than the panel, for separation
+              "bg-black/4 dark:bg-slate-950/12",
+              "hover:bg-black/7 dark:hover:bg-slate-950/18 transition-colors",
+            )}
+          >
+            <div className="flex items-center justify-between gap-3 px-3 py-2 text-sm text-slate-800 dark:text-slate-100">
+              <div className="flex items-center gap-2 min-w-0">
+                <ArchetypeIconPair archetypeId={mid} size={22} />
+                <span className="truncate">vs {formatArchetypeLabel(mid)}</span>
+              </div>
 
-                                                  <div className="text-right tabular-nums">
-                                                    <span className="font-semibold">{m.winRate.toFixed(1)}%</span>{" "}
-                                                    <span className="text-slate-600 dark:text-slate-200/70">
-                                                      ({m.wins}/{m.games})
-                                                    </span>
-                                                  </div>
-                                                </div>
-                                              )
-                                            })}
-                                          </div>
-                                        )}
-                                      </div>
+              <div className="text-right tabular-nums">
+                <span className="font-semibold">{m.winRate.toFixed(1)}%</span>{" "}
+                <span className="text-slate-600 dark:text-slate-200/70">
+                  ({m.wins}/{m.games})
+                </span>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )}
+</div>
+
                                     ) : (
                                       <div className="text-xs text-slate-600 dark:text-slate-200/70 py-2">
                                         No breakdown available (check /api/player-deck-breakdown).

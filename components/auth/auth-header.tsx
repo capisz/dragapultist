@@ -55,7 +55,7 @@ export function AuthHeader() {
             />
             <div className="flex flex-col">
               <h1 className="text-lg md:text-2xl font-semibold tracking-tight text-[#3b608c] dark:text-sky-200/90">
-                Dragapultist
+                Dragapultist ○ DB
               </h1>
               <p className=" text-[11px] md:text-xs text-gray-700 dark:text-gray-300/90">
                 Pokémon TCGL database
@@ -164,7 +164,7 @@ export function AuthHeader() {
           4
         </span>
         <p className="text-slate-700 dark:text-slate-100">
-          Use <span className="font-semibold">Prize mapper</span> to select a deck archetype and see matchup performance.
+          Use <span className="font-semibold">Prize Mapper</span> to select a deck archetype and see matchup performance.
         </p>
       </li>
 
@@ -173,7 +173,7 @@ export function AuthHeader() {
           5
         </span>
         <p className="text-slate-700 dark:text-slate-100">
-          Use <span className="font-semibold">Player database</span> to search a username, view their most-played decks,
+          Use <span className="font-semibold">Player Database</span> to search a username, view their most-played decks,
           and expand a deck to see matchup breakdowns.
         </p>
       </li>

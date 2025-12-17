@@ -486,11 +486,11 @@ export function PrizeMapperPanel({ ptcglUsername }: { ptcglUsername?: string | n
     <div className="space-y-4">
       <header className="space-y-1">
         <h2 className="text-xl font-semibold tracking-tight text-slate-700/80 dark:text-sky-100">
-          Prize mapper
+          Prize Map Analyzer
         </h2>
         <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
-          Select your deck archetype to see matchups, global win%, your win%, and top winning prize
-          sequences. Sequences are filtered so tiny samples don’t dominate.
+          Select your deck archetype to see matchups, global win percentage, your win percentage, and top winning prize
+          sequences all in one database. 
         </p>
       </header>
 

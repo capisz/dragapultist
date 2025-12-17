@@ -1,7 +1,7 @@
 // components/pokemon-tcg-analyzer.tsx
 "use client"
 
-import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react"
+import { useState, useCallback, useEffect, useRef, useLayoutEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils"
 import { PrizeMapperPanel } from "@/components/prize-mapper-panel"
 import { useTheme } from "next-themes"
 import { SiteFooter } from "@/components/site-footer"
+import { TopDeckCalcPanel } from "@/components/top-deck-calc-panel"
+
 
 declare global {
   interface Window {
@@ -25,8 +27,10 @@ declare global {
   }
 }
 
+
+
 export function PokemonTCGAnalyzer() {
-  const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper">("games")
+const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" | "topDeckCalc">("games")
 
   const [games, setGames] = useState<GameSummary[]>([])
   const [selectedGame, setSelectedGame] = useState<GameSummary | null>(null)
@@ -52,43 +56,45 @@ export function PokemonTCGAnalyzer() {
   const isDarkMode = (resolvedTheme ?? theme) === "dark"
 
   const tabsBarRef = useRef<HTMLDivElement | null>(null)
-const tabRefs = useRef<Record<"games" | "players" | "prizeMapper", HTMLButtonElement | null>>({
+ const tabRefs = useRef<
+  Record<"games" | "players" | "prizeMapper" | "topDeckCalc", HTMLButtonElement | null>
+>({
   games: null,
   players: null,
   prizeMapper: null,
+  topDeckCalc: null,
 })
 
-const [tabIndicator, setTabIndicator] = useState<{ x: number; w: number; show: boolean }>({
-  x: 0,
-  w: 0,
-  show: false,
-})
-
-const updateTabIndicator = useCallback(() => {
-  const bar = tabsBarRef.current
-  const btn = tabRefs.current[activeTab]
-  if (!bar || !btn) return
-
-  const barRect = bar.getBoundingClientRect()
-  const btnRect = btn.getBoundingClientRect()
-
-  setTabIndicator({
-    x: btnRect.left - barRect.left,
-    w: btnRect.width,
-    show: true,
+  const [tabIndicator, setTabIndicator] = useState<{ x: number; w: number; show: boolean }>({
+    x: 0,
+    w: 0,
+    show: false,
   })
-}, [activeTab])
 
-useLayoutEffect(() => {
-  updateTabIndicator()
-}, [updateTabIndicator])
+  const updateTabIndicator = useCallback(() => {
+    const bar = tabsBarRef.current
+    const btn = tabRefs.current[activeTab]
+    if (!bar || !btn) return
 
-useEffect(() => {
-  const onResize = () => updateTabIndicator()
-  window.addEventListener("resize", onResize)
-  return () => window.removeEventListener("resize", onResize)
-}, [updateTabIndicator])
+    const barRect = bar.getBoundingClientRect()
+    const btnRect = btn.getBoundingClientRect()
 
+    setTabIndicator({
+      x: btnRect.left - barRect.left,
+      w: btnRect.width,
+      show: true,
+    })
+  }, [activeTab])
+
+  useLayoutEffect(() => {
+    updateTabIndicator()
+  }, [updateTabIndicator])
+
+  useEffect(() => {
+    const onResize = () => updateTabIndicator()
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
+  }, [updateTabIndicator])
 
   useEffect(() => {
     getUser().then(setUser)
@@ -332,125 +338,148 @@ useEffect(() => {
     <div className="flex min-h-screen flex-col">
       <main className="flex-1 w-full px-4 pb-10 pt-4 md:px-6 md:pt-6">
         <div className="mx-auto w-full max-w-6xl">
-          {/* Tabs */}
-          {/* Tabs */}
-<div
-  ref={tabsBarRef}
-  className="relative mb-4 flex items-end border-b border-[#bccddf] dark:border-[#686e73]"
+          {/* Tabs bar */}
+          <div
+            ref={tabsBarRef}
+            className="relative mb-4 flex items-end border-b border-[#bccddf] dark:border-[#686e73]"
+          >
+            {/* Left side */}
+            <div className="flex items-end gap-2">
+              <button
+                ref={(el) => {
+                  tabRefs.current.games = el
+                }}
+                type="button"
+                onClick={() => setActiveTab("games")}
+                className={cn(
+                  "px-3 py-2 text-sm font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-100/40",
+                  activeTab === "games"
+                    ? "text-[#5e82ab] dark:text-sky-100"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+                )}
+              >
+                Game Log
+              </button>
+            </div>
+
+            {/* Right side */}
+            <div className="ml-auto flex items-end gap-2">
+              <button
+                ref={(el) => {
+                  tabRefs.current.players = el
+                }}
+                type="button"
+                onClick={() => setActiveTab("players")}
+                className={cn(
+                  "px-3 py-2 text-sm font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-100/40",
+                  activeTab === "players"
+                    ? "text-[#5e82ab] dark:text-sky-100"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+                )}
+              >
+                Player Database
+              </button>
+
+              <button
+                ref={(el) => {
+                  tabRefs.current.prizeMapper = el
+                }}
+                type="button"
+                onClick={() => setActiveTab("prizeMapper")}
+                className={cn(
+                  "px-3 py-2 text-sm font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-100/40",
+                  activeTab === "prizeMapper"
+                    ? "text-[#5e82ab] dark:text-sky-100"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+                )}
+              >
+                Prize Mapper
+              </button>
+
+              {/* NEW TAB */}
+             <button
+  ref={(el) => {
+    tabRefs.current.topDeckCalc = el
+  }}
+  type="button"
+  onClick={() => setActiveTab("topDeckCalc")}
+  className={cn(
+    "px-3 py-2 text-sm font-medium transition-colors",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-100/40",
+    activeTab === "topDeckCalc"
+      ?  "text-[#5e82ab] dark:text-sky-100"
+      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+  )}
 >
-  {/* Left side */}
-  <div className="flex items-end gap-2">
-    <button
-      ref={(el) => {
-        tabRefs.current.games = el
-      }}
-      type="button"
-      onClick={() => setActiveTab("games")}
-      className={cn(
-        "px-3 py-2 text-sm font-medium transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-200/40",
-        activeTab === "games"
-          ? "text-sky-600 dark:text-sky-300"
-          : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
-      )}
-    >
-      Game Log
-    </button>
-  </div>
+  Top Deck 
+</button>
 
-  {/* Right side */}
-  <div className="ml-auto flex items-end gap-2">
-    <button
-      ref={(el) => {
-        tabRefs.current.players = el
-      }}
-      type="button"
-      onClick={() => setActiveTab("players")}
-      className={cn(
-        "px-3 py-2 text-sm font-medium transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-200/40",
-        activeTab === "players"
-          ? "text-sky-600 dark:text-sky-300"
-          : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
-      )}
-    >
-      Player Database
-    </button>
-
-    <button
-      ref={(el) => {
-        tabRefs.current.prizeMapper = el
-      }}
-      type="button"
-      onClick={() => setActiveTab("prizeMapper")}
-      className={cn(
-        "px-3 py-2 text-sm font-medium transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-200/40",
-        activeTab === "prizeMapper"
-          ? "text-sky-600 dark:text-sky-300"
-          : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
-      )}
-    >
-      Prize Mapper
-    </button>
-  </div>
-
-  {/* Sliding underline */}
-  <span
-    aria-hidden
-    className={cn(
-      "absolute bottom-0 h-[2px] rounded-full",
-      "bg-sky-600 dark:bg-sky-300",
-      "transition-[transform,width,opacity] duration-300 ease-out",
-    )}
-    style={{
-      width: tabIndicator.w,
-      transform: `translateX(${tabIndicator.x}px)`,
-      opacity: tabIndicator.show ? 1 : 0,
-    }}
-  />
-</div>
-
+            </div>
+            {/* Sliding underline */}
+            <span
+              aria-hidden
+               className={cn(
+    "absolute bottom-0 h-[2px] rounded-full",
+    "bg-[#5e82ab] dark:bg-sky-100",
+    "transition-[transform,width,opacity] duration-300 ease-out",
+  )}
+              style={{
+                width: tabIndicator.w,
+                transform: `translateX(${tabIndicator.x}px)`,
+                opacity: tabIndicator.show ? 1 : 0,
+              }}
+            />
+          </div>
 
           {activeTab === "games" ? (
             <>
-              {!selectedGame && (
-                <div className="mb-6 space-y-4">
-                 <Textarea
-  placeholder="Paste your game log here..."
-  value={manualInput}
-  onChange={(e) => {
-    setManualInput(e.target.value)
-    if (e.target.value.trim() === "") setValidationStatus("none")
-  }}
-   className={cn(
-    "w-full h-40 rounded-3xl px-5 py-3",
-    "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
-    "border border-slate-100 shadow-[0_0_22px_rgba(42,81,128,0.1)]",
+             {!selectedGame && (
+  <div className="mb-6 space-y-4">
+    <header className="space-y-1">
+      <h2 className="text-xl font-semibold tracking-tight text-slate-700/80 dark:text-sky-100">
+        Import your PTCGL Game Log:
+      </h2>
+      <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
+        <span className="block">
+          If you’re using the <span className="font-semibold">Dragapultist</span> app, your game logs can be detected automatically when copied to your clipboard.
+           If you’re using the browser version, paste your game log and click <span className="font-semibold">Import</span>.
+        </span>
+      </p>
+    </header>
 
-    // override shadcn defaults (this removes the dark outline)
-    "focus-visible:outline-none",
-    "focus-visible:ring-2 focus-visible:ring-slate-500/40 focus-visible:ring-offset-0",
-
-    "dark:bg-slate-500/50 dark:text-white dark:placeholder:text-slate-200/70",
-    "dark:border-slate-600 dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
-    "dark:focus-visible:ring-slate-300/70"
-  )}
-/>
-
+    <Textarea
+      placeholder="Paste your game log here..."
+      value={manualInput}
+      onChange={(e) => {
+        setManualInput(e.target.value)
+        if (e.target.value.trim() === "") setValidationStatus("none")
+      }}
+      className={cn(
+        "w-full h-40 rounded-3xl",
+        "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
+        "border border-slate-100 shadow-[0_0_22px_rgba(42,81,128,0.1)]",
+        "ring-offset-0 focus:ring-offset-0 focus-visible:ring-offset-0",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300",
+        "dark:bg-slate-500/50 dark:text-white dark:placeholder:text-slate-200/90",
+        "dark:border-slate-600 dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
+        "dark:focus-visible:ring-slate-300/70",
+        "px-5 py-4",
+      )}
+    />
 
                   <div className="flex items-center gap-3">
                     <div className="custom-button-container">
                       <Button
                         onClick={handleManualSubmit}
-                        className={`
-                         rounded-full px-5 h-9 text-sm
-            bg-[#5e82ab] text-slate-50 hover:bg-sky-800/50
-            dark:bg-[#b1cce8] dark:text-[#121212] dark:hover:bg-[#a1c2e4]
-
-                          
-                          ${isButtonPressed ? "scale-95" : "scale-100"}
-                        `}
+                        className={cn(
+                          "rounded-full px-5 h-9 text-sm",
+                          "bg-[#5e82ab] text-slate-50 hover:bg-sky-800/50",
+                          "dark:bg-[#b1cce8] dark:text-[#121212] dark:hover:bg-[#a1c2e4]",
+                          isButtonPressed ? "scale-95" : "scale-100",
+                        )}
                         style={buttonStyles}
                       >
                         Import
@@ -487,34 +516,24 @@ useEffect(() => {
               ) : (
                 <div>
                   <div className="mb-4 relative">
-                    <div className="absolute right-0 bottom-0 z-10">
-                      <img
-                        src="pultist-nobg.png"
-                        alt="dragapult"
-                        className="h-28 object-contain drop-shadow-[0_0_22px_rgba(42,81,128,0.5)] dark:drop-shadow-[0_0_22px_rgba(186,230,253,.3)] "
-                        style={{ transform: "scale(0.85)", opacity: 0.65}}
-                      />
-                    </div>
-                   <Input
-  type="text"
-  placeholder="Search for Pokémon..."
-  value={searchTerm}
-  onChange={(e) => setSearchTerm(e.target.value)}
-  className={cn(
-    "w-64", "px-2.5",
-    "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
-    "border border-slate-300 shadow-[0_0_22px_rgba(42,81,128,0.15)]",
+                    
 
-    "focus-visible:outline-none",
-    "focus-visible:ring-2 focus-visible:ring-slate-400/70 focus-visible:ring-offset-0",
-
-    "dark:bg-slate-500/70 dark:text-slate-100 dark:placeholder:text-slate-300/90",
-    "dark:border-slate-600 dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
-    "dark:focus-visible:ring-slate-300"
-  )}
-/>
-
-
+                    <Input
+                      type="text"
+                      placeholder="Search for Pokémon..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className={cn(
+                        "w-64",
+                        "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
+                        "border border-slate-300 shadow-[0_0_22px_rgba(42,81,128,0.15)]",
+                        "focus-visible:outline-none",
+                        "focus-visible:ring-2 focus-visible:ring-slate-400/70 focus-visible:ring-offset-0",
+                        "dark:bg-slate-500/70 dark:text-slate-100 dark:placeholder:text-slate-300/90",
+                        "dark:border-slate-600 dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
+                        "dark:focus-visible:ring-slate-300",
+                      )}
+                    />
                   </div>
 
                   {filteredGames.length > 0 ? (
@@ -528,9 +547,7 @@ useEffect(() => {
                       isDarkMode={isDarkMode}
                     />
                   ) : (
-                    <p className="text-gray-900 dark:text-white">
-                      No games found matching your search.
-                    </p>
+                    <p className="text-gray-900 dark:text-white">No games found matching your search.</p>
                   )}
                 </div>
               )}
@@ -551,8 +568,10 @@ useEffect(() => {
             </>
           ) : activeTab === "players" ? (
             <PlayerDatabasePanel />
-          ) : (
+          ) : activeTab === "prizeMapper" ? (
             <PrizeMapperPanel ptcglUsername={ptcglUsername} />
+          ) : (
+            <TopDeckCalcPanel />
           )}
         </div>
 
@@ -577,7 +596,6 @@ useEffect(() => {
           }
         `}</style>
       </main>
-
     </div>
   )
 }
