@@ -231,13 +231,14 @@ function CandidateSprite({
 function ArchetypeIconPair({ archetypeId }: { archetypeId: string | null }) {
   const slots = getArchetypeIconCandidatePaths(archetypeId)
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0">
       {slots.slice(0, 3).map((cands, i) => (
         <CandidateSprite
           key={`${archetypeId ?? "unknown"}-${i}`}
           candidates={cands.length ? cands : [FALLBACK_ICON]}
           alt="icon"
-          size={22}
+          size={32}
+          className={`opacity-80 dark:opacity-100 ${i === 0 ? "-ml-0.5" : "-ml-1.5"}`} //fixes icon spacing even if theres padding :)
         />
       ))}
     </div>
@@ -484,7 +485,7 @@ export function PrizeMapperPanel({ ptcglUsername }: { ptcglUsername?: string | n
   return (
     <div className="space-y-4">
       <header className="space-y-1">
-        <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-sky-100">
+        <h2 className="text-xl font-semibold tracking-tight text-slate-700/80 dark:text-sky-100">
           Prize mapper
         </h2>
         <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
@@ -495,29 +496,65 @@ export function PrizeMapperPanel({ ptcglUsername }: { ptcglUsername?: string | n
 
       <div className="flex flex-wrap gap-3 items-end">
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Your deck archetype
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-700/60 dark:text-slate-300/80">
+            Your deck archetype:
           </span>
 
-          <Select
-            value={selectedDeckId}
-            onValueChange={(v) => setSelectedDeckId(v === "none" ? "" : v)}
-          >
-            <SelectTrigger className="w-[340px] bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700">
-              <SelectValue placeholder="Select an archetype…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Select an archetype…</SelectItem>
-              {ARCHETYPE_RULES.map((r) => (
-                <SelectItem key={r.id} value={r.id}>
-                  <div className="flex items-center gap-2">
-                    <ArchetypeIconPair archetypeId={r.id} />
-                    <span>{r.label}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+         <Select
+  value={selectedDeckId}
+  onValueChange={(v) => setSelectedDeckId(v === "none" ? "" : v)}
+>
+  <SelectTrigger
+    className={cn(
+      "w-[340px]",
+      "bg-slate-50 text-slate-900 border-slate-200",
+      "dark:bg-slate-500/70 dark:text-slate-50 dark:border-slate-700",
+    )}
+  >
+    <SelectValue placeholder="Select an archetype…" />
+  </SelectTrigger>
+
+  <SelectContent
+    className={cn(
+      // match trigger + soften the “popover” look
+      "w-[--radix-select-trigger-width]",
+      "bg-slate-50/95 text-slate-900 border-slate-200",
+      "shadow-xl backdrop-blur-md",
+      "dark:bg-slate-500/70 dark:text-slate-50 dark:border-slate-700",
+    )}
+  >
+    <SelectItem
+      value="none"
+      className={cn(
+        "text-slate-900",
+        "data-[highlighted]:bg-slate-200/60 data-[highlighted]:text-slate-900",
+        "data-[state=checked]:bg-slate-200/70",
+        "dark:text-slate-50 dark:data-[highlighted]:bg-slate-50/10 dark:data-[state=checked]:bg-slate-50/15",
+      )}
+    >
+      Select an archetype…
+    </SelectItem>
+
+    {ARCHETYPE_RULES.map((r) => (
+      <SelectItem
+        key={r.id}
+        value={r.id}
+        className={cn(
+          "text-slate-900",
+          "data-[highlighted]:bg-slate-200/60 data-[highlighted]:text-slate-900",
+          "data-[state=checked]:bg-slate-200/70",
+          "dark:text-slate-50 dark:data-[highlighted]:bg-slate-50/10 dark:data-[state=checked]:bg-slate-50/15",
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <ArchetypeIconPair archetypeId={r.id} />
+          <span>{r.label}</span>
+        </div>
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+
         </div>
 
         {/* {!!selectedDeckId && (
@@ -574,9 +611,22 @@ export function PrizeMapperPanel({ ptcglUsername }: { ptcglUsername?: string | n
               </p>
             </div>
           ) : (
-            <div className="rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/80 dark:bg-slate-900/80 overflow-visible shadow-sm">
-              {/* Header row: add gap + padding so “YOU” and “TOP…” never visually fuse */}
-              <div className="grid gap-x-6 items-center grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,3fr)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 border-b border-slate-200/70 dark:border-slate-700/70">
+           <div
+  className={cn(
+    "rounded-2xl border shadow-sm overflow-visible", // keep overflow-visible so your hover popover doesn't get clipped
+    "border-slate-200/70 bg-white/55 backdrop-blur-md",
+    "dark:border-slate-700/55 dark:bg-[#223a54]/40",
+  )}
+>
+  {/* Header row (slightly darker than body) */}
+  <div
+    className={cn(
+      "grid gap-x-6 items-center grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,3fr)] px-4 py-2",
+      "text-xs font-semibold uppercase tracking-wide",
+      "bg-slate-100/70 text-slate-600 border-b border-slate-200/60",
+      "dark:bg-[#162234]/55 dark:text-slate-200/80 dark:border-slate-700/45",
+    )}
+  >
                 <span>Matchup</span>
                 <span className="text-right">Global</span>
                 <span className="text-right">You</span>
@@ -593,10 +643,17 @@ export function PrizeMapperPanel({ ptcglUsername }: { ptcglUsername?: string | n
                   <div
                     key={row.opponentId ?? "__unknown__"}
                     className={cn(
-                      "grid gap-x-6 items-center grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,3fr)] px-4 py-3 text-sm",
-                      "border-b border-slate-100/70 dark:border-slate-800/70 last:border-none",
-                      "hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors",
-                    )}
+  "grid gap-x-6 items-center grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,3fr)] px-4 py-3 text-sm",
+  "border-b border-slate-200/40 last:border-none",
+  "odd:bg-white/25 even:bg-white/35",
+  "hover:bg-slate-100/60 transition-colors",
+
+  "dark:border-slate-700/35",
+  "dark:odd:bg-[#1b2b41]/35 dark:even:bg-[#223a54]/30",
+  "dark:hover:bg-[#2a4666]/45",
+)}
+
+
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <ArchetypeIconPair archetypeId={row.opponentId} />
@@ -649,7 +706,7 @@ export function PrizeMapperPanel({ ptcglUsername }: { ptcglUsername?: string | n
                                 showPerc={`${p.percentOfWins.toFixed(0)}%`}
                               />
                             </div>
-                          ))}
+                          ))} 
                         </div>
                       )}
 

@@ -20,8 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={cn(
           GeistSans.className,
           "min-h-dvh antialiased",
-          "bg-sky-100 text-slate-900",
-          "dark:bg-[#243952] dark:text-slate-50"
+          "bg-[#d3e6ed] text-slate-900",
+          "dark:bg-[#345275] dark:text-slate-50"
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>

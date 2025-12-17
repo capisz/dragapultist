@@ -363,51 +363,38 @@ export function PokemonTCGAnalyzer() {
             <>
               {!selectedGame && (
                 <div className="mb-6 space-y-4">
-                  <Textarea
-                    placeholder="Paste your game log here..."
-                    value={manualInput}
-                    onChange={(e) => {
-                      setManualInput(e.target.value)
-                      if (e.target.value.trim() === "") setValidationStatus("none")
-                    }}
-                    className="
-                      w-full h-40
-                      rounded-3xl
-                      bg-slate-100/90
-                      text-gray-900
-                      placeholder:text-slate-400
-                      border border-slate-200
-                      shadow-[0_0_22px_rgba(42,81,128,0.1)]
-                      focus-visible:outline-none
-                      focus-visible:ring-2
-                      focus-visible:ring-sky-300
+                 <Textarea
+  placeholder="Paste your game log here..."
+  value={manualInput}
+  onChange={(e) => {
+    setManualInput(e.target.value)
+    if (e.target.value.trim() === "") setValidationStatus("none")
+  }}
+  className={cn(
+    "w-full h-40 rounded-3xl",
+    "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
+    "border border-slate-200 shadow-[0_0_22px_rgba(42,81,128,0.1)]",
 
-                      dark:bg-slate-800/80
-                      dark:text-slate-50
-                      dark:placeholder:text-slate-500
-                      dark:border-slate-700
-                      dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]
-                      dark:focus-visible:ring-sky-400
-                    "
-                  />
+    // key: kill the ring offset “black outline”
+    "ring-offset-0 focus:ring-offset-0 focus-visible:ring-offset-0",
+    "focus:outline-none focus:ring-2 focus:ring-slate-300",
+
+    "dark:bg-slate-500/50 dark:text-white dark:placeholder:text-slate-200/90",
+    "dark:border-slate-600 dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
+    "dark:focus:ring-slate-300/70"
+  )}
+/>
+
 
                   <div className="flex items-center gap-3">
                     <div className="custom-button-container">
                       <Button
                         onClick={handleManualSubmit}
                         className={`
-                          rounded-full
-                          px-8
-                          h-11
-                          text-sm font-semibold
-                          text-slate-100
-                          bg-[#5e82ab]
-                          hover:bg-sky-600
-                          
-                          transition-colors transition-transform duration-150
-                          dark:bg-sky-200/90
-                          dark:hover:bg-sky-400
-                          dark:text-slate-950
+                         rounded-full px-5 h-9 text-sm
+            bg-[#5e82ab] text-slate-50 hover:bg-sky-800/50
+            dark:bg-sky-200/90 dark:text-slate-900 dark:hover:bg-sky-100
+
                           
                           ${isButtonPressed ? "scale-95" : "scale-100"}
                         `}
@@ -451,17 +438,33 @@ export function PokemonTCGAnalyzer() {
                       <img
                         src="pultist-nobg.png"
                         alt="dragapult"
-                        className="h-28 object-contain drop-shadow-[0_0_22px_rgba(42,81,128,0.7)] dark:drop-shadow-[0_0_22px_rgba(186,230,253,0.7)] "
+                        className="h-28 object-contain drop-shadow-[0_0_22px_rgba(42,81,128,0.8)] dark:drop-shadow-[0_0_22px_rgba(186,230,253,1)] "
                         style={{ transform: "scale(0.85)", opacity: 0.6}}
                       />
                     </div>
-                    <Input
-                      type="text"
-                      placeholder="Search for Pokémon..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-1/8 shadow-md bg-slate-100/90 dark:bg-slate-800/80 dark:text-white dark:border-[#333740] shadow-[0_0_22px_rgba(42,81,128,0.15)]"
-                    />
+                   <Input
+  type="text"
+  placeholder="Search for Pokémon..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  className={cn(
+    "w-64",
+    "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
+    "border border-slate-300",
+    "shadow-[0_0_22px_rgba(42,81,128,0.15)]",
+
+    // key: remove the dark ring-offset outline
+    "ring-offset-0 focus:ring-offset-0 focus-visible:ring-offset-0",
+    "focus:outline-none focus:ring-2 focus:ring-white",
+
+    "dark:bg-slate-500/70 dark:text-slate-100 dark:placeholder:text-slate-300",
+    "dark:border-slate-600",
+    "dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
+    "dark:focus:ring-slate-300"
+  )}
+/>
+
+
                   </div>
 
                   {filteredGames.length > 0 ? (
