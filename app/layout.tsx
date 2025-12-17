@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={cn(
           GeistSans.className,
           "min-h-dvh antialiased",
-          "bg-[#d3e6ed] text-slate-900",
+          "bg-[#d9ebff] text-slate-900",
           "dark:bg-[#345275] dark:text-slate-50"
         )}
       >

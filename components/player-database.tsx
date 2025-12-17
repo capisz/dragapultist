@@ -208,7 +208,7 @@ export function PlayerDatabasePanel() {
           className={cn(
             "rounded-full px-5 h-9 text-sm transition-transform duration-150",
             "bg-[#5e82ab] text-slate-50 hover:bg-sky-800/50",
-            "dark:bg-sky-200/90 dark:text-slate-900 dark:hover:bg-sky-200",
+            "dark:bg-[#b1cce8] dark:text-[#121212] dark:hover:bg-[#a1c2e4]",
             isButtonPressed ? "scale-95" : "scale-100",
           )}
         >

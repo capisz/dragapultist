@@ -1,7 +1,7 @@
 // components/pokemon-tcg-analyzer.tsx
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -50,6 +50,45 @@ export function PokemonTCGAnalyzer() {
 
   const { theme, resolvedTheme } = useTheme()
   const isDarkMode = (resolvedTheme ?? theme) === "dark"
+
+  const tabsBarRef = useRef<HTMLDivElement | null>(null)
+const tabRefs = useRef<Record<"games" | "players" | "prizeMapper", HTMLButtonElement | null>>({
+  games: null,
+  players: null,
+  prizeMapper: null,
+})
+
+const [tabIndicator, setTabIndicator] = useState<{ x: number; w: number; show: boolean }>({
+  x: 0,
+  w: 0,
+  show: false,
+})
+
+const updateTabIndicator = useCallback(() => {
+  const bar = tabsBarRef.current
+  const btn = tabRefs.current[activeTab]
+  if (!bar || !btn) return
+
+  const barRect = bar.getBoundingClientRect()
+  const btnRect = btn.getBoundingClientRect()
+
+  setTabIndicator({
+    x: btnRect.left - barRect.left,
+    w: btnRect.width,
+    show: true,
+  })
+}, [activeTab])
+
+useLayoutEffect(() => {
+  updateTabIndicator()
+}, [updateTabIndicator])
+
+useEffect(() => {
+  const onResize = () => updateTabIndicator()
+  window.addEventListener("resize", onResize)
+  return () => window.removeEventListener("resize", onResize)
+}, [updateTabIndicator])
+
 
   useEffect(() => {
     getUser().then(setUser)
@@ -294,70 +333,84 @@ export function PokemonTCGAnalyzer() {
       <main className="flex-1 w-full px-4 pb-10 pt-4 md:px-6 md:pt-6">
         <div className="mx-auto w-full max-w-6xl">
           {/* Tabs */}
-          <div className="mb-4 flex items-end gap-2 border-b border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={() => setActiveTab("games")}
-              className={cn(
-                "px-3 py-2 text-sm font-medium border-b-2",
-                activeTab === "games"
-                  ? "border-sky-500 text-sky-600 dark:text-sky-300"
-                  : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
-              )}
-            >
-              Game log
-            </button>
+          {/* Tabs */}
+<div
+  ref={tabsBarRef}
+  className="relative mb-4 flex items-end border-b border-[#bccddf] dark:border-[#686e73]"
+>
+  {/* Left side */}
+  <div className="flex items-end gap-2">
+    <button
+      ref={(el) => {
+        tabRefs.current.games = el
+      }}
+      type="button"
+      onClick={() => setActiveTab("games")}
+      className={cn(
+        "px-3 py-2 text-sm font-medium transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-200/40",
+        activeTab === "games"
+          ? "text-sky-600 dark:text-sky-300"
+          : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+      )}
+    >
+      Game Log
+    </button>
+  </div>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("players")}
-              className={cn(
-                "px-3 py-2 text-sm font-medium border-b-2",
-                activeTab === "players"
-                  ? "border-sky-500 text-sky-600 dark:text-sky-300"
-                  : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
-              )}
-            >
-              Player database
-            </button>
+  {/* Right side */}
+  <div className="ml-auto flex items-end gap-2">
+    <button
+      ref={(el) => {
+        tabRefs.current.players = el
+      }}
+      type="button"
+      onClick={() => setActiveTab("players")}
+      className={cn(
+        "px-3 py-2 text-sm font-medium transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-200/40",
+        activeTab === "players"
+          ? "text-sky-600 dark:text-sky-300"
+          : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+      )}
+    >
+      Player Database
+    </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("prizeMapper")}
-              className={cn(
-                "px-3 py-2 text-sm font-medium border-b-2",
-                activeTab === "prizeMapper"
-                  ? "border-sky-500 text-sky-600 dark:text-sky-300"
-                  : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
-              )}
-            >
-              Prize mapper
-            </button>
+    <button
+      ref={(el) => {
+        tabRefs.current.prizeMapper = el
+      }}
+      type="button"
+      onClick={() => setActiveTab("prizeMapper")}
+      className={cn(
+        "px-3 py-2 text-sm font-medium transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-200/40",
+        activeTab === "prizeMapper"
+          ? "text-sky-600 dark:text-sky-300"
+          : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+      )}
+    >
+      Prize Mapper
+    </button>
+  </div>
 
-            {/* PTCGL username only relevant for prize mapper */}
-            {/* {activeTab === "prizeMapper" && (
-              <div className="ml-auto pb-2 flex items-center gap-2">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                  PTCGL username
-                </span>
-                <Input
-                  value={ptcglUsername}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setPtcglUsername(v)
-                    try {
-                      localStorage.setItem("ptcglUsername", v.trim())
-                    } catch {
-                      // ignore
-                    }
-                  }}
-                  placeholder="capisz…"
-                  className="h-9 w-48 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700"
-                />
-              </div>
-            )} */}
-            {/* removed ptcgl username thing */}
-          </div>
+  {/* Sliding underline */}
+  <span
+    aria-hidden
+    className={cn(
+      "absolute bottom-0 h-[2px] rounded-full",
+      "bg-sky-600 dark:bg-sky-300",
+      "transition-[transform,width,opacity] duration-300 ease-out",
+    )}
+    style={{
+      width: tabIndicator.w,
+      transform: `translateX(${tabIndicator.x}px)`,
+      opacity: tabIndicator.show ? 1 : 0,
+    }}
+  />
+</div>
+
 
           {activeTab === "games" ? (
             <>
@@ -393,7 +446,7 @@ export function PokemonTCGAnalyzer() {
                         className={`
                          rounded-full px-5 h-9 text-sm
             bg-[#5e82ab] text-slate-50 hover:bg-sky-800/50
-            dark:bg-sky-200/90 dark:text-slate-900 dark:hover:bg-sky-100
+            dark:bg-[#b1cce8] dark:text-[#121212] dark:hover:bg-[#a1c2e4]
 
                           
                           ${isButtonPressed ? "scale-95" : "scale-100"}
@@ -414,8 +467,8 @@ export function PokemonTCGAnalyzer() {
                     )}
                     {validationStatus === "invalid" && (
                       <span
-                        className="text-red-600 dark:text-red-400 text-sm font-medium"
-                        style={{ animation: "fadeInOut 5s forwards", opacity: 1 }}
+                        className="text-red-600 dark:text-[#eb9e9e] text-sm font-medium"
+                        style={{ animation: "fadeInOut 3s forwards", opacity: 1 }}
                       >
                         Improper import format
                       </span>
