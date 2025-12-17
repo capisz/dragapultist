@@ -190,12 +190,12 @@ export function PlayerDatabasePanel() {
             if (e.key === "Enter") handleSearch()
           }}
           className={cn(
-            "h-9 w-full sm:w-64 rounded-xl",
+            "h-10 w-full sm:w-72 rounded-xl",
             "bg-slate-100/90 text-slate-900 placeholder:text-slate-400 border border-slate-200/60",
             "shadow-[0_0_22px_rgba(42,81,128,0.12)]",
             "focus-visible:ring-2 focus-visible:ring-slate-200 focus-visible:ring-offset-0",
             "dark:bg-slate-500/60 dark:text-slate-100 dark:placeholder:text-slate-200/70",
-            "dark:border-slate-700/35 dark:shadow-[0_0_32px_rgba(56,189,248,0.10)] dark:focus-visible:ring-slate-400",
+            "dark:border-slate-900/35 dark:shadow-[0_0_32px_rgba(56,189,248,0.10)] dark:focus-visible:ring-slate-400",
           )}
         />
 

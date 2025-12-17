@@ -423,18 +423,18 @@ useEffect(() => {
     setManualInput(e.target.value)
     if (e.target.value.trim() === "") setValidationStatus("none")
   }}
-  className={cn(
-    "w-full h-40 rounded-3xl",
+   className={cn(
+    "w-full h-40 rounded-3xl px-5 py-3",
     "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
-    "border border-slate-200 shadow-[0_0_22px_rgba(42,81,128,0.1)]",
+    "border border-slate-100 shadow-[0_0_22px_rgba(42,81,128,0.1)]",
 
-    // key: kill the ring offset “black outline”
-    "ring-offset-0 focus:ring-offset-0 focus-visible:ring-offset-0",
-    "focus:outline-none focus:ring-2 focus:ring-slate-300",
+    // override shadcn defaults (this removes the dark outline)
+    "focus-visible:outline-none",
+    "focus-visible:ring-2 focus-visible:ring-slate-500/40 focus-visible:ring-offset-0",
 
-    "dark:bg-slate-500/50 dark:text-white dark:placeholder:text-slate-200/90",
+    "dark:bg-slate-500/50 dark:text-white dark:placeholder:text-slate-200/70",
     "dark:border-slate-600 dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
-    "dark:focus:ring-slate-300/70"
+    "dark:focus-visible:ring-slate-300/70"
   )}
 />
 
@@ -491,8 +491,8 @@ useEffect(() => {
                       <img
                         src="pultist-nobg.png"
                         alt="dragapult"
-                        className="h-28 object-contain drop-shadow-[0_0_22px_rgba(42,81,128,0.8)] dark:drop-shadow-[0_0_22px_rgba(186,230,253,1)] "
-                        style={{ transform: "scale(0.85)", opacity: 0.6}}
+                        className="h-28 object-contain drop-shadow-[0_0_22px_rgba(42,81,128,0.5)] dark:drop-shadow-[0_0_22px_rgba(186,230,253,.3)] "
+                        style={{ transform: "scale(0.85)", opacity: 0.65}}
                       />
                     </div>
                    <Input
@@ -501,19 +501,16 @@ useEffect(() => {
   value={searchTerm}
   onChange={(e) => setSearchTerm(e.target.value)}
   className={cn(
-    "w-64",
+    "w-64", "px-2.5",
     "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
-    "border border-slate-300",
-    "shadow-[0_0_22px_rgba(42,81,128,0.15)]",
+    "border border-slate-300 shadow-[0_0_22px_rgba(42,81,128,0.15)]",
 
-    // key: remove the dark ring-offset outline
-    "ring-offset-0 focus:ring-offset-0 focus-visible:ring-offset-0",
-    "focus:outline-none focus:ring-2 focus:ring-white",
+    "focus-visible:outline-none",
+    "focus-visible:ring-2 focus-visible:ring-slate-400/70 focus-visible:ring-offset-0",
 
-    "dark:bg-slate-500/70 dark:text-slate-100 dark:placeholder:text-slate-300",
-    "dark:border-slate-600",
-    "dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
-    "dark:focus:ring-slate-300"
+    "dark:bg-slate-500/70 dark:text-slate-100 dark:placeholder:text-slate-300/90",
+    "dark:border-slate-600 dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
+    "dark:focus-visible:ring-slate-300"
   )}
 />
 

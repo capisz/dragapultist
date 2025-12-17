@@ -507,8 +507,8 @@ export function PrizeMapperPanel({ ptcglUsername }: { ptcglUsername?: string | n
   <SelectTrigger
     className={cn(
       "w-[340px]",
-      "bg-slate-50 text-slate-900 border-slate-200",
-      "dark:bg-slate-500/70 dark:text-slate-50 dark:border-slate-700",
+      "bg-slate-50 text-slate-900/60 border-slate-200",
+      "dark:bg-slate-500/70 dark:text-slate-200/80 dark:border-slate-700",
     )}
   >
     <SelectValue placeholder="Select an archetype…" />
@@ -516,7 +516,7 @@ export function PrizeMapperPanel({ ptcglUsername }: { ptcglUsername?: string | n
 
   <SelectContent
     className={cn(
-      // match trigger + soften the “popover” look
+      
       "w-[--radix-select-trigger-width]",
       "bg-slate-50/95 text-slate-900 border-slate-200",
       "shadow-xl backdrop-blur-md",

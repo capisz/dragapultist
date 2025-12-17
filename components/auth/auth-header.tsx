@@ -51,7 +51,7 @@ export function AuthHeader() {
             <img
               src="/dreepy-nobg.png"
               alt="Dragapultist character"
-              className="h-8 w-10 md:h-16 md:w-14 object-contain drop-shadow-[0_0_22px_rgba(42,81,128,0.9)] dark:drop-shadow-[0_0_16px_rgba(186,230,253,0.5)] opacity-80"
+              className="h-8 w-10 md:h-16 md:w-14 object-contain drop-shadow-[0_0_22px_rgba(42,81,128,0.9)] dark:drop-shadow-[0_0_16px_rgba(186,230,253,0.25)] opacity-80"
             />
             <div className="flex flex-col">
               <h1 className="text-lg md:text-2xl font-semibold tracking-tight text-[#3b608c] dark:text-sky-200/90">
