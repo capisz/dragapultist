@@ -25,3 +25,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# dependencies
+node_modules/
+electron/node_modules/
+
+# electron build output (optional but usually good)
+electron/dist/
+electron/out/
