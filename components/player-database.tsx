@@ -175,16 +175,38 @@ export function PlayerDatabasePanel() {
   // Theme-safe surfaces:
   // Light: use black overlays (gives "slate-100/200" feel without matching the page)
   // Dark: use *darker* slate overlays (avoid the bright grey look from white overlays)
-  const rowBase =
-    "transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-200/40"
-  const rowHover = "hover:bg-black/6 dark:hover:bg-slate-950/18"
-  const rowSelected = "bg-black/10 dark:bg-slate-950/30"
-  const rowSelectedHover = "hover:bg-black/12 dark:hover:bg-slate-950/36"
+ // --- Surface tokens (match GameDetail card depth) ---
+// --- Surface tokens (dark mode matches the older deep-navy look) ---
+const surfaceCard = cn(
+  "rounded-2xl overflow-hidden",
+  "bg-white/70",
+  "border border-slate-200/70",
+  "shadow-[0_10px_30px_rgba(2,6,23,0.10)]",
+  "ring-1 ring-slate-900/5",
+  "dark:bg-[#233a54]",
+  "dark:border-white/10",
+  "dark:shadow-[0_18px_55px_rgba(0,0,0,0.45)]",
+  "dark:ring-white/5",
+)
 
-  const matchupPanelBg = "bg-black/10 dark:bg-slate-950/22"
-  const matchupRowHover = "hover:bg-black/8 dark:hover:bg-slate-950/18"
+const surfaceInset = cn(
+  "rounded-2xl overflow-hidden",
+  "bg-white/55",
+  "border border-slate-200/60",
+  "ring-1 ring-slate-900/5",
+  "dark:bg-[#192a42]",
+  "dark:border-white/10",
+  "dark:ring-white/5",
+)
 
-  
+const rowBase = cn(
+  "transition-colors duration-150",
+  "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-200/40",
+)
+
+const rowHover = "hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.04]"
+const rowSelected = "bg-slate-900/[0.07] dark:bg-white/[0.06]"
+const rowSelectedHover = "hover:bg-slate-900/[0.09] dark:hover:bg-white/[0.08]"
 
   return (
     
@@ -262,20 +284,16 @@ export function PlayerDatabasePanel() {
                   setOpenUsername(v ? p.username : null)
                   if (!v) setOpenDeck(null)
                 }}
-                className={cn(
-                  "rounded-2xl border overflow-hidden backdrop-blur-sm",
-                  "border-slate-200/40 bg-white/25 shadow-[0_10px_30px_rgba(15,23,42,0.08)]",
-                  "dark:border-slate-700/35 dark:bg-[#162638]/55 dark:shadow-[0_18px_45px_rgba(0,0,0,0.25)]",
-                )}
+                className={surfaceCard}
               >
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
                     className={cn(
-                      "w-full text-left p-3 transition-colors",
-                      "hover:bg-white/20",
-                      "dark:hover:bg-slate-950/14",
-                    )}
+  "w-full text-left p-3 transition-colors",
+  "hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.05]",
+)}
+
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
@@ -300,14 +318,8 @@ export function PlayerDatabasePanel() {
 
                 <CollapsibleContent className="px-3 pb-3">
                   {topDeckStats.length > 0 ? (
-                    <div
-                      className={cn(
-    "rounded-2xl overflow-hidden",
-    "bg-black/6 ring-1 ring-black/10",
-    "divide-y divide-black/10",
-    "dark:bg-slate-950/12 dark:ring-white/10 dark:divide-white/10",
-  )}
-                    >
+                   <div className={cn(surfaceInset, "divide-y divide-slate-900/10 dark:divide-white/10")}>
+
                       {topDeckStats.map((d, i) => {
                         const losses = d.games - d.wins
                         const dk = deckKey(p.username, d.archetypeId)
@@ -359,66 +371,62 @@ export function PlayerDatabasePanel() {
                             >
                               <div className="overflow-hidden">
                                 {isSelected && (
-                                  <div className={cn(
-        "border-t border-black/10 dark:border-white/10",
-        "bg-black/6 dark:bg-slate-950/18",
-        "px-3 py-3",
-      )}>
+                                  <div
+  className={cn(
+    "border-t border-slate-900/10 dark:border-white/10",
+    "bg-slate-900/[0.03] dark:bg-[#1b2e48]",
+    "p-0",
+  )}
+>
+
+
                                     {breakdownLoading[dk] ? (
                                       <div className="text-xs text-slate-600 dark:text-slate-200/70 py-2">
                                         Loading…
                                       </div>
                                     ) : breakdowns[dk] ? (
-                                      <div
-  className={cn(
-    "rounded-2xl overflow-hidden",
-    // slightly lighter than the selected deck row
-    "bg-black/6 dark:bg-slate-950/16",
-    "ring-1 ring-black/10 dark:ring-white/10",
-  )}
->
+                                      <div className={cn(surfaceInset)}>
+
   {/* summary row (aligned) */}
-  <div className="px-3 py-2 text-[11px] text-slate-700 dark:text-slate-200/80 tabular-nums border-b border-black/10 dark:border-white/10">
+  <div className="px-3 py-2 text-[11px] text-slate-700 dark:text-slate-200/80 tabular-nums border-b border-slate-900/10 dark:border-white/10">
     {breakdowns[dk]!.wins}/{breakdowns[dk]!.games} wins • {breakdowns[dk]!.winRate.toFixed(1)}%
   </div>
 
   {breakdowns[dk]!.matchups.length === 0 ? (
-    <div className="px-3 py-3 text-xs text-slate-600 dark:text-slate-200/70">
-      No matchup data recorded for this deck yet.
-    </div>
-  ) : (
-    <div className="divide-y divide-black/10 dark:divide-white/10">
-      {breakdowns[dk]!.matchups.slice(0, 8).map((m, mi) => {
-        const mid =
-          canonicalizeArchetypeId(m.opponentArchetypeId) ?? m.opponentArchetypeId ?? null
+  <div className="px-3 py-3 text-xs text-slate-600 dark:text-slate-200/70">
+    No matchup data recorded for this deck yet.
+  </div>
+) : (
+  <div className="divide-y divide-black/10 dark:divide-white/10">
+    {breakdowns[dk]!.matchups.slice(0, 8).map((m, mi) => {
+      const mid = canonicalizeArchetypeId(m.opponentArchetypeId) ?? m.opponentArchetypeId ?? null
 
-        return (
-          <div
-            key={`${dk}-m-${mi}-${mid ?? "__unknown__"}`}
-            className={cn(
-              // very slightly lighter than the panel, for separation
-              "bg-black/4 dark:bg-slate-950/12",
-              "hover:bg-black/7 dark:hover:bg-slate-950/18 transition-colors",
-            )}
-          >
-            <div className="flex items-center justify-between gap-3 px-3 py-2 text-sm text-slate-800 dark:text-slate-100">
-              <div className="flex items-center gap-2 min-w-0">
-                <ArchetypeIconPair archetypeId={mid} size={22} />
-                <span className="truncate">vs {formatArchetypeLabel(mid)}</span>
-              </div>
-
-              <div className="text-right tabular-nums">
-                <span className="font-semibold">{m.winRate.toFixed(1)}%</span>{" "}
-                <span className="text-slate-600 dark:text-slate-200/70">
-                  ({m.wins}/{m.games})
-                </span>
-              </div>
-            </div>
+      return (
+        <div
+          key={`${dk}-m-${mi}-${mid ?? "__unknown__"}`}
+          className={cn(
+            "flex items-center justify-between gap-3",
+            "px-3 py-2 text-sm",
+            "transition-colors",
+            "hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.04]",
+          )}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <ArchetypeIconPair archetypeId={mid} size={22} />
+            <span className="truncate">vs {formatArchetypeLabel(mid)}</span>
           </div>
-        )
-      })}
-    </div>
-  )}
+
+          <div className="text-right tabular-nums">
+            <span className="font-semibold">{m.winRate.toFixed(1)}%</span>{" "}
+            <span className="text-slate-600 dark:text-slate-200/70">
+              ({m.wins}/{m.games})
+            </span>
+          </div>
+        </div>
+      )
+    })}
+  </div>
+)}
 </div>
 
                                     ) : (

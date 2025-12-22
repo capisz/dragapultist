@@ -55,7 +55,7 @@ export function AuthHeader() {
             />
             <div className="flex flex-col">
               <h1 className="text-lg md:text-2xl font-semibold tracking-tight text-[#3b608c] dark:text-sky-200/90">
-                Dragapultist ○ DB
+              Dragapultist 
               </h1>
               <p className=" text-[11px] md:text-xs text-gray-700 dark:text-gray-300/90">
                 Pokémon TCGL database

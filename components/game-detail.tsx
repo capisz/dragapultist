@@ -1,18 +1,20 @@
+// components/game-detail.tsx
 "use client"
 
 import { useMemo, useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Pencil, Book, FileText, Map } from "lucide-react"
-import { parseGameTurns, highlightAceSpecCards } from "@/utils/game-analyzer"
+import { Plus, Pencil, Book, FileText, ArrowLeftRight } from "lucide-react"
+import { highlightAceSpecCards, analyzeGameLog } from "@/utils/game-analyzer"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
 import { CheckIcon } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { GameSummary } from "@/types/game"
+import { ARCHETYPE_RULES } from "@/utils/archetype-mapping"
 
 interface DeckInfo {
   name: string
@@ -27,9 +29,17 @@ interface GameDetailProps {
 }
 
 const FALLBACK_ICON = "/sprites/substitute.png"
+const UNKNOWN_ARCHETYPE = "__unknown__"
 
 export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailProps) {
-  const turns = parseGameTurns(game.rawLog)
+  const pillBtn = (pressed: boolean, extra?: string) =>
+    cn(
+      "rounded-full px-5 h-9 text-sm whitespace-nowrap transition-transform duration-150",
+      "bg-[#5e82ab] text-slate-50 hover:bg-sky-800/50",
+      "dark:bg-[#b1cce8] dark:text-[#121212] dark:hover:bg-[#a1c2e4]",
+      pressed ? "scale-95" : "scale-100",
+      extra,
+    )
 
   const [tags, setTags] = useState<{ text: string; color: string }[]>(game.tags || [])
   const [newTag, setNewTag] = useState("")
@@ -37,9 +47,15 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
   const [isAddingTag, setIsAddingTag] = useState(false)
   const [turnNotes, setTurnNotes] = useState<{ [key: number]: string }>(game.notes || {})
   const [selectedPokemon, setSelectedPokemon] = useState<string | null>(null)
+
   const [isBackButtonPressed, setIsBackButtonPressed] = useState(false)
   const [isCancelTagButtonPressed, setIsCancelTagButtonPressed] = useState(false)
   const [isAddButtonPressed, setIsAddButtonPressed] = useState(false)
+
+  const [isDeckButtonPressed, setIsDeckButtonPressed] = useState(false)
+  const [isSetPlayersButtonPressed, setIsSetPlayersButtonPressed] = useState(false)
+  const [isApplyPlayersPressed, setIsApplyPlayersPressed] = useState(false)
+  const [isSaveDeckPressed, setIsSaveDeckPressed] = useState(false)
 
   const [flippedTurns, setFlippedTurns] = useState<Set<number>>(new Set())
   const [turnStats, setTurnStats] = useState<{
@@ -65,29 +81,58 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
     trainer: number
     energy: number
     total: number
-  }>({ pokemon: 0, trainer: 0, energy: 0, total: 0 })
+  }>({
+    pokemon: 0,
+    trainer: 0,
+    energy: 0,
+    total: 0,
+  })
 
   const [existingDecks, setExistingDecks] = useState<DeckInfo[]>([])
   const [isNewDeck, setIsNewDeck] = useState(true)
   const [showNewDeckInput, setShowNewDeckInput] = useState(false)
   const [newDeckName, setNewDeckName] = useState("")
 
-  // Prize map popover (hoverable)
   const [prizePopoverOpen, setPrizePopoverOpen] = useState(false)
+
+  // --- Set Players dialog ---
+  const [showSetPlayersDialog, setShowSetPlayersDialog] = useState(false)
+  const [swapPlayers, setSwapPlayers] = useState(false)
+  const [userArchetypeId, setUserArchetypeId] = useState<string>((game as any).userArchetype ?? UNKNOWN_ARCHETYPE)
+  const [opponentArchetypeId, setOpponentArchetypeId] = useState<string>(
+    (game as any).opponentArchetype ?? UNKNOWN_ARCHETYPE,
+  )
+
+  // Sync local state when switching games
+  useEffect(() => {
+    setTags(game.tags || [])
+    setTurnNotes(game.notes || {})
+    setDeckList(game.deckList || "")
+    setDeckName(game.deckName || "")
+    setSelectedPokemon(null)
+    setFlippedTurns(new Set())
+    setSwapPlayers(false)
+    setUserArchetypeId((game as any).userArchetype ?? UNKNOWN_ARCHETYPE)
+    setOpponentArchetypeId((game as any).opponentArchetype ?? UNKNOWN_ARCHETYPE)
+  }, [game.id])
+
+  // Reset Set Players dialog state when opened
+  useEffect(() => {
+    if (!showSetPlayersDialog) return
+    setSwapPlayers(false)
+    setUserArchetypeId((game as any).userArchetype ?? UNKNOWN_ARCHETYPE)
+    setOpponentArchetypeId((game as any).opponentArchetype ?? UNKNOWN_ARCHETYPE)
+  }, [showSetPlayersDialog, game.id])
 
   // Load existing decks from localStorage
   useEffect(() => {
     const storedDecks = localStorage.getItem("pokemonDecks")
-    if (storedDecks) {
-      setExistingDecks(JSON.parse(storedDecks))
-    }
+    if (storedDecks) setExistingDecks(JSON.parse(storedDecks))
   }, [])
 
-  // Check if current deck matches any existing deck
   useEffect(() => {
     if (deckList && existingDecks.length > 0) {
       const normalizedDeckList = deckList.replace(/\s+/g, " ").toLowerCase().trim()
-
       const matchingDeck = existingDecks.find(
         (deck) => deck.list.replace(/\s+/g, " ").toLowerCase().trim() === normalizedDeckList,
       )
@@ -103,19 +148,17 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
     }
   }, [deckList, existingDecks, deckName])
 
-  // Initialize validation when dialog opens
   useEffect(() => {
     if (showDeckListDialog && deckList) validateDeckList(deckList)
   }, [showDeckListDialog, deckList])
 
-  // Reset new deck input state when dialog opens
   useEffect(() => {
     if (showDeckListDialog) {
-      const matchesExisting = !!deckList &&
+      const matchesExisting =
+        !!deckList &&
         existingDecks.some(
           (deck) =>
-            deck.list.replace(/\s+/g, " ").toLowerCase().trim() ===
-            deckList.replace(/\s+/g, " ").toLowerCase().trim(),
+            deck.list.replace(/\s+/g, " ").toLowerCase().trim() === deckList.replace(/\s+/g, " ").toLowerCase().trim(),
         )
 
       if (!matchesExisting) {
@@ -128,17 +171,14 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
   // -------- Prize map derivation (per-player) --------
   const players = useMemo(() => {
     const fromLog = extractTwoPlayersFromRawLog(game.rawLog)
-    const storedUser = ((game as any).username ?? "").trim()
+    const storedUser = (((game as any).username ?? "") as string).trim()
     const storedOpp = (game.opponent ?? "").trim()
 
-    // Prefer stored values if present
     let user = storedUser
     let opp = storedOpp
 
-    // If we have two names from log and opponent is known, pick the other as user.
     if (fromLog.p1 && fromLog.p2) {
       if (!opp || opp === "-") {
-        // try to pick opponent as "the other" relative to storedUser
         if (storedUser && normalizeLoose(storedUser) === normalizeLoose(fromLog.p1)) {
           opp = fromLog.p2
           user = storedUser
@@ -146,40 +186,41 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
           opp = fromLog.p1
           user = storedUser
         } else {
-          // fallback: p1 as user, p2 as opponent
           user = user || fromLog.p1
           opp = opp || fromLog.p2
         }
       } else {
-        // opponent known; determine user as the other log name if possible
         const oppNorm = normalizeLoose(opp)
-        if (oppNorm === normalizeLoose(fromLog.p1)) {
-          user = user || fromLog.p2
-        } else if (oppNorm === normalizeLoose(fromLog.p2)) {
-          user = user || fromLog.p1
-        } else {
-          user = user || fromLog.p1
-        }
+        if (oppNorm === normalizeLoose(fromLog.p1)) user = user || fromLog.p2
+        else if (oppNorm === normalizeLoose(fromLog.p2)) user = user || fromLog.p1
+        else user = user || fromLog.p1
       }
     }
 
-    return {
-      user: user || fromLog.p1 || "",
-      opp: opp || fromLog.p2 || "",
-    }
-  }, [game.rawLog, game.opponent])
+    return { user: user || fromLog.p1 || "", opp: opp || fromLog.p2 || "" }
+  }, [game.rawLog, (game as any).username, game.opponent])
 
-  const userPrizeMap = useMemo(() => {
-    if (!players.user) return []
-    return derivePrizeMapForPlayer(game.rawLog, players.user)
-  }, [game.rawLog, players.user])
+  const previewPlayers = useMemo(() => {
+    if (!players.user || !players.opp) return { you: players.user || "unknown", opp: players.opp || "unknown" }
+    return swapPlayers ? { you: players.opp, opp: players.user } : { you: players.user, opp: players.opp }
+  }, [players.user, players.opp, swapPlayers])
 
-  const oppPrizeMap = useMemo(() => {
-    if (!players.opp) return []
-    return derivePrizeMapForPlayer(game.rawLog, players.opp)
-  }, [game.rawLog, players.opp])
+  // Turn log with perspective
+  const turns = useMemo(() => {
+    return parseTurnsWithPerspective(game.rawLog, previewPlayers.you, previewPlayers.opp)
+  }, [game.rawLog, previewPlayers.you, previewPlayers.opp])
 
-  // Calculate turn statistics from game log
+const userPrizeMap = useMemo(() => {
+  if (!previewPlayers.you) return []
+  return derivePrizeMapForPlayer(game.rawLog, previewPlayers.you)
+}, [game.rawLog, previewPlayers.you])
+
+const oppPrizeMap = useMemo(() => {
+  if (!previewPlayers.opp) return []
+  return derivePrizeMapForPlayer(game.rawLog, previewPlayers.opp)
+}, [game.rawLog, previewPlayers.opp])
+
+  // Calculate turn statistics from game log (unchanged)
   useEffect(() => {
     const calculateTurnStats = () => {
       const lines = game.rawLog.split("\n")
@@ -189,7 +230,6 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
       let currentTurn = 0
       let setupComplete = false
 
-      // Get player names from the log
       let username = ""
       let opponent = ""
       for (const line of lines) {
@@ -212,7 +252,6 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
           if (line.startsWith(username)) userMulligans++
           else if (line.startsWith(opponent)) opponentMulligans++
         }
-
         if (line.startsWith("Turn #")) setupComplete = true
       })
 
@@ -267,104 +306,9 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
             else if (line.startsWith(opponent)) stats[currentTurn].opponentCardsDiscarded += discardCount
           }
 
-          if (line.includes("Professor's Research") || line.includes("Professor Oak's Research")) {
-            if (line.startsWith(username)) {
-              stats[currentTurn].userCardsDrawn += 7
-              userDeckSize -= 7
-              stats[currentTurn].userCardsRemaining = userDeckSize
-              stats[currentTurn].userCardsDiscarded += 7
-            } else if (line.startsWith(opponent)) {
-              stats[currentTurn].opponentCardsDrawn += 7
-              opponentDeckSize -= 7
-              stats[currentTurn].opponentCardsRemaining = opponentDeckSize
-              stats[currentTurn].opponentCardsDiscarded += 7
-            }
-          }
-
-          if (line.includes("Battle VIP Pass") || line.includes("searched their deck")) {
-            const searchMatch = line.match(/(?:found|took|added).*?(\d+)/i)
-            let searchCount = 1
-            if (searchMatch && searchMatch[1]) searchCount = parseInt(searchMatch[1])
-
-            if (line.startsWith(username)) {
-              userDeckSize -= searchCount
-              stats[currentTurn].userCardsRemaining = userDeckSize
-            } else if (line.startsWith(opponent)) {
-              opponentDeckSize -= searchCount
-              stats[currentTurn].opponentCardsRemaining = opponentDeckSize
-            }
-          }
-
-          if (line.includes("Ultra Ball") || (line.includes("discarded") && line.includes("searched"))) {
-            if (line.startsWith(username)) {
-              stats[currentTurn].userCardsDiscarded += 2
-              userDeckSize -= 1
-              stats[currentTurn].userCardsRemaining = userDeckSize
-            } else if (line.startsWith(opponent)) {
-              stats[currentTurn].opponentCardsDiscarded += 2
-              opponentDeckSize -= 1
-              stats[currentTurn].opponentCardsRemaining = opponentDeckSize
-            }
-          }
-
-          if (line.includes("Pokégear") || line.includes("looked at the top")) {
-            const addedMatch = line.match(/added (?:a card|(\d+) cards?) to.*?hand/i)
-
-            if (addedMatch) {
-              let addedCount = 1
-              if (addedMatch[1]) addedCount = parseInt(addedMatch[1])
-
-              if (line.startsWith(username)) {
-                stats[currentTurn].userCardsDrawn += addedCount
-                userDeckSize -= addedCount
-                stats[currentTurn].userCardsRemaining = userDeckSize
-              } else if (line.startsWith(opponent)) {
-                stats[currentTurn].opponentCardsDrawn += addedCount
-                opponentDeckSize -= addedCount
-                stats[currentTurn].opponentCardsRemaining = opponentDeckSize
-              }
-            }
-          }
-
           if (line.includes("attached") && line.includes("Energy")) {
             if (line.startsWith(username)) stats[currentTurn].userEnergyAttached += 1
             else if (line.startsWith(opponent)) stats[currentTurn].opponentEnergyAttached += 1
-          }
-
-          if (line.includes("put") && line.includes("back") && line.includes("deck")) {
-            const putBackMatch = line.match(/put (?:a card|(\d+) cards?) back.*?deck/i)
-            let putBackCount = 1
-            if (putBackMatch && putBackMatch[1]) putBackCount = parseInt(putBackMatch[1])
-
-            if (line.startsWith(username)) {
-              userDeckSize += putBackCount
-              stats[currentTurn].userCardsRemaining = userDeckSize
-            } else if (line.startsWith(opponent)) {
-              opponentDeckSize += putBackCount
-              stats[currentTurn].opponentCardsRemaining = opponentDeckSize
-            }
-          }
-
-          if (line.includes("Colress's Experiment") || line.includes("Cynthia's Ambition")) {
-            if (line.startsWith(username)) {
-              stats[currentTurn].userCardsDrawn += 5
-              userDeckSize -= 5
-              stats[currentTurn].userCardsRemaining = userDeckSize
-            } else if (line.startsWith(opponent)) {
-              stats[currentTurn].opponentCardsDrawn += 5
-              opponentDeckSize -= 5
-              stats[currentTurn].opponentCardsRemaining = opponentDeckSize
-            }
-          }
-
-          if (line.includes("Nest Ball") || (line.includes("searched") && line.includes("Basic"))) {
-            if (line.startsWith(username)) {
-              userDeckSize -= 1
-              stats[currentTurn].userCardsRemaining = userDeckSize
-            } else if (line.startsWith(opponent)) {
-              opponentDeckSize -= 1
-              stats[currentTurn].opponentCardsRemaining = opponentDeckSize
-            }
           }
 
           if (stats[currentTurn]) {
@@ -393,103 +337,154 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
     }
   }
 
-  const removeTag = (tagText: string) => {
-    setTags((prev) => prev.filter((tag) => tag.text !== tagText))
-  }
+  const removeTag = (tagText: string) => setTags((prev) => prev.filter((tag) => tag.text !== tagText))
 
   const cleanName = useCallback((name: string) => name.replace(/^.*'s\s/, ""), [])
 
-  const mainPokemonWinRate = useMemo(() => {
-    if (!allGames || !game.userMainAttacker) return null
-    const mainPokemonGames = allGames.filter((g) =>
-      g.userMainAttacker.includes(cleanName(game.userMainAttacker)),
-    )
-    const wins = mainPokemonGames.filter((g) => g.userWon).length
-    const losses = mainPokemonGames.length - wins
-    return { wins, losses, total: mainPokemonGames.length }
-  }, [allGames, game.userMainAttacker, cleanName])
 
-  const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser: boolean) => {
-    const uniquePokemon = [mainAttacker, ...otherPokemon]
-      .map(cleanName)
-      .filter((value, index, self) => self.indexOf(value) === index)
 
-    const getWinRateColor = (wins: number, total: number) => {
-      const winRate = total > 0 ? (wins / total) * 100 : 0
-      if (winRate > 50) return "text-green-600"
-      if (winRate < 50) return "text-red-600"
-      return "text-yellow-600"
+  const TEAM_STOPWORDS = new Set([
+  "it",
+  "them",
+  "they",
+  "you",
+  "your",
+  "yours",
+  "me",
+  "my",
+  "mine",
+  "we",
+  "us",
+  "our",
+  "ours",
+  "he",
+  "she",
+  "his",
+  "her",
+  "hers",
+  "their",
+  "theirs",
+  "its",
+])
+const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser: boolean) => {
+  const sanitize = (raw: string | undefined | null) => {
+    const v = (raw ?? "").trim()
+    if (!v) return null
+
+    // remove owner's prefix like "capisz's X"
+    const cleaned = cleanName(stripOwnerPrefix(v)).trim()
+    if (!cleaned) return null
+
+    const norm = normalizeLoose(cleaned)
+    if (!norm) return null
+
+    // filter log artifacts / pronouns
+    if (TEAM_STOPWORDS.has(norm)) return null
+
+    // common junk that sometimes leaks through parsing
+    if (norm === "pokemon" || norm === "active" || norm === "benched") return null
+
+    // ultra-short noise
+    if (cleaned.length <= 2) return null
+
+    return cleaned
+  }
+
+  const all = [sanitize(mainAttacker), ...(otherPokemon ?? []).map(sanitize)]
+    .filter(Boolean) as string[]
+
+  const uniquePokemon = uniquePreserveOrder(all)
+
+  const handlePokemonClick = (pokemon: string) => {
+    if (selectedPokemon === pokemon) {
+      setSelectedPokemon(null)
+      return
     }
 
-    const handlePokemonClick = (pokemon: string) => {
-      if (selectedPokemon === pokemon) {
-        setSelectedPokemon(null)
-        return
-      }
+    setSelectedPokemon(pokemon)
 
-      setSelectedPokemon(pokemon)
-
-      const allTurnElements = document.querySelectorAll("[data-pokemon-action]")
-      for (const element of allTurnElements) {
-        if (element.textContent?.includes(pokemon)) {
-          element.scrollIntoView({ behavior: "smooth", block: "center" })
-          break
-        }
+    const allTurnElements = document.querySelectorAll("[data-pokemon-action]")
+    for (const element of allTurnElements) {
+      if (element.textContent?.includes(pokemon)) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" })
+        break
       }
     }
+  }
 
-    return (
-      <>
-        <div className="mb-2">
-          <strong>
-            {cleanName(mainAttacker)}{" "}
-            {isUser && mainPokemonWinRate && (
-              <span className={getWinRateColor(mainPokemonWinRate.wins, mainPokemonWinRate.total)}>
-                ({mainPokemonWinRate.wins} - {mainPokemonWinRate.losses})
-              </span>
-            )}
-          </strong>
-        </div>
-        {uniquePokemon.length > 1 && (
+  const MAX_VISIBLE = 4
+  const visible = uniquePokemon.slice(0, MAX_VISIBLE)
+  const hidden = uniquePokemon.slice(MAX_VISIBLE)
+
+  const Row = ({ name, isMain }: { name: string; isMain?: boolean }) => (
+  <button
+    type="button"
+    onClick={() => handlePokemonClick(name)}
+    className={cn(
+      "w-full flex items-center gap-3 py-0 text-left",
+      "rounded-lg transition-colors",
+      "hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.05]",
+      selectedPokemon === name && "bg-sky-500/10",
+    )}
+  >
+    <CandidateSprite
+      candidates={buildPrizeSpriteCandidates(name)}
+      alt={name}
+      title={stripOwnerPrefix(name)}
+      size={23}
+    />
+
+    <div className="flex items-baseline gap-2 min-w-0">
+      <span className={cn("truncate", isMain ? "text-base font-semibold" : "text-sm font-medium")}>
+        {name}
+      </span>
+
+      
+    </div>
+  </button>
+)
+
+  if (!uniquePokemon.length) {
+    return <div className="text-xs text-slate-500 dark:text-slate-400">No Pokémon detected.</div>
+  }
+
+  return (
+   <div className="space-y-1">
+      <div className="space-y-2">
+        {visible.map((p, idx) => (
+          <Row key={`${p}-${idx}`} name={p} isMain={idx === 0} />
+        ))}
+
+        {hidden.length > 0 && (
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="link" className="p-0 h-auto font-normal ml-2">
-                {uniquePokemon.length - 1} more
-              </Button>
+              <button
+                type="button"
+                className="text-left text-sm font-semibold text-slate-600 dark:text-slate-200/80 underline decoration-dotted underline-offset-4"
+              >
+                +{hidden.length} more
+              </button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto z-[60]" sideOffset={5} collisionPadding={20}>
-              <ul className="list-disc pl-4">
-                {uniquePokemon.slice(1).map((pokemon, index) => (
-                  <li
-                    key={index}
-                    onClick={() => handlePokemonClick(pokemon)}
-                    className={cn(
-                      "cursor-pointer hover:text-blue-500 transition-colors",
-                      selectedPokemon === pokemon && "text-blue-500 font-semibold",
-                    )}
-                  >
-                    {pokemon}
-                  </li>
+
+            <PopoverContent className="w-[320px] z-[60] p-3 rounded-2xl" sideOffset={8} collisionPadding={20}>
+              <div className="space-y-2">
+                {hidden.map((p, idx) => (
+                  <Row key={`${p}-hidden-${idx}`} name={p} />
                 ))}
-              </ul>
+              </div>
             </PopoverContent>
           </Popover>
         )}
-      </>
-    )
-  }
+      </div>
+    </div>
+  )
+}
 
   const handleBackClick = () => {
     setIsBackButtonPressed(true)
     setTimeout(() => {
       setIsBackButtonPressed(false)
-      onUpdateGame({
-        ...game,
-        tags,
-        notes: turnNotes,
-        deckList,
-        deckName,
-      })
+      onUpdateGame({ ...game, tags, notes: turnNotes, deckList, deckName })
       onBack()
     }, 150)
   }
@@ -535,12 +530,7 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
 
     const totalCards = pokemonCount + trainerCount + energyCount
 
-    setDeckListStats({
-      pokemon: pokemonCount,
-      trainer: trainerCount,
-      energy: energyCount,
-      total: totalCards,
-    })
+    setDeckListStats({ pokemon: pokemonCount, trainer: trainerCount, energy: energyCount, total: totalCards })
 
     if (totalCards !== 60) {
       setDeckListError(`Deck must contain exactly 60 cards. Current count: ${totalCards}`)
@@ -552,11 +542,7 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
 
   const handleSaveDeckList = () => {
     if (isNewDeck && newDeckName.trim()) {
-      const newDeck: DeckInfo = {
-        name: newDeckName.trim(),
-        list: deckList,
-      }
-
+      const newDeck: DeckInfo = { name: newDeckName.trim(), list: deckList }
       const updatedDecks = [...existingDecks, newDeck]
       setExistingDecks(updatedDecks)
       localStorage.setItem("pokemonDecks", JSON.stringify(updatedDecks))
@@ -594,348 +580,335 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
     })
   }
 
+  const handleSwapPlayers = () => {
+    setSwapPlayers((prev) => !prev)
+    // also swap archetype selections so it behaves like the import dialog
+    const a = userArchetypeId
+    const b = opponentArchetypeId
+    setUserArchetypeId(b)
+    setOpponentArchetypeId(a)
+  }
+
+  const applyPlayers = () => {
+    const recalculated = analyzeGameLog(
+      game.rawLog,
+      swapPlayers,
+      undefined,
+      undefined,
+      userArchetypeId === UNKNOWN_ARCHETYPE ? null : userArchetypeId,
+      opponentArchetypeId === UNKNOWN_ARCHETYPE ? null : opponentArchetypeId,
+    )
+
+    const merged: GameSummary = {
+      ...(recalculated as any),
+      id: game.id,
+      date: game.date,
+      rawLog: game.rawLog,
+      tags,
+      notes: turnNotes,
+      deckList,
+      deckName,
+    }
+
+    onUpdateGame(merged)
+    setShowSetPlayersDialog(false)
+
+    
+  }
+
+  const SummaryPills = () => (
+  <div className="flex flex-wrap gap-2 text-xs">
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-3 py-1 font-semibold",
+        game.userWon
+          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/40 dark:text-emerald-200"
+          : "bg-rose-100 text-rose-800 dark:bg-rose-800/40 dark:text-rose-200",
+      )}
+    >
+      Result: {game.userWon ? "Won" : "Lost"}
+    </span>
+
+    <span className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 font-medium text-sky-800 dark:bg-sky-900/40 dark:text-sky-200">
+      Prize cards: {game.userPrizeCardsTaken} – {game.opponentPrizeCardsTaken}
+    </span>
+
+    <span className="inline-flex items-center rounded-full bg-stone-300 px-3 py-1 font-medium text-slate-700 dark:bg-stone-500/60 dark:text-slate-100">
+      Damage: {game.damageDealt}
+    </span>
+
+    <span className="inline-flex items-center rounded-full bg-slate-300 px-3 py-1 font-medium text-slate-700 dark:bg-slate-500/60 dark:text-slate-100">
+      Turns: {game.turns}
+    </span>
+  </div>
+)
+
   // ---------- RENDER ----------
-  return (
-    <div className="max-w-4xl mx-auto px-4 pb-16 text-slate-900 dark:text-slate-50 border border-slate-300/50 shadow shadow-slate-600/30 dark:shadow-slate-500/70 dark:border-slate-200/20 backdrop-blur-sm">
+return (
+  <div
+    className={cn(
+      "max-w-4xl mx-auto px-4 pb-16",
+      "text-slate-900 dark:text-slate-50",
+
+      // Surface color (slightly different than page bg)
+      "bg-slate-200/60 dark:bg-[#162234]/60",
+
+      // Depth + separation
+      "backdrop-blur-md",
+      "border border-slate-200/70 dark:border-slate-700/60",
+      "shadow-[0_10px_30px_rgba(2,6,23,0.10)] dark:shadow-[0_14px_40px_rgba(0,0,0,0.35)]",
+
+      // Subtle inner ring
+      "ring-1 ring-slate-900/5 dark:ring-white/5",
+
+      // Rounded corners
+      "rounded-2xl",
+    )}
+  >
+
       {/* Back + summary row */}
       <div className="flex items-center justify-between gap-4 pt-4">
-        <Button
-  onClick={handleBackClick}
-  className={cn(
-    // Theme outline button (square/rectangular is preserved)
-     "bg-[#5e82ab] text-slate-100 hover:bg-sky-600",
-    "shadow-[0_0_22px_rgba(56,189,248,0.35)] transition-colors",
-    "dark:bg-sky-200/90 dark:text-slate-950 dark:hover:bg-sky-400",
-    "dark:shadow-[0_0_26px_rgba(56,189,248,0.55)]",
-    isBackButtonPressed ? "scale-95" : "scale-100",
-  )}
->
-  &larr; Back to list
-</Button>
+        <Button onClick={handleBackClick} className={pillBtn(isBackButtonPressed)}>
+          &larr; Back to list
+        </Button>
 
-
-        {/* Desktop stat pills */}
-        <div className="hidden sm:flex flex-wrap gap-2 text-xs">
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-3 py-1 font-semibold",
-              game.userWon
-                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-                : "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200",
-            )}
-          >
-            Result: {game.userWon ? "Won" : "Lost"}
-          </span>
-          <span className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 font-medium text-sky-800 dark:bg-sky-900/40 dark:text-sky-200">
-            Prize cards: {game.userPrizeCardsTaken} – {game.opponentPrizeCardsTaken}
-          </span>
-          <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700 dark:bg-slate-800/60 dark:text-slate-100">
-            Damage: {game.damageDealt}
-          </span>
-          <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700 dark:bg-slate-800/60 dark:text-slate-100">
-            Turns: {game.turns}
-          </span>
-        </div>
-      </div>
-
-      {/* Mobile stat pills */}
-      <div className="mt-3 flex flex-wrap gap-2 text-xs sm:hidden">
-        <span
-          className={cn(
-            "inline-flex items-center rounded-full px-3 py-1 font-semibold",
-            game.userWon
-              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-              : "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200",
-          )}
-        >
-          {game.userWon ? "Won" : "Lost"}
-        </span>
-        <span className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 font-medium text-sky-800 dark:bg-sky-900/40 dark:text-sky-200">
-          {game.userPrizeCardsTaken} – {game.opponentPrizeCardsTaken} prizes
-        </span>
       </div>
 
       {/* GAME DETAILS + TAGS */}
-      <section className="mt-4 space-y-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-2xl font-semibold tracking-tight">Game details</h2>
-
-          {(game.userAceSpecs?.length || 0) > 0 || (game.opponentAceSpecs?.length || 0) > 0 ? (
-            <div className="flex flex-wrap gap-2 text-[11px] sm:text-xs">
-              {game.userAceSpecs && game.userAceSpecs.length > 0 && (
-                <span className="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 font-medium text-violet-800 dark:bg-violet-900/40 dark:text-violet-100">
-                  You: {game.userAceSpecs.join(", ")}
-                </span>
-              )}
-              {game.opponentAceSpecs && game.opponentAceSpecs.length > 0 && (
-                <span className="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 font-medium text-violet-800 dark:bg-violet-900/40 dark:text-violet-100">
-                  Opponent: {game.opponentAceSpecs.join(", ")}
-                </span>
-              )}
-            </div>
-          ) : null}
-        </div>
-
-        {/* 2-column meta + Pokémon */}
-        <div className="grid gap-4 md:grid-cols-2 items-start text-sm">
-          {/* Left: meta */}
-          <dl className="space-y-1.5">
-            <div className="flex gap-2">
-              <dt className="w-28 text-slate-500">Date</dt>
-              <dd className="font-medium">{game.date}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-28 text-slate-500">Opponent</dt>
-              <dd className="font-medium break-all">{game.opponent}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-28 text-slate-500">Went first</dt>
-              <dd className="font-medium">{game.wentFirst ? "Yes" : "No"}</dd>
-            </div>
-          </dl>
-
-          {/* Right: Pokémon + deck action */}
-          <div className="space-y-3">
-            <div>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pokémon</p>
-
-                {/* Hoverable prize map */}
-                <div
-                  onMouseEnter={() => setPrizePopoverOpen(true)}
-                  onMouseLeave={() => setPrizePopoverOpen(false)}
-                  className="hidden sm:block"
-                >
-                  <Popover open={prizePopoverOpen} onOpenChange={setPrizePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className={cn(
-                          "inline-flex items-center gap-2 text-xs font-medium",
-                          "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-50",
-                          "rounded-full px-3 py-1 border border-slate-300/70 dark:border-slate-700/70",
-                          "bg-white/60 dark:bg-slate-900/50 hover:bg-white/80 dark:hover:bg-slate-900/70",
-                          "transition-colors",
-                        )}
-                        aria-label="View prize map"
-                      >
-                        <Map className="h-3.5 w-3.5" />
-                        View prize map
-                      </button>
-                    </PopoverTrigger>
-
-                    <PopoverContent
-                      className="w-[520px] max-w-[90vw] z-[70] p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-950/95 backdrop-blur shadow-xl"
-                      sideOffset={10}
-                      collisionPadding={20}
-                    >
-                      <div className="flex items-baseline justify-between gap-3">
-                        <div>
-                          <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                            Prize map
-                          </div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Derived from “was Knocked Out!” + “took a Prize card.”
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 p-3">
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300 mb-2">
-                            You ({players.user || "unknown"})
-                          </div>
-                          {userPrizeMap.length ? (
-                            <PrizeMapStrip sequence={userPrizeMap} />
-                          ) : (
-                            <div className="text-xs text-slate-500 dark:text-slate-400">
-                              No prize KOs detected.
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 p-3">
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300 mb-2">
-                            Opponent ({players.opp || "unknown"})
-                          </div>
-                          {oppPrizeMap.length ? (
-                            <PrizeMapStrip sequence={oppPrizeMap} />
-                          ) : (
-                            <div className="text-xs text-slate-500 dark:text-slate-400">
-                              No prize KOs detected.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-
-              <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    Your team
-                  </p>
-                  {formatPokemonList(game.userMainAttacker, game.userOtherPokemon, true)}
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    Opponent&apos;s team
-                  </p>
-                  {formatPokemonList(game.opponentMainAttacker, game.opponentOtherPokemon, false)}
-                </div>
-              </div>
-
-              {/* Mobile prize map button (tap) */}
-              <div className="sm:hidden mt-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="rounded-full">
-                      <Map className="h-4 w-4 mr-2" />
-                      View prize map
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-[92vw] z-[70] p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-950/95 backdrop-blur shadow-xl"
-                    sideOffset={10}
-                    collisionPadding={20}
-                  >
-                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                      Prize map
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Derived from “was Knocked Out!” + “took a Prize card.”
-                    </div>
-
-                    <div className="mt-3 space-y-3">
-                      <div className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 p-3">
-                        <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300 mb-2">
-                          You ({players.user || "unknown"})
-                        </div>
-                        {userPrizeMap.length ? (
-                          <PrizeMapStrip sequence={userPrizeMap} />
-                        ) : (
-                          <div className="text-xs text-slate-500 dark:text-slate-400">
-                            No prize KOs detected.
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 p-3">
-                        <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300 mb-2">
-                          Opponent ({players.opp || "unknown"})
-                        </div>
-                        {oppPrizeMap.length ? (
-                          <PrizeMapStrip sequence={oppPrizeMap} />
-                        ) : (
-                          <div className="text-xs text-slate-500 dark:text-slate-400">
-                            No prize KOs detected.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-          <Button
-  onClick={() => setShowDeckListDialog(true)}
+     <section
   className={cn(
-    // Theme filled button (matches your Import button vibe)
-    "bg-[#5e82ab] text-slate-100 hover:bg-sky-600",
-    "shadow-[0_0_22px_rgba(56,189,248,0.35)] transition-colors",
-    "dark:bg-sky-200/90 dark:text-slate-950 dark:hover:bg-sky-400",
-    "dark:shadow-[0_0_26px_rgba(56,189,248,0.55)]",
+    "mt-4 space-y-4",
+    "rounded-2xl p-4",
+    "bg-slate-50/60 dark:bg-slate-900/40",
+    "border border-slate-200/60 dark:border-slate-700/50",
   )}
 >
-  <FileText className="mr-2 h-4 w-4" />
-  {game.deckList || deckList ? "View / edit deck list" : "Add deck list"}
-</Button>
 
-          </div>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-xl font-semibold tracking-tight">Game Details</h2>
         </div>
 
+       <div className="grid gap-6 md:grid-cols-2 items-start">
+  {/* LEFT COLUMN */}
+  <div className="space-y-4">
+    <dl className="space-y-2 text-sm">
+
+      <SummaryPills />
+      <div className="flex gap-2">
+        <dt className="w-28 text-slate-500 dark:text-slate-200/80">Date</dt>
+        <dd className="font-medium">{game.date}</dd>
+      </div>
+
+      <div className="flex gap-2">
+        <dt className="w-28 text-slate-500 dark:text-slate-200/80">Opponent</dt>
+        <dd className="font-medium break-all">{game.opponent}</dd>
+      </div>
+
+      <div className="flex gap-2">
+        <dt className="w-28 text-slate-500 dark:text-slate-200/80">Went first</dt>
+        <dd className="font-medium">{game.wentFirst ? "Yes" : "No"}</dd>
+      </div>
+    </dl>
+
+    {/* Add deck + Set Players moved to the left column */}
+    <div className="flex flex-wrap gap-2">
+      <Button
+        onClick={() => {
+          setIsDeckButtonPressed(true)
+          setTimeout(() => setIsDeckButtonPressed(false), 150)
+          setShowDeckListDialog(true)
+        }}
+        className={pillBtn(isDeckButtonPressed, "inline-flex items-center gap-2")}
+      >
+        <FileText className="h-4 w-4" />
+        {game.deckList || deckList ? "Deck list" : "Add deck"}
+      </Button>
+
+      <Button
+        onClick={() => {
+          setIsSetPlayersButtonPressed(true)
+          setTimeout(() => setIsSetPlayersButtonPressed(false), 150)
+          setShowSetPlayersDialog(true)
+        }}
+        className={pillBtn(isSetPlayersButtonPressed, "inline-flex items-center gap-2")}
+      >
+        <Pencil className="h-4 w-4" />
+        Set Players
+      </Button>
+    </div>
+  </div>
+{/* RIGHT COLUMN */}
+<div className="space-y-3">
+  {/* Match turn log sizing */}
+  <div className="grid gap-3 sm:grid-cols-2 text-sm">
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200/70">
+        Your team
+      </p>
+      {formatPokemonList(game.userMainAttacker, game.userOtherPokemon, true)}
+    </div>
+
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200/70">
+        Opponent&apos;s team
+      </p>
+      {formatPokemonList(game.opponentMainAttacker, game.opponentOtherPokemon, false)}
+    </div>
+  </div>
+</div>
+  </div>
         {/* TAGS */}
-        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-600/80 dark:border-slate-300">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Tags
-          </span>
+       <div className="pt-3 border-t border-slate-600/80 dark:border-slate-300">
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    {/* LEFT: tags */}
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tags</span>
 
-          {tags.map((tag) => (
-            <button key={tag.text} type="button" onClick={() => removeTag(tag.text)} className="group">
-              <Badge
-                className="text-[11px] font-medium rounded-full px-3 py-1 border-0 shadow-sm group-hover:opacity-80 group-active:scale-95 transition"
-                style={{
-                  backgroundColor: tag.color,
-                  color: getContrastColor(tag.color),
-                }}
-              >
-                {tag.text}
-                <span className="ml-1 text-[10px] opacity-80 group-hover:opacity-100">×</span>
-              </Badge>
-            </button>
-          ))}
+      {tags.map((tag) => (
+        <button key={tag.text} type="button" onClick={() => removeTag(tag.text)} className="group">
+          <Badge
+            className="text-[11px] font-medium rounded-full px-3 py-1 border-0 shadow-sm group-hover:opacity-80 group-active:scale-95 transition"
+            style={{ backgroundColor: tag.color, color: getContrastColor(tag.color) }}
+          >
+            {tag.text}
+            <span className="ml-1 text-[10px] opacity-80 group-hover:opacity-100">×</span>
+          </Badge>
+        </button>
+      ))}
 
-          {!isAddingTag ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onClick={() => setIsAddingTag(true)}
-              className="h-7 px-2 text-xs border-dashed border-slate-400/70 text-slate-600 dark:text-slate-300 dark:border-slate-600 bg-transparent hover:bg-slate-100/40 dark:hover:bg-slate-800/60"
-            >
-              <Plus className="mr-1 h-3 w-3" />
-              Add tag
-            </Button>
+      {!isAddingTag ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          onClick={() => setIsAddingTag(true)}
+          className="h-7 px-2 text-xs border-dashed border-slate-400/70 text-slate-600 dark:text-slate-300 dark:border-slate-600 bg-transparent hover:bg-slate-100/40 dark:hover:bg-slate-800/60"
+        >
+          <Plus className="mr-1 h-3 w-3" />
+          Add tag
+        </Button>
+      ) : (
+  <div className="flex flex-wrap items-center gap-2">
+    <Input
+      value={newTag}
+      onChange={(e) => setNewTag(e.target.value)}
+      placeholder="Tag name"
+      className="h-7 w-36 text-xs bg-white/60 dark:bg-slate-950/20"
+      onKeyDown={(e) => {
+        if (e.key === "Enter") addTag(newTag.trim(), newTagColor)
+        if (e.key === "Escape") {
+          setIsAddingTag(false)
+          setNewTag("")
+          setNewTagColor("#FF9999")
+        }
+      }}
+    />
+
+    <input
+      type="color"
+      value={newTagColor}
+      onChange={(e) => setNewTagColor(e.target.value)}
+      className="h-7 w-10 rounded-md border border-slate-300/70 dark:border-white/15 bg-transparent"
+      aria-label="Tag color"
+    />
+
+    <Button
+      type="button"
+      size="sm"
+      onClick={() => addTag(newTag.trim(), newTagColor)}
+      disabled={!newTag.trim()}
+      className={cn(
+        "h-7 px-3 text-xs",
+        "bg-slate-800 text-white hover:bg-slate-700 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-100",
+        isAddButtonPressed && "scale-95",
+      )}
+    >
+      Add
+    </Button>
+
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() => {
+        setIsCancelTagButtonPressed(true)
+        setTimeout(() => setIsCancelTagButtonPressed(false), 120)
+        setIsAddingTag(false)
+        setNewTag("")
+        setNewTagColor("#FF9999")
+      }}
+      className={cn("h-7 px-3 text-xs", isCancelTagButtonPressed && "scale-95")}
+    >
+      Cancel
+    </Button>
+  </div>
+)}
+    </div>
+
+   {/* RIGHT: prize map button (bottom-right) */}
+<div className="flex justify-end shrink-0">
+  <Popover open={prizePopoverOpen} onOpenChange={setPrizePopoverOpen}>
+    <PopoverTrigger asChild>
+      <button
+        type="button"
+        onMouseEnter={() => setPrizePopoverOpen(true)}
+        onMouseLeave={() => setPrizePopoverOpen(false)}
+        className={cn(
+          "inline-flex items-center gap-2 text-xs font-medium",
+          "text-slate-600 hover:text-slate-900 dark:text-slate-200/90 dark:hover:text-slate-50",
+          "rounded-full px-3 py-1 border border-slate-300/70 dark:border-white/15",
+          "bg-white/60 dark:bg-slate-950/20 hover:bg-white/80 dark:hover:bg-slate-950/30",
+          "transition-colors",
+        )}
+        aria-label="View prize map"
+      >
+            View prize map
+          </button>
+    </PopoverTrigger>
+
+    <PopoverContent
+      side="top"
+      align="end"
+      sideOffset={10}
+      collisionPadding={20}
+      onMouseEnter={() => setPrizePopoverOpen(true)}
+      onMouseLeave={() => setPrizePopoverOpen(false)}
+      className="w-[520px] max-w-[90vw] z-[70] p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-700/80 backdrop-blur shadow-xl"
+    >
+      <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Prize Map</div>
+      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+        Here is the order in which prize cards were taken.
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300 mb-2">
+            You ({previewPlayers.you || "unknown"})
+          </div>
+          {userPrizeMap.length ? (
+            <PrizeMapStrip sequence={userPrizeMap} />
           ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                autoFocus
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="Matchup, event, notes..."
-                className="h-7 w-40 text-xs bg-slate-950/5 dark:bg-slate-900 border-slate-300 dark:border-slate-700"
-              />
-              <input
-                type="color"
-                value={newTagColor}
-                onChange={(e) => setNewTagColor(e.target.value)}
-                className="h-7 w-7 rounded-full border border-slate-300 dark:border-slate-600 cursor-pointer p-0 bg-transparent"
-              />
-              <Button
-                type="button"
-                size="xs"
-                disabled={!newTag.trim()}
-                onClick={() => addTag(newTag, newTagColor)}
-                className={cn("h-7 px-2 text-xs bg-sky-500 text-white hover:bg-sky-600", isAddButtonPressed && "scale-95")}
-              >
-                Add
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                onClick={() => {
-                  setIsCancelTagButtonPressed(true)
-                  setTimeout(() => {
-                    setIsCancelTagButtonPressed(false)
-                    setIsAddingTag(false)
-                    setNewTag("")
-                    setNewTagColor("#FF9999")
-                  }, 150)
-                }}
-                className={cn(
-                  "h-7 px-2 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
-                  isCancelTagButtonPressed && "scale-95",
-                )}
-              >
-                Cancel
-              </Button>
-            </div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">No prize KOs detected.</div>
           )}
         </div>
+
+        <div className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300 mb-2">
+            Opponent ({previewPlayers.opp || "unknown"})
+          </div>
+          {oppPrizeMap.length ? (
+            <PrizeMapStrip sequence={oppPrizeMap} />
+          ) : (
+            <div className="text-xs text-slate-500 dark:text-slate-400">No prize KOs detected.</div>
+          )}
+        </div>
+      </div>
+    </PopoverContent>
+  </Popover>
+    </div>
+  </div>
+</div>
+
       </section>
 
       {/* TURN LIST */}
@@ -950,9 +923,24 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
               <article
                 key={turn.turnNumber}
                 onClick={() => handleTurnClick(turn.turnNumber)}
-                className="py-4 px-3 text-sm leading-relaxed cursor-pointer
-                           rounded-lg border border-slate-300/80 dark:border-slate-500/70
-                           transition-colors hover:bg-slate-900/40 shadow-[0_0_15px_rgba(255,255,255,0.1)] dark:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+className={cn(
+  "py-4 px-3 text-sm leading-relaxed cursor-pointer",
+  "rounded-2xl transition-colors",
+
+  // match the Game details surface
+  "bg-slate-50/60 dark:bg-slate-900/40",
+  "border border-slate-200/60 dark:border-slate-700/50",
+
+  // optional depth so it doesn’t look flat
+  "shadow-[0_8px_22px_rgba(2,6,23,0.06)] dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]",
+  "ring-1 ring-slate-900/5 dark:ring-white/5",
+
+  // preserve hover effects (overlay)
+  "hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.05]",
+
+  isFlipped && "bg-slate-900/[0.06] dark:bg-white/[0.06]"
+
+)}
               >
                 <div className="flex items-center justify-between gap-3 mb-2">
                   <div className="font-medium text-slate-700 dark:text-slate-100">
@@ -986,10 +974,7 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
                           <Textarea
                             placeholder="Add a note for this turn..."
                             value={turnNotes[turn.turnNumber] || ""}
-                            onChange={(e) => {
-                              const newNotes = { ...turnNotes, [turn.turnNumber]: e.target.value }
-                              setTurnNotes(newNotes)
-                            }}
+                            onChange={(e) => setTurnNotes({ ...turnNotes, [turn.turnNumber]: e.target.value })}
                             className="min-h-[80px] max-h-[120px] border-none focus:ring-0 rounded-none pr-10 text-sm bg-gray-50 dark:bg-gray-800"
                           />
                           <Button
@@ -1014,10 +999,9 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
 
                 {!isFlipped ? (
                   <div className="grid gap-4 md:grid-cols-2">
-                    {/* You */}
                     <div>
                       <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">
-                        You
+                        You ({previewPlayers.you})
                       </div>
                       <ul className="space-y-1 text-[13px] text-slate-800 dark:text-slate-100">
                         {turn.userActions.map((action, index) => (
@@ -1030,35 +1014,15 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
                                 ? "rounded bg-amber-100/80 px-1 dark:bg-amber-200/80 dark:text-slate-900"
                                 : "",
                             )}
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                action.includes("drew") || action.includes("drawn")
-                                  ? `<strong><em>${highlightAceSpecCards(action)}</em></strong>`
-                                  : action.includes("damage")
-                                    ? `<strong>${
-                                        action.includes("Knocked Out")
-                                          ? `<u>${highlightAceSpecCards(action)}</u>`
-                                          : highlightAceSpecCards(action)
-                                      }</strong>`
-                                    : action.includes("Knocked Out")
-                                      ? `<strong><u>${highlightAceSpecCards(action)}</u></strong>`
-                                      : action.includes("conceded the game")
-                                        ? `<strong style="color: #dc2626;">${highlightAceSpecCards(action)}</strong>`
-                                        : action.includes("You won")
-                                          ? `<strong style="color: #16a34a;" class="flex items-center gap-2">${highlightAceSpecCards(
-                                              action,
-                                            )}<img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/494-Kl7SRdC5ClhprQJ6w3ugfVSUCwsfCH.webp" alt="Victory Victini" class="w-12 h-12 inline-block -mt-2" /></strong>`
-                                          : highlightAceSpecCards(action),
-                            }}
+                            dangerouslySetInnerHTML={{ __html: formatActionHtml(action) }}
                           />
                         ))}
                       </ul>
                     </div>
 
-                    {/* Opponent */}
                     <div className="md:border-l md:border-slate-500/70 md:pl-4 dark:md:border-slate-500">
                       <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-600 dark:text-sky-300">
-                        Opponent
+                        Opponent ({previewPlayers.opp || "unknown"})
                       </div>
                       <ul className="space-y-1 text-[13px] text-slate-800 dark:text-slate-100">
                         {turn.opponentActions.map((action, index) => (
@@ -1071,31 +1035,13 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
                                 ? "rounded bg-amber-100/80 px-1 dark:bg-amber-200/80 dark:text-slate-900"
                                 : "",
                             )}
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                action.includes("drew") || action.includes("drawn")
-                                  ? `<strong><em>${highlightAceSpecCards(action)}</em></strong>`
-                                  : action.includes("damage")
-                                    ? `<strong>${
-                                        action.includes("Knocked Out")
-                                          ? `<u>${highlightAceSpecCards(action)}</u>`
-                                          : highlightAceSpecCards(action)
-                                      }</strong>`
-                                    : action.includes("Knocked Out")
-                                      ? `<strong><u>${highlightAceSpecCards(action)}</u></strong>`
-                                      : action.includes("conceded the game")
-                                        ? `<strong style="color: #dc2626;">${highlightAceSpecCards(action)}</strong>`
-                                        : action.includes("Opponent won")
-                                          ? `<strong style="color: #dc2626;">${highlightAceSpecCards(action)}</strong>`
-                                          : highlightAceSpecCards(action),
-                            }}
+                            dangerouslySetInnerHTML={{ __html: formatActionHtml(action) }}
                           />
                         ))}
                       </ul>
                     </div>
                   </div>
                 ) : (
-                  // Stats view
                   <div className="grid gap-4 md:grid-cols-2 text-[13px]">
                     {turnStats[turn.turnNumber] ? (
                       <>
@@ -1158,201 +1104,328 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
         </div>
       </section>
 
-      {/* DECK LIST DIALOG (restyled) */}
-      <Dialog open={showDeckListDialog} onOpenChange={setShowDeckListDialog}>
-       <DialogContent
-  className={cn(
-    "sm:max-w-[680px]",
-    "rounded-2xl border border-slate-200/70 dark:border-slate-700/70",
-    "bg-white/95 dark:bg-slate-900/95",
-    "shadow-[0_18px_60px_rgba(2,6,23,0.18)] dark:shadow-[0_18px_70px_rgba(0,0,0,0.55)]",
-    "backdrop-blur-md",
-    // smoother open/close
-    "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-    "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-  )}
->
-  <DialogHeader className="px-6 pt-6">
-    <DialogTitle className="text-xl font-semibold tracking-tight text-slate-900 dark:text-sky-100">
-      {game.deckList ? "View / Edit Deck List" : "Add Deck List"}
-    </DialogTitle>
-    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-      Paste your list, then save it to reuse later.
-    </p>
-  </DialogHeader>
-
-  <div className="px-6 pb-6 pt-4 space-y-4">
-    <div>
-      <label
-        htmlFor="deckName"
-        className="block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2"
+      {/* SET PLAYERS DIALOG (Import-style) */}
+      <Dialog
+        open={showSetPlayersDialog}
+        onOpenChange={(next) => {
+          setShowSetPlayersDialog(next)
+        }}
       >
-        Deck name
-      </label>
+        <DialogContent className="sm:max-w-[520px] bg-white dark:bg-slate-900 rounded-2xl">
+          <DialogHeader>
+  <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-50">
+    Confirm Players & Deck Archetypes
+  </DialogTitle>
+  <DialogDescription className="text-sm text-slate-700 dark:text-slate-300">
+    If needed, you can swap players and assign deck archetypes for this game.
+  </DialogDescription>
+</DialogHeader>
+          <div className="space-y-6">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              If needed, you can swap players and assign deck archetypes for this game.
+            </p>
 
-      <div className="space-y-2">
-        <Select value={isNewDeck ? "new" : deckName} onValueChange={handleDeckSelection}>
-          <SelectTrigger
-            className={cn(
-              "w-full rounded-xl",
-              "bg-slate-100/90 dark:bg-slate-800/80",
-              "text-slate-900 dark:text-slate-50",
-              "border border-slate-200 dark:border-slate-700",
-              "shadow-[0_0_18px_rgba(42,81,128,0.18)] dark:shadow-[0_0_22px_rgba(56,189,248,0.10)]",
-              "focus-visible:ring-2 focus-visible:ring-sky-300 dark:focus-visible:ring-sky-400",
-            )}
-          >
-            <SelectValue placeholder="Select a deck or create new" />
-          </SelectTrigger>
-
-          <SelectContent>
-            {existingDecks.map((deck) => (
-              <SelectItem key={deck.name} value={deck.name}>
-                {deck.name}
-              </SelectItem>
-            ))}
-            <SelectItem value="new">+ Create New Deck</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {showNewDeckInput && (
-          <Input
-            type="text"
-            id="newDeckName"
-            placeholder="Enter a name for your new deck"
-            value={newDeckName}
-            onChange={(e) => setNewDeckName(e.target.value)}
-            className={cn(
-              "rounded-xl",
-              "bg-slate-100/90 dark:bg-slate-800/80",
-              "text-slate-900 dark:text-slate-50",
-              "border border-slate-200 dark:border-slate-700",
-              "focus-visible:ring-2 focus-visible:ring-sky-300 dark:focus-visible:ring-sky-400",
-            )}
-          />
-        )}
-      </div>
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/60 p-4 space-y-4">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 text-sm">
+  <div>
+    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+      You
     </div>
-
-    <Textarea
-      placeholder="Paste your deck list here..."
-      value={deckList}
-      onChange={(e) => {
-        setDeckList(e.target.value)
-        validateDeckList(e.target.value)
-      }}
-      className={cn(
-        "min-h-[320px] rounded-2xl font-mono text-sm",
-        "bg-slate-100/90 dark:bg-slate-800/80",
-        "text-slate-900 dark:text-slate-50",
-        "border border-slate-200 dark:border-slate-700",
-        "shadow-[0_0_22px_rgba(42,81,128,0.18)] dark:shadow-[0_0_26px_rgba(56,189,248,0.10)]",
-        "focus-visible:ring-2 focus-visible:ring-sky-300 dark:focus-visible:ring-sky-400",
-      )}
-    />
-
-    {deckListStats.total > 0 && (
-      <div className="flex flex-wrap justify-between gap-2 text-xs">
-        <span className="text-slate-600 dark:text-slate-300">Pokémon: {deckListStats.pokemon}</span>
-        <span className="text-slate-600 dark:text-slate-300">Trainer: {deckListStats.trainer}</span>
-        <span className="text-slate-600 dark:text-slate-300">Energy: {deckListStats.energy}</span>
-        <span
-          className={cn(
-            "font-semibold",
-            deckListStats.total === 60
-              ? "text-emerald-600 dark:text-emerald-400"
-              : "text-rose-600 dark:text-rose-400",
-          )}
-        >
-          Total: {deckListStats.total}/60
-        </span>
-      </div>
-    )}
-
-    {deckListError && (
-      <p className="text-sm text-rose-600 dark:text-rose-400">{deckListError}</p>
-    )}
-
-    <DialogFooter className="pt-2">
-      <Button
-        variant="outline"
-        onClick={() => setShowDeckListDialog(false)}
-        className={cn(
-          "border-sky-200/70 text-slate-700 hover:bg-sky-50 hover:border-sky-300",
-          "dark:border-sky-500/30 dark:text-slate-200 dark:hover:bg-slate-800/70",
-        )}
-      >
-        Cancel
-      </Button>
-
-      <Button
-        onClick={handleSaveDeckList}
-        disabled={isNewDeck && !newDeckName.trim()}
-        className={cn(
-          "bg-[#5e82ab] text-slate-100 hover:bg-sky-600",
-          "dark:bg-sky-200/90 dark:text-slate-950 dark:hover:bg-sky-400",
-          "disabled:opacity-60 disabled:pointer-events-none",
-        )}
-      >
-        Save
-      </Button>
-    </DialogFooter>
+    <div className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-50">
+      {previewPlayers.you || "Unknown"}
+    </div>
   </div>
-</DialogContent>
 
+  <Button
+    type="button"
+    variant="outline"
+    size="sm"
+    onClick={handleSwapPlayers}
+    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-50 dark:border-slate-600"
+  >
+    <ArrowLeftRight className="h-4 w-4" />
+    Swap players
+  </Button>
+
+  <div className="text-right">
+    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+      Opponent
+    </div>
+    <div className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-50">
+      {previewPlayers.opp || "Unknown"}
+    </div>
+  </div>
+</div>
+
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-200 dark:border-slate-700 mt-3">
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Your deck archetype
+                  </div>
+                  <Select value={userArchetypeId} onValueChange={(v) => setUserArchetypeId(v)}>
+                    <SelectTrigger className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 border-slate-300 dark:border-slate-600">
+                      <SelectValue placeholder="Select your archetype" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={UNKNOWN_ARCHETYPE}>Not set / Unknown</SelectItem>
+                      {ARCHETYPE_RULES.map((rule) => (
+                        <SelectItem key={rule.id} value={rule.id}>
+                          {rule.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Opponent&apos;s archetype
+                  </div>
+                  <Select value={opponentArchetypeId} onValueChange={(v) => setOpponentArchetypeId(v)}>
+                    <SelectTrigger className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 border-slate-300 dark:border-slate-600">
+                      <SelectValue placeholder="Select opponent archetype" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={UNKNOWN_ARCHETYPE}>Not set / Unknown</SelectItem>
+                      {ARCHETYPE_RULES.map((rule) => (
+                        <SelectItem key={rule.id} value={rule.id}>
+                          {rule.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {swapPlayers && (
+              <div className="rounded-lg border border-sky-300/70 bg-sky-50 dark:bg-sky-900/20 dark:border-sky-600/60 px-3 py-2">
+                <p className="text-xs text-sky-900 dark:text-sky-100">
+                  Players will be swapped for this game.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowSetPlayersDialog(false)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setIsApplyPlayersPressed(true)
+                setTimeout(() => {
+                  setIsApplyPlayersPressed(false)
+                  applyPlayers()
+                }, 150)
+              }}
+              className={pillBtn(isApplyPlayersPressed)}
+            >
+              Set Players
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
+
+      {/* DECK LIST DIALOG (your existing block stays) */}
+     {/* DECK LIST DIALOG */}
+<Dialog open={showDeckListDialog} onOpenChange={setShowDeckListDialog}>
+  <DialogContent
+    className={cn(
+      "sm:max-w-[560px] md:max-w-[600px]",           // smaller than 680
+      "rounded-2xl p-0 overflow-hidden",
+      "bg-white text-slate-900",
+      "dark:bg-slate-900 dark:text-slate-50",
+"border border-slate-200/70 dark:border-slate-700/70",
+      "shadow-[0_18px_60px_rgba(2,6,23,0.22)] dark:shadow-[0_18px_60px_rgba(0,0,0,0.55)]",
+    )}
+  >
+    {/* Header */}
+    <div className="px-5 pt-5 pb-3 border-b border-slate-200/70 dark:border-slate-700/70"
+>
+      <DialogHeader className="space-y-1">
+        <DialogTitle className="text-lg font-semibold tracking-tight">
+          {game.deckList ? "View / Edit Deck List" : "Add Deck List"}
+        </DialogTitle>
+        <DialogDescription className="text-sm text-slate-600 dark:text-slate-300">
+          Paste your list, then save it to reuse later.
+        </DialogDescription>
+      </DialogHeader>
     </div>
-  )
-}
 
-/* ---------------- Prize-map UI helpers ---------------- */
+    {/* Body */}
+    <div className="px-5 pb-5 pt-4 space-y-4">
+      <div>
+        <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300 mb-2">
+          Deck name
+        </label>
 
-function PrizeMapStrip({ sequence }: { sequence: string[] }) {
-  return (
-    <div className="inline-flex flex-wrap items-center gap-1">
-      {sequence.map((name, i) => (
-        <span key={`${name}-${i}`} className="inline-flex items-center gap-1">
-          <PrizeSprite name={name} />
-          {i < sequence.length - 1 && (
-            <span className="text-slate-400 dark:text-slate-500 text-sm select-none">→</span>
+        <div className="space-y-2">
+          <Select value={isNewDeck ? "new" : deckName} onValueChange={handleDeckSelection}>
+            <SelectTrigger
+              className={cn(
+                "w-full rounded-xl h-9",
+                "bg-white border-slate-200 text-slate-900",
+                "dark:bg-slate-800/70 dark:border-slate-700 dark:text-slate-50",
+              )}
+            >
+              <SelectValue placeholder="Select a deck or create new" />
+            </SelectTrigger>
+
+<SelectContent className="dark:bg-slate-800 dark:border-slate-700">
+              {existingDecks.map((deck) => (
+                <SelectItem key={deck.name} value={deck.name}>
+                  {deck.name}
+                </SelectItem>
+              ))}
+              <SelectItem value="new">+ Create New Deck</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {showNewDeckInput && (
+            <Input
+              type="text"
+              placeholder="Enter a name for your new deck"
+              value={newDeckName}
+              onChange={(e) => setNewDeckName(e.target.value)}
+              className={cn(
+                "rounded-xl h-9",
+                "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
+"dark:bg-slate-800/70 dark:border-slate-700 dark:text-slate-50 dark:placeholder:text-slate-400",
+              )}
+            />
           )}
-        </span>
-      ))}
+        </div>
+      </div>
+
+      <Textarea
+        placeholder="Paste your deck list here..."
+        value={deckList}
+        onChange={(e) => {
+          setDeckList(e.target.value)
+          validateDeckList(e.target.value)
+        }}
+        className={cn(
+          "min-h-[240px] md:min-h-[260px]", // smaller textarea
+          "rounded-2xl font-mono text-sm leading-relaxed",
+          "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
+"dark:bg-slate-800/70 dark:border-slate-700 dark:text-slate-50 dark:placeholder:text-slate-400",
+          "focus-visible:ring-2 focus-visible:ring-sky-500/40",
+        )}
+      />
+
+      {deckListStats.total > 0 && (
+        <div className="flex flex-wrap justify-between gap-2 text-xs text-slate-600 dark:text-slate-300">
+          <span>Pokémon: {deckListStats.pokemon}</span>
+          <span>Trainer: {deckListStats.trainer}</span>
+          <span>Energy: {deckListStats.energy}</span>
+          <span className={cn("font-semibold", deckListStats.total === 60 ? "text-emerald-600" : "text-rose-600")}>
+            Total: {deckListStats.total}/60
+          </span>
+        </div>
+      )}
+
+      {deckListError && <p className="text-sm text-rose-600">{deckListError}</p>}
+
+      <div className="pt-2 flex items-center justify-end gap-2">
+        <Button variant="outline" onClick={() => setShowDeckListDialog(false)} className="rounded-xl">
+          Cancel
+        </Button>
+        <Button
+          onClick={() => {
+            setIsSaveDeckPressed(true)
+            setTimeout(() => {
+              setIsSaveDeckPressed(false)
+              handleSaveDeckList()
+            }, 150)
+          }}
+          disabled={isNewDeck && !newDeckName.trim()}
+          className={cn(pillBtn(isSaveDeckPressed), "rounded-xl")}
+        >
+          Save
+        </Button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
     </div>
   )
 }
 
-function PrizeSprite({ name, size = 22 }: { name: string; size?: number }) {
-  const candidates = buildPrizeSpriteCandidates(name)
-  return <CandidateSprite candidates={candidates} alt={name} title={stripOwnerPrefix(name)} size={size} />
+/* ---------------- helpers ---------------- */
+
+function formatActionHtml(action: string) {
+  if (action.includes("drew") || action.includes("drawn")) {
+    return `<strong><em>${highlightAceSpecCards(action)}</em></strong>`
+  }
+  if (action.includes("damage")) {
+    return `<strong>${
+      action.includes("Knocked Out") ? `<u>${highlightAceSpecCards(action)}</u>` : highlightAceSpecCards(action)
+    }</strong>`
+  }
+  if (action.includes("Knocked Out")) return `<strong><u>${highlightAceSpecCards(action)}</u></strong>`
+  if (action.includes("conceded the game")) return `<strong style="color: #dc2626;">${highlightAceSpecCards(action)}</strong>`
+  return highlightAceSpecCards(action)
 }
 
-function CandidateSprite({
-  candidates,
-  alt,
-  title,
-  size = 22,
-}: {
-  candidates: string[]
-  alt: string
-  title?: string
-  size?: number
-}) {
-  const [idx, setIdx] = useState(0)
-  const src = candidates[Math.min(idx, candidates.length - 1)] ?? FALLBACK_ICON
+function parseTurnsWithPerspective(rawLog: string, youName: string, oppName: string) {
+  const lines = rawLog.split(/\r?\n/)
 
-  return (
-    <img
-      src={src}
-      alt={alt}
-      title={title}
-      loading="lazy"
-      decoding="async"
-      style={{ width: size, height: size }}
-      className="object-contain shrink-0 bg-transparent"
-      onError={() => setIdx((v) => Math.min(v + 1, candidates.length - 1))}
-    />
-  )
+  const turns: { turnNumber: number; userActions: string[]; opponentActions: string[] }[] = []
+  let currentTurn = 0
+  let current = { turnNumber: 0, userActions: [] as string[], opponentActions: [] as string[] }
+
+  const you = youName?.trim()
+  const opp = oppName?.trim()
+
+  const pushCurrent = () => {
+    if (current.userActions.length || current.opponentActions.length || current.turnNumber === 0) turns.push(current)
+  }
+
+  const stripPrefix = (line: string, name: string) => {
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    return line
+      .replace(new RegExp(`^${esc}\\s+`, "i"), "")
+      .replace(new RegExp(`^${esc}['’]s\\s+`, "i"), "")
+      .trim()
+  }
+
+  const isFor = (line: string, name: string) => {
+    if (!name) return false
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    return new RegExp(`^${esc}(\\s|['’]s\\s)`, "i").test(line)
+  }
+
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (!line) continue
+
+    if (/^Turn\s*#\s*\d+/i.test(line)) {
+      const n = Number.parseInt(line.split("#")[1], 10)
+      const gameTurn = Number.isFinite(n) ? Math.ceil(n / 2) : currentTurn + 1
+
+      if (gameTurn !== currentTurn) {
+        pushCurrent()
+        currentTurn = gameTurn
+        current = { turnNumber: currentTurn, userActions: [], opponentActions: [] }
+      }
+      continue
+    }
+
+    if (you && isFor(line, you)) current.userActions.push(stripPrefix(line, you))
+    else if (opp && isFor(line, opp)) current.opponentActions.push(stripPrefix(line, opp))
+    else current.userActions.push(line)
+  }
+
+  pushCurrent()
+  return turns
 }
 
 function normalizeLoose(input: string): string {
@@ -1387,7 +1460,6 @@ function buildPrizeSpriteCandidates(displayName: string): string[] {
   const base = n0.replace(/\bex\b/g, "").replace(/\s+/g, " ").trim()
   const tokens = base.split(" ").filter(Boolean).filter((t) => t !== "mask")
 
-  // Ogerpon masks
   if (tokens.includes("ogerpon")) {
     const tset = new Set(tokens)
     const form =
@@ -1450,51 +1522,128 @@ function extractTwoPlayersFromRawLog(rawLog: string): { p1: string; p2: string }
 
 function derivePrizeMapForPlayer(rawLog: string, playerName: string): string[] {
   if (!rawLog || !playerName) return []
-  const playerNorm = normalizeLoose(playerName)
-  if (!playerNorm) return []
+  const takerNorm = normalizeLoose(playerName)
+  if (!takerNorm) return []
 
   const lines = rawLog.split(/\r?\n/)
+
+  // FIFO-ish queue of KOs we’ve seen but not yet paired to a prize-take line.
+  const pendingKOs: { ownerNorm: string; victim: string }[] = []
   const seq: string[] = []
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
+  const parsePrizeCount = (line: string): number => {
+    // "took a Prize card." => 1
+    // "took 2 Prize cards." => 2
+    const m = line.match(/\btook\s+(\d+)\s+Prize cards?\./i)
+    if (m?.[1]) {
+      const n = Number.parseInt(m[1], 10)
+      return Number.isFinite(n) && n > 0 ? n : 1
+    }
+    return /\btook\s+a\s+Prize card\./i.test(line) ? 1 : 0
+  }
 
-    // "CShepS's Budew was Knocked Out!"
-    // "capisz’s Frillish was Knocked Out!"
-    let m = line.match(/^(.+?)['’]s\s+(.+?)\s+was Knocked Out!/i)
-    if (!m) {
-      const m2 = line.match(/^(.+?)\s+was Knocked Out!/i)
-      if (!m2) continue
-      m = ["", "", m2[1]]
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (!line) continue
+
+    // KO lines:
+    // "capisz's Dusknoir was Knocked Out!"
+    // "brunolugon’s Munkidori was Knocked Out."
+    // "Munkidori was Knocked Out!"
+    const ownedKO = line.match(/^(.+?)['’]s\s+(.+?)\s+was Knocked Out[!.]/i)
+    if (ownedKO) {
+      const owner = normalizeLoose((ownedKO[1] ?? "").trim())
+      const victim = stripOwnerPrefix((ownedKO[2] ?? "").trim())
+      if (victim) pendingKOs.push({ ownerNorm: owner, victim })
+      continue
     }
 
-    const victimRaw = (m[2] ?? "").trim()
-    if (!victimRaw) continue
-
-    // Look ahead for "X took a Prize card."
-    let prizeTakenByPlayer = false
-    for (let j = i + 1; j < Math.min(lines.length, i + 12); j++) {
-      const l2 = lines[j].trim()
-      if (/^Turn\s+#/i.test(l2)) break
-
-      const pm = l2.match(/^(.+?)\s+took a Prize card\./i)
-      if (!pm) continue
-
-      const taker = normalizeLoose(pm[1] ?? "")
-      if (taker && taker === playerNorm) prizeTakenByPlayer = true
+    const bareKO = line.match(/^(.+?)\s+was Knocked Out[!.]/i)
+    if (bareKO) {
+      const victim = stripOwnerPrefix((bareKO[1] ?? "").trim())
+      if (victim) pendingKOs.push({ ownerNorm: "", victim })
+      continue
     }
 
-    if (!prizeTakenByPlayer) continue
+    // Prize lines:
+    // "capisz took a Prize card." / "capisz took 2 Prize cards."
+    const pm = line.match(/^(.+?)\s+took\s+(?:a|an|\d+)\s+Prize card(?:s)?\./i)
+    if (!pm) continue
 
-    const cleanVictim = stripOwnerPrefix(victimRaw)
-    if (!cleanVictim) continue
-    seq.push(cleanVictim)
+    const taker = normalizeLoose((pm[1] ?? "").trim())
+    if (!taker) continue
+
+    // Pair this prize-take with the most recent KO from the OTHER side.
+    // This is the critical bit that fixes self-KO attribution.
+    let idx = -1
+    for (let i = pendingKOs.length - 1; i >= 0; i--) {
+      const ko = pendingKOs[i]
+      if (!ko.ownerNorm || ko.ownerNorm !== taker) {
+        idx = i
+        break
+      }
+    }
+    if (idx < 0) continue
+
+    const [{ victim }] = pendingKOs.splice(idx, 1)
+
+    // If this prize-taker is the player we’re building the map for, record it.
+    if (taker === takerNorm) {
+      const count = parsePrizeCount(line) || 1
+      for (let k = 0; k < count; k++) seq.push(victim)
+    }
   }
 
   return seq
 }
 
-/* ----------------- existing helpers ----------------- */
+function PrizeMapStrip({ sequence }: { sequence: string[] }) {
+  return (
+    <div className="inline-flex flex-wrap items-center gap-1">
+      {sequence.map((name, i) => (
+        <span key={`${name}-${i}`} className="inline-flex items-center gap-1">
+          <PrizeSprite name={name} />
+          {i < sequence.length - 1 && (
+            <span className="text-slate-400 dark:text-slate-500 text-sm select-none">→</span>
+          )}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function PrizeSprite({ name, size = 22 }: { name: string; size?: number }) {
+  const candidates = buildPrizeSpriteCandidates(name)
+  return <CandidateSprite candidates={candidates} alt={name} title={stripOwnerPrefix(name)} size={size} />
+}
+
+function CandidateSprite({
+  candidates,
+  alt,
+  title,
+  size = 22,
+}: {
+  candidates: string[]
+  alt: string
+  title?: string
+  size?: number
+}) {
+  const [idx, setIdx] = useState(0)
+  const src = candidates[Math.min(idx, candidates.length - 1)] ?? FALLBACK_ICON
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      title={title}
+      loading="lazy"
+      decoding="async"
+      style={{ width: size, height: size }}
+      className="object-contain shrink-0 bg-transparent"
+      onError={() => setIdx((v) => Math.min(v + 1, candidates.length - 1))}
+    />
+  )
+}
 
 function getContrastColor(hexColor: string) {
   const r = Number.parseInt(hexColor.slice(1, 3), 16)
@@ -1502,16 +1651,4 @@ function getContrastColor(hexColor: string) {
   const b = Number.parseInt(hexColor.slice(5, 7), 16)
   const yiq = (r * 299 + g * 587 + b * 114) / 1000
   return yiq >= 128 ? "black" : "white"
-}
-
-// (kept for compatibility even if unused elsewhere)
-function getLighterColor(color: string): string {
-  return color === "black" ? "#333333" : "#FFFFFF"
-}
-
-// (kept for compatibility even if unused elsewhere)
-function getBabyColor(tagText: string): string {
-  const colors = ["#FFB7B2", "#FFDAC1", "#E2F0CB", "#B5EAD7", "#C7CEEA", "#FF9AA2"]
-  const hash = tagText.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return colors[hash % colors.length]
 }

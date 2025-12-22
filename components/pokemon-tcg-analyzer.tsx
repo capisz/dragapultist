@@ -1,7 +1,7 @@
 // components/pokemon-tcg-analyzer.tsx
 "use client"
 
-import { useState, useCallback, useEffect, useRef, useLayoutEffect, useMemo } from "react"
+import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -15,9 +15,7 @@ import { PlayerDatabasePanel } from "@/components/player-database"
 import { cn } from "@/lib/utils"
 import { PrizeMapperPanel } from "@/components/prize-mapper-panel"
 import { useTheme } from "next-themes"
-import { SiteFooter } from "@/components/site-footer"
 import { TopDeckCalcPanel } from "@/components/top-deck-calc-panel"
-
 
 declare global {
   interface Window {
@@ -27,10 +25,10 @@ declare global {
   }
 }
 
-
-
 export function PokemonTCGAnalyzer() {
-const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" | "topDeckCalc">("games")
+  const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" | "topDeckCalc">(
+    "games",
+  )
 
   const [games, setGames] = useState<GameSummary[]>([])
   const [selectedGame, setSelectedGame] = useState<GameSummary | null>(null)
@@ -49,21 +47,20 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
   const fadeTimerRef = useRef<NodeJS.Timeout | null>(null)
   const buttonTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // PTCGL username used for "personal stats" in Prize Mapper
   const [ptcglUsername, setPtcglUsername] = useState<string>("")
 
   const { theme, resolvedTheme } = useTheme()
   const isDarkMode = (resolvedTheme ?? theme) === "dark"
 
   const tabsBarRef = useRef<HTMLDivElement | null>(null)
- const tabRefs = useRef<
-  Record<"games" | "players" | "prizeMapper" | "topDeckCalc", HTMLButtonElement | null>
->({
-  games: null,
-  players: null,
-  prizeMapper: null,
-  topDeckCalc: null,
-})
+  const tabRefs = useRef<
+    Record<"games" | "players" | "prizeMapper" | "topDeckCalc", HTMLButtonElement | null>
+  >({
+    games: null,
+    players: null,
+    prizeMapper: null,
+    topDeckCalc: null,
+  })
 
   const [tabIndicator, setTabIndicator] = useState<{ x: number; w: number; show: boolean }>({
     x: 0,
@@ -101,7 +98,6 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
   }, [])
 
   useEffect(() => {
-    // Load saved PTCGL username
     try {
       const stored = localStorage.getItem("ptcglUsername")
       if (stored) setPtcglUsername(stored)
@@ -111,15 +107,12 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
   }, [])
 
   useEffect(() => {
-    if (user) {
-      if (user.username === "Guest") {
-        const storedGames = localStorage.getItem("guestGames")
-        if (storedGames) {
-          setGames(JSON.parse(storedGames))
-        }
-      } else {
-        // TODO: fetch games for this logged-in user from the server
-      }
+    if (!user) return
+    if (user.username === "Guest") {
+      const storedGames = localStorage.getItem("guestGames")
+      if (storedGames) setGames(JSON.parse(storedGames))
+    } else {
+      // TODO: fetch games for this logged-in user from the server
     }
   }, [user])
 
@@ -150,14 +143,14 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
       },
     ) => {
       const gameSummary = analyzeGameLog(
-        log,
-        options?.swapPlayers ?? false,
-        undefined,
-        undefined,
-        options?.userArchetypeId ?? null,
-        options?.opponentArchetypeId ?? null,
-      )
-
+           log,
+           options?.swapPlayers ?? false,
+           undefined,
+           undefined,
+           options?.userArchetypeId ?? null,
+           options?.opponentArchetypeId ?? null,
+           ptcglUsername || undefined,
+        )
       setGames((prevGames) => {
         const newGames = [...prevGames, gameSummary]
         if (user?.username === "Guest") {
@@ -167,18 +160,15 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
       })
 
       // Persist to backend (Mongo) – fire-and-forget
-      console.log("Saving game to backend for player:", (gameSummary as any).username)
       fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gameSummary }),
-      }).catch((err) => {
-        console.error("Failed to save game to backend", err)
-      })
+      }).catch(() => {})
 
       setManualInput("")
     },
-    [user],
+    [user, ptcglUsername],
   )
 
   const processLogForManualImport = useCallback(
@@ -202,7 +192,7 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
       }
 
       try {
-        const gameData = getGameDataForConfirmation(log)
+        const gameData = getGameDataForConfirmation(log, ptcglUsername || undefined)
         setPendingGameData(gameData)
         setPendingGameLog(log)
         setShowConfirmationDialog(true)
@@ -211,7 +201,7 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
         fadeTimerRef.current = setTimeout(() => setValidationStatus("none"), 5000)
       }
     },
-    [validateGameLog],
+    [validateGameLog, ptcglUsername],
   )
 
   const handleManualSubmit = useCallback(() => {
@@ -289,10 +279,13 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
   const handleUpdateGame = useCallback(
     (updatedGame: GameSummary) => {
       setGames((prevGames) => {
-        const newGames = prevGames.map((game) => (game.id === updatedGame.id ? updatedGame : game))
+        const newGames = prevGames.map((g) => (g.id === updatedGame.id ? updatedGame : g))
         if (user?.username === "Guest") localStorage.setItem("guestGames", JSON.stringify(newGames))
         return newGames
       })
+
+      // IMPORTANT: keep detail + list in sync
+      setSelectedGame((prev) => (prev?.id === updatedGame.id ? updatedGame : prev))
     },
     [user],
   )
@@ -343,7 +336,6 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
             ref={tabsBarRef}
             className="relative mb-4 flex items-end border-b border-[#bccddf] dark:border-[#686e73]"
           >
-            {/* Left side */}
             <div className="flex items-end gap-2">
               <button
                 ref={(el) => {
@@ -363,7 +355,6 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
               </button>
             </div>
 
-            {/* Right side */}
             <div className="ml-auto flex items-end gap-2">
               <button
                 ref={(el) => {
@@ -399,33 +390,31 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
                 Prize Mapper
               </button>
 
-              {/* NEW TAB */}
-             <button
-  ref={(el) => {
-    tabRefs.current.topDeckCalc = el
-  }}
-  type="button"
-  onClick={() => setActiveTab("topDeckCalc")}
-  className={cn(
-    "px-3 py-2 text-sm font-medium transition-colors",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-100/40",
-    activeTab === "topDeckCalc"
-      ?  "text-[#5e82ab] dark:text-sky-100"
-      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
-  )}
->
-  Top Deck 
-</button>
-
+              <button
+                ref={(el) => {
+                  tabRefs.current.topDeckCalc = el
+                }}
+                type="button"
+                onClick={() => setActiveTab("topDeckCalc")}
+                className={cn(
+                  "px-3 py-2 text-sm font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-100/40",
+                  activeTab === "topDeckCalc"
+                    ? "text-[#5e82ab] dark:text-sky-100"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+                )}
+              >
+                Top Deck
+              </button>
             </div>
-            {/* Sliding underline */}
+
             <span
               aria-hidden
-               className={cn(
-    "absolute bottom-0 h-[2px] rounded-full",
-    "bg-[#5e82ab] dark:bg-sky-100",
-    "transition-[transform,width,opacity] duration-300 ease-out",
-  )}
+              className={cn(
+                "absolute bottom-0 h-[2px] rounded-full",
+                "bg-[#5e82ab] dark:bg-sky-100",
+                "transition-[transform,width,opacity] duration-300 ease-out",
+              )}
               style={{
                 width: tabIndicator.w,
                 transform: `translateX(${tabIndicator.x}px)`,
@@ -436,39 +425,41 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
 
           {activeTab === "games" ? (
             <>
-             {!selectedGame && (
-  <div className="mb-6 space-y-4">
-    <header className="space-y-1">
-      <h2 className="text-xl font-semibold tracking-tight text-slate-700/80 dark:text-sky-100">
-        Import your PTCGL Game Log:
-      </h2>
-      <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
-        <span className="block">
-          If you’re using the <span className="font-semibold">Dragapultist</span> app, your game logs can be detected automatically when copied to your clipboard.
-           If you’re using the browser version, paste your game log and click <span className="font-semibold">Import</span>.
-        </span>
-      </p>
-    </header>
+              {!selectedGame && (
+                <div className="mb-6 space-y-4">
+                  <header className="space-y-1">
+                    <h2 className="text-xl font-semibold tracking-tight text-slate-700/80 dark:text-sky-100">
+                      Import your PTCGL Game Log:
+                    </h2>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
+                      <span className="block">
+                        If you’re using the <span className="font-semibold">Dragapultist</span> app, your
+                        game logs can be detected automatically when copied to your clipboard. If you’re
+                        using the browser version, paste your game log and click{" "}
+                        <span className="font-semibold">Import</span>.
+                      </span>
+                    </p>
+                  </header>
 
-    <Textarea
-      placeholder="Paste your game log here..."
-      value={manualInput}
-      onChange={(e) => {
-        setManualInput(e.target.value)
-        if (e.target.value.trim() === "") setValidationStatus("none")
-      }}
-      className={cn(
-        "w-full h-40 rounded-3xl",
-        "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
-        "border border-slate-100 shadow-[0_0_22px_rgba(42,81,128,0.1)]",
-        "ring-offset-0 focus:ring-offset-0 focus-visible:ring-offset-0",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300",
-        "dark:bg-slate-500/50 dark:text-white dark:placeholder:text-slate-200/90",
-        "dark:border-slate-600 dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
-        "dark:focus-visible:ring-slate-300/70",
-        "px-5 py-4",
-      )}
-    />
+                  <Textarea
+                    placeholder="Paste your game log here..."
+                    value={manualInput}
+                    onChange={(e) => {
+                      setManualInput(e.target.value)
+                      if (e.target.value.trim() === "") setValidationStatus("none")
+                    }}
+                    className={cn(
+                      "w-full h-40 rounded-3xl",
+                      "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
+                      "border border-slate-300 shadow-[0_0_22px_rgba(42,81,128,0.1)]",
+                      "ring-offset-0 focus:ring-offset-0 focus-visible:ring-offset-0",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300",
+                      "dark:bg-slate-500/50 dark:text-white dark:placeholder:text-slate-200/90",
+                      "dark:border-[rgba(78,70,74,0.8)] dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
+                      "dark:focus-visible:ring-slate-300/70",
+                      "px-5 py-4",
+                    )}
+                  />
 
                   <div className="flex items-center gap-3">
                     <div className="custom-button-container">
@@ -516,8 +507,6 @@ const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" |
               ) : (
                 <div>
                   <div className="mb-4 relative">
-                    
-
                     <Input
                       type="text"
                       placeholder="Search for Pokémon..."

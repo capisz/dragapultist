@@ -86,18 +86,23 @@ export async function POST(req: NextRequest) {
       )
     }
 
-const usernameFromLog = extractUsernameFromLog(gameSummary.rawLog)
-const username = gameSummary.username || usernameFromLog || "Guest"
+const now = new Date()
 
+// Trust analyzer output (client). Only fallback if missing.
+const username = (gameSummary.username ?? "").trim() || "Guest"
+const opponent = (gameSummary.opponent ?? "").trim() || "Opponent"
 
-    const now = new Date()
+// Optional: still store “coinflip actor” for debugging, but DO NOT use it as username.
+const coinflipActor = extractUsernameFromLog(gameSummary.rawLog)
 
-    const finalDoc: AnyGame = {
-      ...gameSummary,
-      username,
-      createdAt: gameSummary["createdAt"] ? new Date(gameSummary["createdAt"]) : now,
-      updatedAt: now,
-    }
+const finalDoc: AnyGame = {
+  ...gameSummary,
+  username,
+  opponent,
+  coinflipActor, // optional debug field
+  createdAt: gameSummary["createdAt"] ? new Date(gameSummary["createdAt"]) : now,
+  updatedAt: now,
+}
 
     const client = await clientPromise
     const db = client.db(process.env.MONGODB_DB || "dragapultist")

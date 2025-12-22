@@ -32,7 +32,7 @@ export function SiteFooter() {
               href="https://prize-checkr-io.vercel.app/"
               className="hover:underline"
             >
-              PrizeCheckDrillr.io (Prize check trainer)
+              PrizeCheckDrillr.io
             </Link>
 
              <Link
@@ -46,13 +46,13 @@ export function SiteFooter() {
               href="https://limitlesstcg.com"
               className="hover:underline"
             >
-              LimitlessTCG (Deck database)
+              LimitlessTCG 
             </Link>
             <Link
               href="https://limitlesstcg.com/tools/tabletop"
               className="hover:underline"
             >
-              Limitless TableTop )
+              Limitless TableTop 
             </Link>
           </div>
         </div>

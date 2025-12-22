@@ -96,13 +96,104 @@ function detectAceSpecCards(text: string): string[] {
   return foundAceSpecs
 }
 
+function normalizeName(n: string): string {
+  return (n ?? "").trim().toLowerCase()
+}
+
+function sameName(a: string, b: string): boolean {
+  return normalizeName(a) !== "" && normalizeName(a) === normalizeName(b)
+}
+
+function extractPlayersFromOpeningHands(lines: string[]): string[] {
+  const names: string[] = []
+  const re = /^(.+?) drew 7 cards for the opening hand\./i
+
+  for (const raw of lines) {
+    const m = raw.trim().match(re)
+    if (!m) continue
+    const nm = (m[1] ?? "").trim()
+    if (!nm) continue
+    if (!names.some((x) => sameName(x, nm))) names.push(nm)
+    if (names.length >= 2) break
+  }
+
+  return names
+}
+
+function extractPlayersFromPrefixes(lines: string[]): string[] {
+  const names: string[] = []
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+    if (!line) continue
+    if (line.startsWith("Setup") || line.startsWith("Turn #")) continue
+    if (line.startsWith("-") || line.startsWith("•")) continue
+
+    const m = line.match(/^([^\s]+)\s/)
+    if (!m) continue
+    const nm = (m[1] ?? "").trim()
+    if (!nm) continue
+    if (nm === "You" || nm === "Opponent") continue
+    if (!names.some((x) => sameName(x, nm))) names.push(nm)
+    if (names.length >= 2) break
+  }
+  return names
+}
+
+function resolvePlayers(lines: string[], preferredUsername?: string): { username: string; opponent: string } {
+  // Best source: opening hand lines
+  let names = extractPlayersFromOpeningHands(lines)
+
+  // Fallback: prefix scan
+  if (names.length < 2) names = extractPlayersFromPrefixes(lines)
+
+  const a = names[0] ?? ""
+  const b = names[1] ?? ""
+
+  // If the user has set their PTCGL username, use it to anchor identity.
+  if (preferredUsername && a && b) {
+    if (sameName(preferredUsername, a)) return { username: a, opponent: b }
+    if (sameName(preferredUsername, b)) return { username: b, opponent: a }
+  }
+
+    // If we can see a "wins." line with an "Opponent/You ..." prefix, use it to anchor POV.
+const resultLine = [...lines].reverse().find((l) => /\bwins\./i.test(l))?.trim() ?? ""
+const winner = extractWinnerFromResultLine(resultLine)
+
+  if (winner && a && b && (sameName(winner, a) || sameName(winner, b))) {
+    const other = sameName(winner, a) ? b : a
+
+    if (/^Opponent conceded\./i.test(resultLine) || /^You took all of your Prize cards\./i.test(resultLine)) {
+      // Opponent conceded => YOU (this log's POV) is the winner
+      return { username: winner, opponent: other }
+    }
+
+    if (/^You conceded\./i.test(resultLine) || /^Opponent took all of their Prize cards\./i.test(resultLine)) {
+      // You conceded OR opponent took all prizes => opponent is the winner => YOU are the other name
+      return { username: other, opponent: winner }
+    }
+  }
+
+  // If logs literally use "You"/"Opponent", keep that convention
+  if (a === "You" && b === "Opponent") return { username: "You", opponent: "Opponent" }
+  if (a === "Opponent" && b === "You") return { username: "You", opponent: "Opponent" }
+
+  // Last resort: stable default ordering
+  return { username: a, opponent: b }
+}
+
+function stripOwnerPrefix(name: string): string {
+  // Handles both straight and curly apostrophes: "capisz's X" and "capisz’s X"
+  return (name ?? "").replace(/^[^'’]+['’]s\s+/i, "").trim()
+}
+
 export function analyzeGameLog(
   log: string,
   swapPlayers = false,
   _customUserMainAttacker?: string,
   _customOpponentMainAttacker?: string,
   userArchetypeOverrideId?: string | null,
-  opponentArchetypeOverrideId?: string | null,
+  opponentArchetypeOverrideId?: string | null, 
+  preferredUsername?: string,
 ): GameSummary {
   const lines = log.split("\n")
   const userStats: PlayerStats = {}
@@ -133,70 +224,10 @@ export function analyzeGameLog(
   const userAceSpecs: Set<string> = new Set()
   const opponentAceSpecs: Set<string> = new Set()
 
-  // --- Determine player names and game winner from the raw log ---
-
-  // Collect the two player names that appear in the log (ignoring "You" / "Opponent")
-  const playerNames = new Set<string>()
-  for (const rawLine of lines) {
-    const line = rawLine.trim()
-    if (!line || line.startsWith("Setup") || line.startsWith("Turn #")) continue
-
-    const nameMatch = line.match(/^([^\s]+)\s/)
-    if (nameMatch) {
-      const possibleName = nameMatch[1]
-      if (possibleName !== "You" && possibleName !== "Opponent") {
-        playerNames.add(possibleName)
-        if (playerNames.size === 2) break
-      }
-    }
-  }
-
-  const [playerA, playerB] = Array.from(playerNames) as [string | undefined, string | undefined]
-
-  // Try to determine who wins from the final line that contains "wins."
-  const resultLine = lines.find((l) => l.includes("wins.")) || ""
-  let winnerName: string | null = null
-  if (resultLine) {
-    const match = resultLine.match(/([^\s]+)\s+wins\./)
-    winnerName = match?.[1] || null
-  }
-
-  if (playerA && playerB) {
-    // Case 1: log explicitly says "Opponent took all of their Prize cards."
-    if (resultLine.startsWith("Opponent took all of their Prize cards.")) {
-      const opponentName =
-        winnerName && (winnerName === playerA || winnerName === playerB) ? winnerName : playerB
-      const userName = opponentName === playerA ? playerB : playerA
-      username = userName || ""
-      opponent = opponentName || ""
-    }
-    // Case 2: log explicitly says "You took all of your Prize cards."
-    else if (resultLine.startsWith("You took all of your Prize cards.")) {
-      const userName =
-        winnerName && (winnerName === playerA || winnerName === playerB) ? winnerName : playerA
-      const opponentName = userName === playerA ? playerB : playerA
-      username = userName || ""
-      opponent = opponentName || ""
-    }
-    // Fallback: treat the first name we saw as the user
-    else {
-      username = playerA || ""
-      opponent = playerB || ""
-    }
-  } else {
-    // Fallback to older behaviour based on the coin-flip lines if we somehow
-    // did not detect both player names.
-    for (const line of lines) {
-      if (line.includes("chose") && line.includes("for the opening coin flip")) {
-        username = line.split(" ")[0]
-      } else if (line.includes("won the coin toss")) {
-        const winner = line.split(" ")[0]
-        if (winner !== username) {
-          opponent = winner
-        }
-      }
-    }
-  }
+  // --- Determine player names (anchor to preferredUsername if provided) ---
+  const resolved = resolvePlayers(lines, preferredUsername)
+  username = resolved.username
+  opponent = resolved.opponent
 
   // Determine who actually went first by looking for "decided to go second" or turn order
   let originalUserWentFirst = true
@@ -230,172 +261,196 @@ export function analyzeGameLog(
     wentFirst = originalUserWentFirst
   }
 
-  // --- Walk lines and collect stats ---
+    // --- Walk lines and collect stats ---
   let maxTurn = 0
-  lines.forEach((line) => {
+  let lastActor: "user" | "opponent" | null = null
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim()
+    if (!line) return
+
     // Count turns
     if (line.startsWith("Turn #")) {
-      const turnNumber = Number.parseInt(line.split("#")[1])
-      maxTurn = Math.max(maxTurn, turnNumber)
-      currentTurn = turnNumber
-      turnCount++
+      const turnNumber = Number.parseInt(line.split("#")[1], 10)
+      if (Number.isFinite(turnNumber)) {
+        maxTurn = Math.max(maxTurn, turnNumber)
+        currentTurn = turnNumber
+        turnCount++
+      }
+      // reset lastActor at turn boundary (optional but helps)
+      lastActor = null
+      return
     }
 
+    const isUser = username && line.startsWith(username)
+    const isOpp = opponent && line.startsWith(opponent)
+
+    if (isUser) lastActor = "user"
+    else if (isOpp) lastActor = "opponent"
+
+    const isSub = line.startsWith("-") || line.startsWith("•")
+    const owner: "user" | "opponent" | null = isUser ? "user" : isOpp ? "opponent" : isSub ? lastActor : null
+    const content = line.replace(/^[-•]\s*/, "")
+
     // ACE SPEC usage
-    const aceSpecsInLine = detectAceSpecCards(line)
+    const aceSpecsInLine = detectAceSpecCards(content)
     aceSpecsInLine.forEach((aceSpec) => {
-      if (line.startsWith(username)) {
-        userAceSpecs.add(aceSpec)
-      } else if (line.startsWith(opponent)) {
-        opponentAceSpecs.add(aceSpec)
-      }
+      if (owner === "user") userAceSpecs.add(aceSpec)
+      else if (owner === "opponent") opponentAceSpecs.add(aceSpec)
     })
 
     // Prize cards taken
-    if (line.includes("took a Prize card")) {
-      if (line.startsWith(username)) {
-        userPrizeCardsTaken++
-      } else if (line.startsWith(opponent)) {
-        opponentPrizeCardsTaken++
+    if (content.includes("took a Prize card")) {
+      if (owner === "user") userPrizeCardsTaken++
+      else if (owner === "opponent") opponentPrizeCardsTaken++
+    }
+
+    const multiPrize = content.match(/took\s+(\d+)\s+Prize cards?/i)
+    if (multiPrize) {
+      const n = Number.parseInt(multiPrize[1], 10)
+      if (Number.isFinite(n)) {
+        if (owner === "user") userPrizeCardsTaken += n
+        else if (owner === "opponent") opponentPrizeCardsTaken += n
       }
     }
 
-    const multiplePrizeCardMatch = line.match(/(\d+) Prize cards/)
-    if (multiplePrizeCardMatch) {
-      const prizeCardCount = Number.parseInt(multiplePrizeCardMatch[1])
-      if (line.startsWith(username)) {
-        userPrizeCardsTaken += prizeCardCount
-      } else if (line.startsWith(opponent)) {
-        opponentPrizeCardsTaken += prizeCardCount
+    // Active / bench Pokémon (FIX: handles "to the Bench" and "- drew X and played it to the Bench.")
+    if (owner && content.includes("played")) {
+      const playedActive = content.match(/played (.+?) to the Active Spot\./i)
+      const playedBench =
+        content.match(/played (.+?) to the Bench\./i) ||
+        content.match(/played (.+?) onto the Bench\./i) ||
+        content.match(/drew (.+?) and played it to the Bench\./i)
+
+      const playedNameRaw = (playedActive?.[1] || playedBench?.[1] || "").trim()
+      const playedName = stripOwnerPrefix(playedNameRaw)
+
+      if (playedName) {
+        if (owner === "user") {
+          userPokemon.add(playedName)
+          if (playedActive) userActive = playedName
+          userStats[playedName] = userStats[playedName] || {
+            name: playedName,
+            totalDamage: 0,
+            turnsOnBoard: 0,
+            attackCount: 0,
+          }
+        } else {
+          opponentPokemon.add(playedName)
+          if (playedActive) opponentActive = playedName
+          opponentStats[playedName] = opponentStats[playedName] || {
+            name: playedName,
+            totalDamage: 0,
+            turnsOnBoard: 0,
+            attackCount: 0,
+          }
+        }
       }
     }
 
-    // Active / bench Pokémon
-    if (
-      line.includes("played") &&
-      (line.includes("to the Active Spot") || line.includes("onto the Bench"))
-    ) {
-      const pokemonName = line.match(/played (.*?) (to the Active|onto the Bench)/)?.[1] || ""
-      if (line.startsWith(username)) {
-        userPokemon.add(pokemonName)
-        if (line.includes("to the Active Spot")) {
+    // Switches (FIX: strip "X's" prefix from the captured name)
+    if (owner && content.includes("is now in the Active Spot")) {
+      const m = content.match(/(.+?) is now in the Active Spot\./i)
+      const pokemonName = stripOwnerPrefix((m?.[1] || "").trim())
+      if (pokemonName) {
+        if (owner === "user") {
           userActive = pokemonName
-        }
-        userStats[pokemonName] = userStats[pokemonName] || {
-          name: pokemonName,
-          totalDamage: 0,
-          turnsOnBoard: 0,
-          attackCount: 0,
-        }
-      } else if (line.startsWith(opponent)) {
-        opponentPokemon.add(pokemonName)
-        if (line.includes("to the Active Spot")) {
+          userPokemon.add(pokemonName)
+          userStats[pokemonName] = userStats[pokemonName] || {
+            name: pokemonName,
+            totalDamage: 0,
+            turnsOnBoard: 0,
+            attackCount: 0,
+          }
+        } else {
           opponentActive = pokemonName
-        }
-        opponentStats[pokemonName] = opponentStats[pokemonName] || {
-          name: pokemonName,
-          totalDamage: 0,
-          turnsOnBoard: 0,
-          attackCount: 0,
-        }
-      }
-    }
-
-    // Switches
-    if (line.includes("is now in the Active Spot")) {
-      const pokemonName = line.match(/(.*?) is now in the Active/)?.[1] || ""
-      if (line.includes(`${username}'s`)) {
-        userActive = pokemonName
-        userPokemon.add(pokemonName)
-        userStats[pokemonName] = userStats[pokemonName] || {
-          name: pokemonName,
-          totalDamage: 0,
-          turnsOnBoard: 0,
-          attackCount: 0,
-        }
-      } else if (line.includes(`${opponent}'s`)) {
-        opponentActive = pokemonName
-        opponentPokemon.add(pokemonName)
-        opponentStats[pokemonName] = opponentStats[pokemonName] || {
-          name: pokemonName,
-          totalDamage: 0,
-          turnsOnBoard: 0,
-          attackCount: 0,
+          opponentPokemon.add(pokemonName)
+          opponentStats[pokemonName] = opponentStats[pokemonName] || {
+            name: pokemonName,
+            totalDamage: 0,
+            turnsOnBoard: 0,
+            attackCount: 0,
+          }
         }
       }
     }
 
-    // Damage
-    if (line.includes("used") && line.includes("for") && line.includes("damage")) {
-      const pokemonName = line.match(/'s (.*?) used/)?.[1] || ""
-      const damage = Number.parseInt(line.match(/for (\d+) damage/)?.[1] || "0")
+    // Damage (FIX: handle curly apostrophe)
+    if (owner && content.includes("used") && content.includes("for") && content.includes("damage")) {
+      const pokemonName = content.match(/['’]s (.*?) used/i)?.[1] || ""
+      const damage = Number.parseInt(content.match(/for (\d+) damage/)?.[1] || "0", 10)
 
-      if (line.startsWith(username)) {
-        userStats[pokemonName] = userStats[pokemonName] || {
-          name: pokemonName,
-          totalDamage: 0,
-          turnsOnBoard: 0,
-          attackCount: 0,
+      if (pokemonName) {
+        if (owner === "user") {
+          userStats[pokemonName] = userStats[pokemonName] || {
+            name: pokemonName,
+            totalDamage: 0,
+            turnsOnBoard: 0,
+            attackCount: 0,
+          }
+          userStats[pokemonName].totalDamage += damage
+          userStats[pokemonName].attackCount++
+          userPokemon.add(pokemonName)
+        } else {
+          opponentStats[pokemonName] = opponentStats[pokemonName] || {
+            name: pokemonName,
+            totalDamage: 0,
+            turnsOnBoard: 0,
+            attackCount: 0,
+          }
+          opponentStats[pokemonName].totalDamage += damage
+          opponentStats[pokemonName].attackCount++
+          opponentPokemon.add(pokemonName)
         }
-        userStats[pokemonName].totalDamage += damage
-        userStats[pokemonName].turnsOnBoard++
-        userStats[pokemonName].attackCount++
-        userPokemon.add(pokemonName)
-      } else if (line.startsWith(opponent)) {
-        opponentStats[pokemonName] = opponentStats[pokemonName] || {
-          name: pokemonName,
-          totalDamage: 0,
-          turnsOnBoard: 0,
-          attackCount: 0,
-        }
-        opponentStats[pokemonName].totalDamage += damage
-        opponentStats[pokemonName].turnsOnBoard++
-        opponentStats[pokemonName].attackCount++
-        opponentPokemon.add(pokemonName)
       }
 
-      if (damage > 240) {
-        highDamageAttackCount++
-      }
+      if (damage > 240) highDamageAttackCount++
     }
 
-    // Turns on board
-    if (userActive && userStats[userActive]) {
-      userStats[userActive].turnsOnBoard++
-    }
-    if (opponentActive && opponentStats[opponentActive]) {
-      opponentStats[opponentActive].turnsOnBoard++
-    }
+    // Turns on board (keep your behavior)
+    if (userActive && userStats[userActive]) userStats[userActive].turnsOnBoard++
+    if (opponentActive && opponentStats[opponentActive]) opponentStats[opponentActive].turnsOnBoard++
 
     // Bench KOs / bench size
-    if (line.includes("was Knocked Out") && line.includes("on the Bench")) {
-      benchKnockouts++
-    }
-    if (line.includes("played") && line.includes("to the Bench")) {
-      totalBenchedPokemon++
-    }
+    if (content.includes("was Knocked Out") && content.includes("on the Bench")) benchKnockouts++
+    if (content.includes("played") && content.includes("to the Bench")) totalBenchedPokemon++
 
     // Weakness
-    if (line.includes("It's super effective!")) {
-      weaknessBonus = true
-    }
+    if (content.includes("It's super effective!")) weaknessBonus = true
 
-    // Action-packed turns
+    // Action-packed turns (keep your behavior)
     const actionCount = (line.match(/•/g) || []).length
     if (actionCount > 12) {
-      if (line.startsWith(username)) {
-        actionPackedTurns.user++
-      } else if (line.startsWith(opponent)) {
-        actionPackedTurns.opponent++
-      }
+      if (owner === "user") actionPackedTurns.user++
+      else if (owner === "opponent") actionPackedTurns.opponent++
     }
 
     // Game result / concessions
-    if (line.includes("wins") || line.includes("conceded")) {
-      userWon = line.includes(`${username} wins`) || line.includes(`${opponent} conceded`)
-      userConceded = line.includes(`${username} conceded`)
-      opponentConceded = line.includes(`${opponent} conceded`)
-    }
+   if (content.includes("wins") || content.includes("conceded")) {
+  // Named wins line (e.g. "capisz wins.")
+  if (username && content.includes(`${username} wins`)) userWon = true
+  if (opponent && content.includes(`${opponent} wins`)) userWon = false
+
+  // POV-style concession lines
+  if (/^Opponent conceded\./i.test(content)) {
+    userWon = true
+    opponentConceded = true
+  }
+  if (/^You conceded\./i.test(content)) {
+    userWon = false
+    userConceded = true
+  }
+
+  // Named concessions (if present)
+  if (username && content.includes(`${username} conceded`)) {
+    userWon = false
+    userConceded = true
+  }
+  if (opponent && content.includes(`${opponent} conceded`)) {
+    userWon = true
+    opponentConceded = true
+  }
+}
   })
 
   // Main attackers (still computed for display, but not user-controlled)
@@ -433,12 +488,14 @@ export function analyzeGameLog(
   )
 
   // Winner prize path
-  const winnerPrizePath = computeWinnerPrizePath(log, userWon)
+const winnerName = userWon ? username : opponent
+const winnerPrizePath = computeWinnerPrizePath(log, winnerName)
 
   // Base summary
   const baseSummary = {
     id: Date.now().toString(),
     date: new Date().toLocaleDateString(),
+    username,
     opponent,
     userMainAttacker,
     opponentMainAttacker,
@@ -484,38 +541,38 @@ export function analyzeGameLog(
   }
 }
 
-export function getGameDataForConfirmation(log: string): {
+export function getGameDataForConfirmation(
+  log: string,
+  preferredUsername?: string,
+): {
   username: string
   opponent: string
   suggestedUserArchetype?: string | null
   suggestedOpponentArchetype?: string | null
 } {
   const lines = log.split("\n")
-  let username = ""
-  let opponent = ""
 
-  // Get player names (as before)
-  for (const line of lines) {
-    if (line.includes("chose tails") || line.includes("chose heads")) {
-      username = line.split(" ")[0]
-    } else if (line.includes("won the coin toss")) {
-      const winner = line.split(" ")[0]
-      opponent = winner !== username ? winner : ""
-      break
-    }
-  }
+  // Use the same resolver as analyzeGameLog so the dialog matches the actual saved game.
+  const resolved = resolvePlayers(lines, preferredUsername)
 
-  // Quick analysis to get auto-inferred archetypes as suggestions
-  const quickAnalysis = analyzeGameLog(log, false)
-
+  // IMPORTANT: run analysis anchored to preferredUsername so "user" side is correct.
+  const quickAnalysis = analyzeGameLog(
+    log,
+    false,
+    undefined,
+    undefined,
+    null,
+    null,
+    preferredUsername,
+  )
+  console.log("[CONFIRM]", { preferredUsername, resolved })
   return {
-    username,
-    opponent,
+    username: resolved.username,
+    opponent: resolved.opponent,
     suggestedUserArchetype: quickAnalysis.userArchetype ?? null,
     suggestedOpponentArchetype: quickAnalysis.opponentArchetype ?? null,
   }
 }
-
 
 // Function to highlight ACE SPEC cards in text
 export function highlightAceSpecCards(text: string): string {
@@ -531,6 +588,13 @@ export function highlightAceSpecCards(text: string): string {
 }
 
 // --- Prize-path extraction helpers ---
+function extractWinnerFromResultLine(line: string): string {
+  if (!line) return ""
+  // Handles: "Opponent conceded. capisz wins." and also "capisz wins."
+  const matches = Array.from(line.matchAll(/(?:^|[.!?]\s*)([^.!?]+?)\s+wins\./gi))
+  return (matches.at(-1)?.[1] ?? "").trim()
+}
+
 
 function cleanPokemonName(name: string): string {
   // Similar to the cleanName logic in GameDetail but focused on KO lines
@@ -548,92 +612,78 @@ function cleanPokemonName(name: string): string {
  *   "<PlayerName> took 2 Prize cards."
  * and pair them. Only prize events for the eventual winner are recorded.
  */
-function computeWinnerPrizePath(rawLog: string, userWon: boolean): string[] {
+function computeWinnerPrizePath(rawLog: string, winnerName: string): string[] {
   const lines = rawLog.split(/\r?\n/)
-
-  let username = ""
-  let opponent = ""
-
-  // Infer player names from the coin flip section
-  for (const line of lines) {
-    if (line.includes("chose tails") || line.includes("chose heads")) {
-      // First word is usually the username
-      username = line.split(" ")[0].trim()
-    } else if (line.includes("won the coin toss")) {
-      const winnerName = line.split(" ")[0].trim()
-      if (winnerName !== username) {
-        opponent = winnerName
-      }
-    }
-    if (username && opponent) break
-  }
-
-  // Fallback if something looks off
-   const winnerName = userWon ? username || "You" : opponent || "Opponent"
+  const winnerNorm = normalizeName(winnerName)
+  if (!winnerNorm) return []
 
   const events: string[] = []
-  let lastKO: string | null = null
+  const pendingKOs: { ownerNorm: string; victim: string }[] = []
 
   for (const raw of lines) {
     const line = raw.trim()
+    if (!line) continue
 
-    // 1. Detect Knock Outs – allow "!" or "."
-    const koMatch = line.match(/(.+?) was Knocked Out[!.]/i)
-    if (koMatch) {
-      lastKO = koMatch[1].trim()
+    // KO lines:
+    // "capisz's Dusknoir was Knocked Out!"
+    // "brunolugon’s Munkidori was Knocked Out!"
+    // fallback: "Munkidori was Knocked Out!"
+    const ownedKO = line.match(/^(.+?)['’]s\s+(.+?)\s+was Knocked Out[!.]/i)
+    if (ownedKO) {
+      const owner = (ownedKO[1] ?? "").trim()
+      const victim = stripOwnerPrefix((ownedKO[2] ?? "").trim())
+      if (victim) pendingKOs.push({ ownerNorm: normalizeName(owner), victim })
       continue
     }
 
-    // 2. Detect prize taking and tie it to the last KO
-    const prizeMatch = line.match(/^(.*?) took (a|\d+) Prize cards?/i)
-    if (prizeMatch && lastKO) {
-      const takingPlayer = prizeMatch[1].trim()
-      if (takingPlayer === winnerName) {
-        events.push(cleanPokemonName(lastKO))
+    const bareKO = line.match(/^(.+?)\s+was Knocked Out[!.]/i)
+    if (bareKO) {
+      const victim = stripOwnerPrefix((bareKO[1] ?? "").trim())
+      if (victim) pendingKOs.push({ ownerNorm: "", victim })
+      continue
+    }
+
+    // Prize lines:
+    // "capisz took a Prize card." / "capisz took 2 Prize cards."
+    const pm = line.match(/^(.+?)\s+took\s+(?:a|an|\d+)\s+Prize card(?:s)?/i)
+    if (!pm) continue
+
+    const takerNorm = normalizeName((pm[1] ?? "").trim())
+    if (!takerNorm) continue
+
+    // Match the most recent KO that belongs to the OTHER side (owner != taker)
+    let idx = -1
+    for (let i = pendingKOs.length - 1; i >= 0; i--) {
+      const ko = pendingKOs[i]
+      if (!ko.ownerNorm || ko.ownerNorm !== takerNorm) {
+        idx = i
+        break
       }
-      lastKO = null
-      continue
     }
+    if (idx < 0) continue
+
+    const [ko] = pendingKOs.splice(idx, 1)
+
+    // Only record prize events taken by the winner
+    if (takerNorm === winnerNorm) events.push(cleanPokemonName(ko.victim))
   }
 
   return events
 }
 
-export function parseGameTurns(log: string): GameTurn[] {
+export function parseGameTurns(log: string, preferredUsername?: string): GameTurn[] {
   const lines = log.split("\n")
   const turns: GameTurn[] = []
   let currentTurn: GameTurn | null = null
-  let username = ""
-  let opponent = ""
+  const resolved = resolvePlayers(lines, preferredUsername)
+  let username = resolved.username
+  let opponent = resolved.opponent
   const setupActions: { userActions: string[]; opponentActions: string[] } = {
     userActions: [],
     opponentActions: [],
   }
   let isInSetup = true
   let gameEndMessage = ""
-
-  // First, determine the player names (initial guess)
-  for (const line of lines) {
-    if (line.includes("chose") && line.includes("for the opening coin flip")) {
-      // First name we see in the coin flip line
-      username = line.split(" ")[0]
-    } else if (line.includes("won the coin toss")) {
-      const winner = line.split(" ")[0]
-      // Take the *other* name as the opponent if we already guessed username
-      opponent = winner !== username ? winner : ""
-      break
-    }
-  }
-
-  // If we haven't found the opponent yet, look for them in the "drew 7 cards" line
-  if (!opponent) {
-    for (const line of lines) {
-      if (line.includes("drew 7 cards") && !line.startsWith(username)) {
-        opponent = line.split(" ")[0]
-        break
-      }
-    }
-  }
 
   // Extra correction: if the log explicitly says "Opponent took all of their Prize cards.
   // XYZ wins.", then XYZ is the opponent from the log's point of view.

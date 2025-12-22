@@ -20,6 +20,7 @@ interface GameListProps {
   sortConfig: SortConfig
   onSort: (key: keyof GameSummary) => void
   showTags?: boolean
+  isDarkMode?: boolean // analyzer passes this
 }
 
 export function GameList({
@@ -35,14 +36,11 @@ export function GameList({
 
   useEffect(() => {
     return () => {
-      if (deleteTimerRef.current) {
-        clearTimeout(deleteTimerRef.current)
-      }
+      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current)
     }
   }, [])
 
   const startDeleteTimer = (id: string) => {
-    // second click within 3s → confirm delete
     if (pendingDeleteId === id) {
       if (deleteTimerRef.current) {
         clearTimeout(deleteTimerRef.current)
@@ -54,12 +52,8 @@ export function GameList({
     }
 
     setPendingDeleteId(id)
-    if (deleteTimerRef.current) {
-      clearTimeout(deleteTimerRef.current)
-    }
-    deleteTimerRef.current = setTimeout(() => {
-      setPendingDeleteId(null)
-    }, 3000)
+    if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current)
+    deleteTimerRef.current = setTimeout(() => setPendingDeleteId(null), 3000)
   }
 
   const renderSortableHeader = (label: string, key: keyof GameSummary) => {
@@ -82,21 +76,18 @@ export function GameList({
     )
   }
 
-  // Container: closer to page background, not pitch-black
   const containerClasses = cn(
     "overflow-hidden rounded-3xl border",
     "border-slate-200 bg-slate-50",
     "dark:border-slate-600/40 dark:bg-slate-700/40",
   )
 
-  // Header band: slightly darker than rows in both modes
   const headerClasses = cn(
     "grid grid-cols-[1.1fr,1.3fr,2.4fr,1.3fr,0.9fr,1.2fr,1.5fr] items-center px-4 py-2.5",
     "bg-slate-200/60 text-slate-800 border-b border-slate-200",
     "dark:bg-slate-600/90 dark:text-slate-50 dark:border-slate-800",
   )
 
-  // Rows a bit lighter than header in dark mode
   const rowClasses = cn(
     "grid grid-cols-[1.1fr,1.3fr,2.4fr,1.3fr,0.9fr,1.2fr,1.5fr] items-center px-4 py-2.5 text-[13px] border-t",
     "border-slate-200 bg-white hover:bg-slate-50 text-slate-900",
@@ -141,52 +132,32 @@ export function GameList({
     cn(
       "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
       variant === "you"
-        ? [
-            "bg-emerald-100 text-emerald-700",
-            "dark:bg-emerald-500/20 dark:text-emerald-200",
-          ]
-        : [
-            "bg-rose-100 text-rose-700",
-            "dark:bg-rose-500/20 dark:text-rose-200",
-          ],
+        ? ["bg-emerald-100 text-emerald-700", "dark:bg-emerald-500/20 dark:text-emerald-200"]
+        : ["bg-rose-100 text-rose-700", "dark:bg-rose-500/20 dark:text-rose-200"],
     )
 
   return (
     <div className={containerClasses}>
-      {/* Header */}
       <div className={headerClasses}>
         <div>{renderSortableHeader("Date", "date")}</div>
         <div>{renderSortableHeader("Opponent", "opponent")}</div>
-        <div className="text-[11px] font-semibold tracking-[0.08em] uppercase">
-          Matchup 
-        </div>
+        <div className="text-[11px] font-semibold tracking-[0.08em] uppercase">Matchup</div>
         <div>{renderSortableHeader("Result", "userWon")}</div>
-        <div className="text-right">
-          {renderSortableHeader("Turns", "turns")}
-        </div>
-        <div className="text-right text-[11px] font-semibold tracking-[0.08em] uppercase">
-          Prize trade
-        </div>
-        <div className="text-right text-[11px] font-semibold tracking-[0.08em] uppercase">
-          Actions
-        </div>
+        <div className="text-right">{renderSortableHeader("Turns", "turns")}</div>
+        <div className="text-right text-[11px] font-semibold tracking-[0.08em] uppercase">Prize trade</div>
+        <div className="text-right text-[11px] font-semibold tracking-[0.08em] uppercase">Actions</div>
       </div>
 
-      {/* Rows */}
       {games.map((game) => {
-        const userLabel = formatArchetypeLabel(game.userArchetype)
-        const oppLabel = formatArchetypeLabel(game.opponentArchetype)
+        const userLabel = formatArchetypeLabel((game as any).userArchetype)
+        const oppLabel = formatArchetypeLabel((game as any).opponentArchetype)
         const isPendingDelete = pendingDeleteId === game.id
 
         return (
           <div key={game.id} className={rowClasses}>
-            {/* Date */}
             <div className="tabular-nums">{game.date}</div>
-
-            {/* Opponent */}
             <div className="font-medium">{game.opponent}</div>
 
-            {/* Matchup – archetypes */}
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-1.5">
                 <span className={labelPillClasses("you")}>You</span>
@@ -198,7 +169,6 @@ export function GameList({
               </div>
             </div>
 
-            {/* Result */}
             <div className="flex justify-start md:justify-center">
               <span className={resultPillClasses(game.userWon)}>
                 {game.userWon ? "Win" : "Loss"}
@@ -208,19 +178,14 @@ export function GameList({
               </span>
             </div>
 
-            {/* Turns */}
             <div className="text-right tabular-nums">
-              {game.turns}{" "}
-              <span className="text-[11px] opacity-70">turns</span>
+              {game.turns} <span className="text-[11px] opacity-70">turns</span>
             </div>
 
-            {/* Prize trade */}
             <div className="text-right">
-              {game.userPrizeCardsTaken} – {game.opponentPrizeCardsTaken}{" "}
-              <span className="text-[11px] opacity-70"></span>
+              {game.userPrizeCardsTaken} – {game.opponentPrizeCardsTaken}
             </div>
 
-            {/* Tags + Actions */}
             <div className="flex items-center justify-end gap-2">
               {showTags && (
                 <div className="flex flex-wrap gap-1 justify-end mr-1">
@@ -242,12 +207,7 @@ export function GameList({
                 </div>
               )}
 
-              <Button
-                type="button"
-                onClick={() => onSelectGame(game)}
-                className={viewButtonClasses}
-                variant="outline"
-              >
+              <Button type="button" onClick={() => onSelectGame(game)} className={viewButtonClasses} variant="outline">
                 View
               </Button>
 

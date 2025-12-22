@@ -81,10 +81,6 @@ function stripOwnerPrefix(name: string): string {
   return name.replace(/^[^'’]+['’]s\s+/i, "").trim()
 }
 
-/**
- * Parse raw log and return KO victim order for the player who is taking prizes.
- * We only count a KO if the winner takes at least one Prize card immediately after that KO.
- */
 function deriveWinnerKOSequenceFromRawLog(rawLog: string, winnerName: string): string[] {
   if (!rawLog || !winnerName) return []
 
@@ -92,48 +88,59 @@ function deriveWinnerKOSequenceFromRawLog(rawLog: string, winnerName: string): s
   if (!winnerNorm) return []
 
   const lines = rawLog.split(/\r?\n/)
-  const seq: string[] = []
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
+  // pending KOs in the order they occurred
+  const pendingKOs: { ownerNorm: string; victim: string }[] = []
+  const out: string[] = []
 
-    // "CShepS's Budew was Knocked Out!"
-    // "capisz’s Frillish was Knocked Out!"
-    let m = line.match(/^(.+?)['’]s\s+(.+?)\s+was Knocked Out!/i)
-    if (!m) {
-      // fallback: "Budew was Knocked Out!"
-      const m2 = line.match(/^(.+?)\s+was Knocked Out!/i)
-      if (!m2) continue
-      m = ["", "", m2[1]]
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (!line) continue
+
+    // Owned KO: "capisz's Dusknoir was Knocked Out!"
+    const ownedKO = line.match(/^(.+?)['’]s\s+(.+?)\s+was Knocked Out[!.]/i)
+    if (ownedKO) {
+      const ownerNorm = normalizeLoose((ownedKO[1] ?? "").trim())
+      const victim = stripOwnerPrefix((ownedKO[2] ?? "").trim())
+      if (victim) pendingKOs.push({ ownerNorm, victim })
+      continue
     }
 
-    const victimRaw = (m[2] ?? "").trim()
-    if (!victimRaw) continue
+    // Bare KO: "Dusknoir was Knocked Out!"
+    const bareKO = line.match(/^(.+?)\s+was Knocked Out[!.]/i)
+    if (bareKO) {
+      const victim = stripOwnerPrefix((bareKO[1] ?? "").trim())
+      if (victim) pendingKOs.push({ ownerNorm: "", victim })
+      continue
+    }
 
-    // Look ahead briefly for "X took a Prize card."
-    let prizeTakenByWinner = false
-    for (let j = i + 1; j < Math.min(lines.length, i + 12); j++) {
-      const l2 = lines[j].trim()
-      if (/^Turn\s+#/i.test(l2)) break
+    // Prize line: "capisz took a Prize card." / "capisz took 2 Prize cards."
+    const pm = line.match(/^(.+?)\s+took\s+(?:a|an|\d+)\s+Prize card(?:s)?\./i)
+    if (!pm) continue
 
-      const pm = l2.match(/^(.+?)\s+took a Prize card\./i)
-      if (!pm) continue
+    const takerNorm = normalizeLoose((pm[1] ?? "").trim())
+    if (!takerNorm) continue
 
-      const taker = normalizeLoose(pm[1] ?? "")
-      if (taker && taker === winnerNorm) {
-        prizeTakenByWinner = true
+    // Pair this prize with the most recent KO from the OTHER side.
+    let idx = -1
+    for (let i = pendingKOs.length - 1; i >= 0; i--) {
+      const ko = pendingKOs[i]
+      if (!ko.ownerNorm || ko.ownerNorm !== takerNorm) {
+        idx = i
+        break
       }
     }
+    if (idx < 0) continue
 
-    if (!prizeTakenByWinner) continue
+    const [{ victim }] = pendingKOs.splice(idx, 1)
 
-    const cleanVictim = stripOwnerPrefix(victimRaw)
-    if (!cleanVictim) continue
-
-    seq.push(cleanVictim)
+    // Only record prize events taken by the winner
+    if (takerNorm === winnerNorm && victim) {
+      out.push(victim)
+    }
   }
 
-  return seq
+  return out
 }
 
 /**

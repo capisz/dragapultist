@@ -125,7 +125,7 @@ const copyOptionSelected = cn(
 
   return (
   <div className="space-y-4">
-    {/* Prize Mapper-style header */}
+    {/* Header OUTSIDE the box (like your last pasted version) */}
     <header className="space-y-1">
       <h2 className="text-xl font-semibold tracking-tight text-slate-700/80 dark:text-sky-100">
         Top Deck Calculator
@@ -143,7 +143,8 @@ const copyOptionSelected = cn(
         "bg-white/30 border border-slate-200/50 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur-sm",
         "dark:bg-[#162638]/55 dark:border-slate-700/35 dark:shadow-[0_18px_45px_rgba(0,0,0,0.25)]",
       )}
-    >
+    
+    > {/* Prize Mapper-style header */}
       <div className="flex flex-col md:flex-row gap-4 md:items-start">
         {/* Left: cards remaining */}
         <div className="md:w-52 shrink-0 space-y-1">
@@ -304,7 +305,7 @@ const copyOptionSelected = cn(
       </div>
 
       {/* Results (leave your existing results block exactly as-is below) */}
-      <div className={cn("mt-4 rounded-3xl overflow-hidden", "bg-black/5 dark:bg-white/8")}>
+<div className={cn("mt-4 rounded-3xl overflow-hidden", "bg-slate-100/70 dark:bg-white/[0.06]")}>
         <div className="px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-50">
           Odds in the next N draws
         </div>
@@ -320,16 +321,19 @@ const copyOptionSelected = cn(
 
         <div className="px-2 pb-2">
           <div className="rounded-2xl overflow-hidden">
-            {results.map((r) => (
-              <div
-                key={r.n}
-                className={cn(
-                  "grid items-center gap-3 px-4 py-3 text-sm",
-                  cols,
-                  "text-slate-800 dark:text-slate-100",
-                  "hover:bg-black/5 dark:hover:bg-white/10 transition-colors",
-                )}
-              >
+            {results.map((r, idx) => (
+  <div
+    key={r.n}
+    className={cn(
+      "grid items-center gap-3 px-4 py-3 text-sm",
+      cols,
+      "text-slate-800 dark:text-slate-100",
+      "border-t border-black/5 dark:border-white/10",
+      idx % 2 === 0 ? "bg-transparent dark:bg-white/[0.03]" : "bg-black/5 dark:bg-white/[0.07]",
+      "hover:bg-black/10 dark:hover:bg-white/[0.12] transition-colors",
+    )}
+  >
+
                 <div className="font-medium tabular-nums">Draw {r.n}</div>
                 <div className="text-right tabular-nums font-semibold">{fmt(r.pA)}</div>
 
