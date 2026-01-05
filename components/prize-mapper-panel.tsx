@@ -290,23 +290,33 @@ export function PrizeMapperPanel({ ptcglUsername }: { ptcglUsername?: string | n
   const [selectedDeckId, setSelectedDeckId] = useState<string>("")
 
   useEffect(() => {
-    const fetchGames = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const res = await fetch("/api/games", { cache: "no-store" })
-        if (!res.ok) throw new Error(`Failed to load games (${res.status})`)
-        const data = await res.json()
-        setGames((data.games ?? []) as GameWithUsername[])
-      } catch (err: any) {
-        console.error("Failed to load games for prize mapper", err)
-        setError(err?.message || "Failed to load games")
-      } finally {
-        setLoading(false)
+  const fetchGames = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const res = await fetch("/api/games", { cache: "no-store" })
+
+      // Guest / not logged in
+      if (res.status === 401) {
+        setGames([])
+        return
       }
+
+      if (!res.ok) throw new Error(`Failed to load games (${res.status})`)
+
+      const data = await res.json()
+      setGames((data.games ?? []) as GameWithUsername[])
+    } catch (err: any) {
+      console.error("Failed to load games for prize mapper", err)
+      setError(err?.message || "Failed to load games")
+    } finally {
+      setLoading(false)
     }
-    fetchGames()
-  }, [])
+  }
+
+  fetchGames()
+}, [])
 
   const normalizedPtcgl = useMemo(() => normalizeLoose(ptcglUsername ?? ""), [ptcglUsername])
 

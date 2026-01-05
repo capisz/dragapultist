@@ -1,101 +1,111 @@
 "use server"
 
 import { cookies } from "next/headers"
-import type { AuthResponse, User } from "@/types/auth"
+import bcrypt from "bcryptjs"
+import { ObjectId } from "mongodb"
+import clientPromise from "@/lib/mongodb"
+import type { User } from "@/types/auth"
 
-// In a real app, you'd want to use a database
-const users: User[] = [
-  {
-    id: "admin",
-    email: "admin@example.com",
-    username: "Admin",
-    verified: true,
-  },
-]
+type AuthResponse = {
+  success: boolean
+  message: string
+  user?: User
+}
+
+function toUser(doc: any): User {
+  return {
+    id: String(doc._id),
+    email: doc.email ?? null,
+    username: doc.username ?? null,
+    verified: !!doc.verified,
+  }
+}
+
+function cookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict" as const,
+    path: "/",
+  }
+}
 
 export async function signUp(formData: FormData): Promise<AuthResponse> {
   try {
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
-    const username = formData.get("username") as string
+    const username = String(formData.get("username") || "").trim()
+    const email = String(formData.get("email") || "").trim().toLowerCase()
+    const password = String(formData.get("password") || "")
 
-    if (!email || !password || !username) {
-      throw new Error("Invalid form data")
+    if (!username || !email || !password) {
+      return { success: false, message: "Missing username, email, or password." }
     }
 
-    // Check if user already exists
-    if (users.some((user) => user.email === email || user.username === username)) {
-      throw new Error("User already exists")
+    const client = await clientPromise
+    const db = client.db(process.env.MONGODB_DB || "dragapultist")
+    const users = db.collection("users")
+
+    const existing = await users.findOne({ $or: [{ email }, { username }] })
+    if (existing) {
+      return { success: false, message: "Email or username already in use." }
     }
 
-    // Create new user
-    const newUser: User = {
-      id: Math.random().toString(36).slice(2),
-      email,
+    const passwordHash = await bcrypt.hash(password, 10)
+    const now = new Date()
+
+    const insertRes = await users.insertOne({
       username,
-      verified: true, // Set to true by default for testing
-    }
-
-    users.push(newUser)
-
-    // Automatically log in the new user
-    cookies().set("userId", newUser.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60 * 24 * 7, // 1 week
+      email,
+      passwordHash,
+      verified: true,
+      createdAt: now,
+      updatedAt: now,
     })
 
-    return {
-      success: true,
-      message: "Account created and logged in successfully",
-      user: newUser,
+    const user: User = {
+      id: String(insertRes.insertedId),
+      email,
+      username,
+      verified: true,
     }
-  } catch (error) {
-    console.error("Sign up error:", error)
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "An unexpected error occurred during sign up",
-    }
+
+    const jar = await cookies()
+    jar.set("userId", user.id, { ...cookieOptions(), maxAge: 60 * 60 * 24 * 7 })
+
+    return { success: true, message: "Account created.", user }
+  } catch (err) {
+    console.error("signUp error:", err)
+    return { success: false, message: "Sign up failed." }
   }
 }
 
 export async function login(formData: FormData): Promise<AuthResponse> {
   try {
-    const username = formData.get("username") as string
-    const password = formData.get("password") as string
+    const email = String(formData.get("email") || "").trim().toLowerCase()
+    const password = String(formData.get("password") || "")
 
-    if (!username || !password) {
-      throw new Error("Invalid login credentials")
+    if (!email || !password) {
+      return { success: false, message: "Missing email or password." }
     }
 
-    // Find the user
-    const user = users.find((u) => u.username === username)
+    const client = await clientPromise
+    const db = client.db(process.env.MONGODB_DB || "dragapultist")
+    const users = db.collection("users")
 
-    if (!user) {
-      throw new Error("Invalid credentials")
-    }
+    const doc = await users.findOne({ email })
+    if (!doc?.passwordHash) return { success: false, message: "Invalid email or password." }
 
-    // In a real app, you'd check the password here
+    const ok = await bcrypt.compare(password, doc.passwordHash)
+    if (!ok) return { success: false, message: "Invalid email or password." }
 
-    cookies().set("userId", user.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-    })
+    const user = toUser(doc)
 
-    return {
-      success: true,
-      message: "Logged in successfully",
-      user,
-    }
-  } catch (error) {
-    console.error("Login error:", error)
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "An unexpected error occurred during login",
-    }
+    const jar = await cookies()
+    jar.set("userId", user.id, { ...cookieOptions(), maxAge: 60 * 60 * 24 * 7 })
+
+    return { success: true, message: "Logged in.", user }
+  } catch (err) {
+    console.error("login error:", err)
+    return { success: false, message: "Login failed." }
   }
 }
 
@@ -107,22 +117,22 @@ export async function loginAsGuest(): Promise<User> {
     verified: false,
   }
 
-  cookies().set("userId", guestUser.id, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 60 * 60 * 24, // 1 day
-  })
+  const jar = await cookies()
+  jar.set("userId", guestUser.id, { ...cookieOptions(), maxAge: 60 * 60 * 24 })
 
   return guestUser
 }
 
 export async function logout(): Promise<void> {
-  cookies().delete("userId")
+  const jar = await cookies()
+  jar.delete("userId")
 }
 
 export async function getUser(): Promise<User | null> {
-  const userId = cookies().get("userId")?.value
+  const jar = await cookies()
+  const userId = jar.get("userId")?.value
+  if (!userId) return null
+
   if (userId === "guest") {
     return {
       id: "guest",
@@ -131,5 +141,16 @@ export async function getUser(): Promise<User | null> {
       verified: false,
     }
   }
-  return users.find((user) => user.id === userId) || null
+
+  try {
+    const client = await clientPromise
+    const db = client.db(process.env.MONGODB_DB || "dragapultist")
+    const users = db.collection("users")
+
+    const doc = await users.findOne({ _id: new ObjectId(userId) })
+    return doc ? toUser(doc) : null
+  } catch {
+    // invalid ObjectId, etc.
+    return null
+  }
 }

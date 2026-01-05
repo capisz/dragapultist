@@ -111,9 +111,12 @@ export function PokemonTCGAnalyzer() {
     if (user.username === "Guest") {
       const storedGames = localStorage.getItem("guestGames")
       if (storedGames) setGames(JSON.parse(storedGames))
-    } else {
-      // TODO: fetch games for this logged-in user from the server
-    }
+   } else {
+  fetch("/api/games")
+    .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+    .then((data) => setGames(Array.isArray(data.games) ? data.games : []))
+    .catch(() => setGames([]))
+}
   }, [user])
 
   useEffect(() => {
@@ -159,12 +162,14 @@ export function PokemonTCGAnalyzer() {
         return newGames
       })
 
-      // Persist to backend (Mongo) – fire-and-forget
-      fetch("/api/games", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameSummary }),
-      }).catch(() => {})
+    // Persist to backend (Mongo) – only for logged-in users
+if (user?.username !== "Guest") {
+  fetch("/api/games", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ gameSummary }),
+  }).catch(() => {})
+}
 
       setManualInput("")
     },

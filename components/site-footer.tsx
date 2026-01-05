@@ -6,7 +6,7 @@ export function SiteFooter() {
   return (
     <footer
       className={cn(
-        "w-full border-t border-sky-200 bg-[rgba(245,251,255,0.8)] shadow-inner backdrop-blur-sm",
+        "w-full border-t border-sky-200 bg-[rgba(255,255,255,0.9)] shadow-inner backdrop-blur-sm",
     "dark:border-slate-800 dark:bg-slate-800/80"
       )}
     >

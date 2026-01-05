@@ -1,174 +1,97 @@
 "use client"
 
-import type React from "react"
+import * as React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 import { login } from "@/app/actions"
-import { FaGoogle, FaFacebook, FaYahoo } from "react-icons/fa"
 
 interface LoginFormProps {
-  onSuccess: () => void
-  onGuestLogin: () => void
+  onSuccess?: () => void
 }
 
-export function LoginForm({ onSuccess, onGuestLogin }: LoginFormProps) {
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [isLoginButtonPressed, setIsLoginButtonPressed] = useState(false)
-  const [isGuestButtonPressed, setIsGuestButtonPressed] = useState(false)
-  const [isSocialButtonPressed, setSocialButtonPressed] = useState<string | null>(null)
+// Light mode: darker blue
+// Dark mode: lighter blue
+const BRAND_BTN =
+  "bg-[#5e82ab] text-slate-50 hover:bg-[#4f739d] active:bg-[#44678f] " +
+  "dark:bg-[#b1cce8] dark:text-[#0b1220] dark:hover:bg-[#a1c2e4] dark:active:bg-[#93b7df] " +
+  "border-none shadow-md hover:shadow-lg transition-all"
+
+export function LoginForm({ onSuccess }: LoginFormProps) {
   const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string>("")
 
-  const handleGoogleLogin = () => (window.location.href = "https://accounts.google.com/o/oauth2/v2/auth")
-  const handleFacebookLogin = () => (window.location.href = "https://www.facebook.com/v12.0/dialog/oauth")
-  const handleYahooLogin = () => (window.location.href = "https://api.login.yahoo.com/oauth2/request_auth")
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
     setError("")
-    setIsLoginButtonPressed(true)
     setLoading(true)
 
     try {
-      const form = event.currentTarget
-      const formData = new FormData(form)
+      const formData = new FormData(e.currentTarget)
+      const res = await login(formData)
 
-      console.log("Submitting login form data:", {
-        username: formData.get("username"),
-        password: formData.get("password"),
-      })
-
-      const response = await login(formData)
-
-      if (response.success) {
-        console.log("Login successful:", response.message)
-        router.refresh()
-        onSuccess()
-      } else {
-        console.error("Login failed:", response.message)
-        setError(response.message)
-        setIsLoginButtonPressed(false)
+      if (!res?.success) {
+        setError(res?.message || "Invalid email or password.")
+        return
       }
+
+      router.refresh()
+      onSuccess?.()
     } catch (err) {
-      console.error("Login error:", err)
-      setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.")
-      setIsLoginButtonPressed(false)
+      setError(err instanceof Error ? err.message : "Failed to sign in.")
     } finally {
       setLoading(false)
     }
   }
 
-  const handleGuestLoginWithAnimation = () => {
-    setIsGuestButtonPressed(true)
-    setTimeout(() => {
-      setIsGuestButtonPressed(false)
-      onGuestLogin()
-    }, 150)
-  }
-
-  const handleSocialLoginWithAnimation = (provider: string) => {
-    setSocialButtonPressed(provider)
-    setTimeout(() => {
-      setSocialButtonPressed(null)
-      if (provider === "google") handleGoogleLogin()
-      else if (provider === "facebook") handleFacebookLogin()
-      else if (provider === "yahoo") handleYahooLogin()
-    }, 150)
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4">
-      <Button
-        onClick={handleGuestLoginWithAnimation}
-        type="button"
-        className={`w-full bg-blue-400 text-white hover:bg-blue-500 dark:bg-blue-300 dark:hover:bg-blue-400 dark:text-gray-800 shadow-md hover:shadow-lg transition-all mb-4 ${
-          isGuestButtonPressed ? "scale-95" : "scale-100"
-        }`}
-      >
-        Login as Guest
-      </Button>
+    <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="username" className="text-gray-700 dark:text-gray-300">
-          Username
+        <Label htmlFor="email" className="text-slate-700 dark:text-slate-200">
+          Email
         </Label>
         <Input
-          id="username"
-          name="username"
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
           required
-          className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-md"
+          className={cn(
+            "rounded-2xl",
+            "bg-slate-50/80 border-slate-200",
+            "dark:bg-slate-900/40 dark:border-slate-700",
+          )}
         />
       </div>
+
       <div className="space-y-2">
-        <Label htmlFor="password" className="text-gray-700 dark:text-gray-300">
+        <Label htmlFor="password" className="text-slate-700 dark:text-slate-200">
           Password
         </Label>
         <Input
           id="password"
           name="password"
           type="password"
+          autoComplete="current-password"
           required
-          className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-md"
+          className={cn(
+            "rounded-2xl",
+            "bg-slate-50/80 border-slate-200",
+            "dark:bg-slate-900/40 dark:border-slate-700",
+          )}
         />
       </div>
-      {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
-      <Button
-        type="submit"
-        className={`w-full bg-blue-400 text-white hover:bg-blue-500 dark:bg-blue-300 dark:hover:bg-blue-400 dark:text-gray-800 shadow-md hover:shadow-lg transition-all ${
-          isLoginButtonPressed ? "scale-95" : "scale-100"
-        }`}
-        disabled={loading}
-      >
-        {loading ? "Logging in..." : "Login"}
+
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+      <Button type="submit" disabled={loading} className={cn("w-full rounded-full h-11", BRAND_BTN)}>
+        {loading ? "Signing in..." : "Sign in"}
       </Button>
-      <div className="pt-4">
-        <div className="flex justify-between items-center">
-          <img
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1-6WFmcA74FjlYCwGZhPiiCBWbpIMvym.png"
-            alt="Ghost Pokemon with pumpkin head"
-            className="w-16 h-16 object-contain"
-          />
-          <div className="flex space-x-4">
-            <Button
-              type="button"
-              variant="outline"
-              className={`rounded-full p-2 bg-[#4285F4] hover:bg-[#4285F4]/90 shadow-md hover:shadow-lg transition-all transform hover:scale-105 ${
-                isSocialButtonPressed === "google" ? "scale-95" : "scale-100"
-              }`}
-              onClick={() => handleSocialLoginWithAnimation("google")}
-            >
-              <FaGoogle className="w-6 h-6 text-white" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className={`rounded-full p-2 bg-[#3b5998] hover:bg-[#3b5998]/90 shadow-md hover:shadow-lg transition-all transform hover:scale-105 ${
-                isSocialButtonPressed === "facebook" ? "scale-95" : "scale-100"
-              }`}
-              onClick={() => handleSocialLoginWithAnimation("facebook")}
-            >
-              <FaFacebook className="w-6 h-6 text-white" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className={`rounded-full p-2 bg-[#720e9e] hover:bg-[#720e9e]/90 shadow-md hover:shadow-lg transition-all transform hover:scale-105 ${
-                isSocialButtonPressed === "yahoo" ? "scale-95" : "scale-100"
-              }`}
-              onClick={() => handleSocialLoginWithAnimation("yahoo")}
-            >
-              <FaYahoo className="w-6 h-6 text-white" />
-            </Button>
-          </div>
-          <img
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-vNJrOH25glsL946THYWTPavaayogru.png"
-            alt="Hooded ghost Pokemon"
-            className="w-16 h-16 object-contain"
-          />
-        </div>
-      </div>
     </form>
   )
 }

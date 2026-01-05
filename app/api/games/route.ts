@@ -1,48 +1,27 @@
-// app/api/games/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
+import { auth } from "@/auth"
 
 type AnyGame = {
   id: string
-  rawLog?: string
-  username?: string
-  opponent?: string
-  userArchetype?: string | null
-  opponentArchetype?: string | null
-  winnerPrizePath?: string[]
+  userId?: string | null
   [key: string]: any
 }
 
-// Helper: pull the PTCGL handle from the log
-function extractUsernameFromLog(rawLog?: string): string | null {
-  if (!rawLog) return null
-
-  const lines = rawLog.split(/\r?\n/)
-
-  // 1) First, look for the "chose tails/heads" line
-  for (const line of lines) {
-    const coinFlipMatch = line.match(
-      /^(.+?)\s+chose\s+(?:tails|heads)\s+for\s+the\s+opening\s+coin\s+flip/i,
-    )
-    if (coinFlipMatch?.[1]) {
-      return coinFlipMatch[1].trim()
-    }
-  }
-
-  // 2) Fallback: "won the coin toss"
-  for (const line of lines) {
-    const tossMatch = line.match(/^(.+?)\s+won\s+the\s+coin\s+toss/i)
-    if (tossMatch?.[1]) {
-      return tossMatch[1].trim()
-    }
-  }
-
-  return null
+function getSessionUserId(session: any): string | null {
+  return session?.user?.id ? String(session.user.id) : null
 }
-
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth()
+    const userId = getSessionUserId(session)
+
+    // Guest: return empty list (avoid UI error states)
+    if (!userId) {
+      return NextResponse.json({ games: [] }, { status: 200 })
+    }
+
     const client = await clientPromise
     const db = client.db(process.env.MONGODB_DB || "dragapultist")
     const collection = db.collection<AnyGame>("games")
@@ -50,23 +29,15 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const usernameParam = searchParams.get("username")
     const limitParam = searchParams.get("limit")
-
     const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 100, 1000) : 500
 
-    const query: any = {}
-
-    // Treat ?username= as "player name", and match either your username OR their opponent field
+    const query: any = { userId }
     if (usernameParam && usernameParam.trim() !== "") {
       const regex = new RegExp(usernameParam, "i")
       query.$or = [{ username: regex }, { opponent: regex }]
     }
 
-    const games = await collection
-      .find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .toArray()
-
+    const games = await collection.find(query).sort({ createdAt: -1 }).limit(limit).toArray()
     return NextResponse.json({ games })
   } catch (err) {
     console.error("GET /api/games error:", err)
@@ -76,41 +47,35 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth()
+    const userId = getSessionUserId(session)
+
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
+    }
+
     const body = (await req.json()) as { gameSummary?: AnyGame }
     const { gameSummary } = body
 
-    if (!gameSummary || !gameSummary.id) {
-      return NextResponse.json(
-        { error: "Missing gameSummary or id in request body" },
-        { status: 400 },
-      )
+    if (!gameSummary?.id) {
+      return NextResponse.json({ error: "Missing gameSummary or id" }, { status: 400 })
     }
 
-const now = new Date()
+    const now = new Date()
 
-// Trust analyzer output (client). Only fallback if missing.
-const username = (gameSummary.username ?? "").trim() || "Guest"
-const opponent = (gameSummary.opponent ?? "").trim() || "Opponent"
-
-// Optional: still store “coinflip actor” for debugging, but DO NOT use it as username.
-const coinflipActor = extractUsernameFromLog(gameSummary.rawLog)
-
-const finalDoc: AnyGame = {
-  ...gameSummary,
-  username,
-  opponent,
-  coinflipActor, // optional debug field
-  createdAt: gameSummary["createdAt"] ? new Date(gameSummary["createdAt"]) : now,
-  updatedAt: now,
-}
+    const finalDoc: AnyGame = {
+      ...gameSummary,
+      userId,
+      createdAt: gameSummary.createdAt ? new Date(gameSummary.createdAt) : now,
+      updatedAt: now,
+    }
 
     const client = await clientPromise
     const db = client.db(process.env.MONGODB_DB || "dragapultist")
     const collection = db.collection<AnyGame>("games")
 
-    // Upsert by game.id so duplicates aren’t inserted twice
     await collection.updateOne(
-      { id: finalDoc.id },
+      { id: finalDoc.id, userId: finalDoc.userId },
       { $set: finalDoc },
       { upsert: true },
     )
