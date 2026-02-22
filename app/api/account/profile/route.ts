@@ -1,26 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { ObjectId } from "mongodb"
-import { cookies } from "next/headers"
-import { auth } from "@/auth"
 import clientPromise from "@/lib/mongodb"
+import { getRequestUserObjectId } from "@/lib/request-user"
 
 const MAX_IMAGE_CHARS = 1_500_000
 const MAX_TOTAL_IMAGE_CHARS = 2_500_000
-
-function getSessionUserId(session: any): string | null {
-  return session?.user?.id ? String(session.user.id) : null
-}
-
-async function getRequestUserObjectId(): Promise<ObjectId | null> {
-  const session = await auth()
-  const sessionUserId = getSessionUserId(session)
-  if (sessionUserId && ObjectId.isValid(sessionUserId)) return new ObjectId(sessionUserId)
-
-  const jar = await cookies()
-  const cookieUserId = jar.get("userId")?.value
-  if (!cookieUserId || cookieUserId === "guest" || !ObjectId.isValid(cookieUserId)) return null
-  return new ObjectId(cookieUserId)
-}
 
 function normalizeImageField(value: unknown): { provided: boolean; value: string | null } {
   if (value === undefined) return { provided: false, value: null }

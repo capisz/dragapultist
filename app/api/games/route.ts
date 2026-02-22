@@ -1,35 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
-import { auth } from "@/auth"
-import { cookies } from "next/headers"
-import { ObjectId } from "mongodb"
+import { getRequestUserId, userIdQueryValue } from "@/lib/request-user"
+import type { ObjectId } from "mongodb"
 
 type AnyGame = {
   id: string
   userId?: string | ObjectId | null
   [key: string]: any
-}
-
-function getSessionUserId(session: any): string | null {
-  return session?.user?.id ? String(session.user.id) : null
-}
-
-async function getRequestUserId(): Promise<string | null> {
-  const session = await auth()
-  const sessionUserId = getSessionUserId(session)
-  if (sessionUserId) return sessionUserId
-
-  const jar = await cookies()
-  const cookieUserId = jar.get("userId")?.value
-  if (!cookieUserId || cookieUserId === "guest") return null
-  return cookieUserId
-}
-
-function userIdQueryValue(userId: string): string | { $in: Array<string | ObjectId> } {
-  if (ObjectId.isValid(userId)) {
-    return { $in: [userId, new ObjectId(userId)] }
-  }
-  return userId
 }
 
 export async function GET(req: NextRequest) {

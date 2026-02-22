@@ -1,43 +1,60 @@
 // app/api/games/[id]/route.ts
 import { NextResponse } from "next/server"
-import { auth } from "@/auth"
 import clientPromise from "@/lib/mongodb"
-import { ObjectId } from "mongodb"
+import { getRequestUserId, userIdQueryValue } from "@/lib/request-user"
 
-function getUserObjectId(session: any) {
-  const id = session?.user?.id
-  return typeof id === "string" && ObjectId.isValid(id) ? new ObjectId(id) : null
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
 }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
-  const session = await auth()
-  const userId = getUserObjectId(session)
+  const userId = await getRequestUserId()
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const client = await clientPromise
-  const db = client.db(process.env.MONGODB_DB)
+  const db = client.db(process.env.MONGODB_DB || "dragapultist")
 
-  await db.collection("games").deleteOne({ userId, gameId: params.id })
+  await db.collection("games").deleteOne({
+    userId: userIdQueryValue(userId),
+    $or: [{ id: params.id }, { gameId: params.id }],
+  })
   return NextResponse.json({ ok: true })
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const session = await auth()
-  const userId = getUserObjectId(session)
+  const userId = await getRequestUserId()
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json().catch(() => null)
-  const gameSummary = body?.gameSummary
+  const gameSummary = isRecord(body) && isRecord(body.gameSummary) ? body.gameSummary : null
   if (!gameSummary?.id || gameSummary.id !== params.id) {
     return NextResponse.json({ error: "gameSummary.id must match route id" }, { status: 400 })
   }
 
   const client = await clientPromise
-  const db = client.db(process.env.MONGODB_DB)
+  const db = client.db(process.env.MONGODB_DB || "dragapultist")
+  const now = new Date()
+  const createdAt =
+    typeof gameSummary.createdAt === "string" || gameSummary.createdAt instanceof Date
+      ? new Date(gameSummary.createdAt)
+      : now
 
   await db.collection("games").updateOne(
-    { userId, gameId: params.id },
-    { $set: { gameSummary, updatedAt: new Date() } },
+    {
+      userId: userIdQueryValue(userId),
+      $or: [{ id: params.id }, { gameId: params.id }],
+    },
+    {
+      $set: {
+        ...gameSummary,
+        id: params.id,
+        userId,
+        createdAt,
+        updatedAt: now,
+      },
+      $unset: { gameSummary: "" },
+    },
+    { upsert: true },
   )
 
   return NextResponse.json({ ok: true })

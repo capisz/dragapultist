@@ -1,24 +1,17 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/auth"
 import clientPromise from "@/lib/mongodb"
-import { ObjectId } from "mongodb"
-
-function getUserId(session: any) {
-  const id = session?.user?.id
-  return typeof id === "string" && ObjectId.isValid(id) ? id : null
-}
+import { getRequestUserObjectId } from "@/lib/request-user"
 
 export async function GET() {
-  const session = await auth()
-  const uid = getUserId(session)
-  if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const userObjectId = await getRequestUserObjectId()
+  if (!userObjectId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const client = await clientPromise
-  const db = client.db(process.env.MONGODB_DB)
+  const db = client.db(process.env.MONGODB_DB || "dragapultist")
 
   const imports = await db
     .collection("imports")
-    .find({ userId: new ObjectId(uid) })
+    .find({ userId: userObjectId })
     .sort({ createdAt: -1 })
     .limit(50)
     .toArray()
@@ -27,9 +20,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await auth()
-  const uid = getUserId(session)
-  if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const userObjectId = await getRequestUserObjectId()
+  if (!userObjectId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json().catch(() => null)
   const rawText = body?.rawText
@@ -41,10 +33,10 @@ export async function POST(req: Request) {
   }
 
   const client = await clientPromise
-  const db = client.db(process.env.MONGODB_DB)
+  const db = client.db(process.env.MONGODB_DB || "dragapultist")
 
   const doc = {
-    userId: new ObjectId(uid),
+    userId: userObjectId,
     title,
     rawText,
     parsed,
