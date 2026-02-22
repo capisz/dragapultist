@@ -159,7 +159,7 @@ export function UserProfile({ user, stats, deckCount, lastPlayedLabel }: UserPro
   }
 
   return (
-    <Card className="overflow-hidden rounded-3xl border border-slate-200/55 bg-white/35 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-slate-700/35 dark:bg-[#162638]/55 dark:shadow-[0_18px_45px_rgba(0,0,0,0.25)]">
+    <Card className="h-fit self-start overflow-hidden rounded-3xl border border-slate-200/55 bg-white/35 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-slate-700/35 dark:bg-[#162638]/55 dark:shadow-[0_18px_45px_rgba(0,0,0,0.25)]">
       <input
         ref={bannerInputRef}
         type="file"

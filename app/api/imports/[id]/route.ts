@@ -3,12 +3,15 @@ import clientPromise from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { getRequestUserObjectId } from "@/lib/request-user"
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+type RouteContext = { params: Promise<{ id: string }> }
+
+export async function GET(_: Request, { params }: RouteContext) {
+  const { id } = await params
   const userObjectId = await getRequestUserObjectId()
   if (!userObjectId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-  if (!ObjectId.isValid(params.id)) {
+  if (!ObjectId.isValid(id)) {
     return NextResponse.json({ error: "Bad id" }, { status: 400 })
   }
 
@@ -16,7 +19,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   const db = client.db(process.env.MONGODB_DB || "dragapultist")
 
   const doc = await db.collection("imports").findOne({
-    _id: new ObjectId(params.id),
+    _id: new ObjectId(id),
     userId: userObjectId,
   })
 

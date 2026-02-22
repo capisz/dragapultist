@@ -27,4 +27,5 @@ export interface GameSummary {
   winnerPrizePath?: string[]            // e.g. ["Wellspring Mask Ogerpon ex", "Mew ex", ...]
   userArchetype?: string | null         // archetype id (e.g. "raging-bolt-ogerpon")
   opponentArchetype?: string | null     // archetype id
+  favorite?: boolean
 }

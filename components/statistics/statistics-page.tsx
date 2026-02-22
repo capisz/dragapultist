@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Loader2, RefreshCcw } from "lucide-react"
+import { ArrowLeft, Loader2, RefreshCcw, Star, Trash2 } from "lucide-react"
 import type { User } from "@/types/auth"
 import { UserProfile } from "./user-profile"
 import { DeckList } from "./deck-list"
 import { CardStatistics } from "./card-statistics"
-import { GameList } from "@/components/game-list"
 import { GameDetail } from "@/components/game-detail"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { OverallStats } from "./overall-stats"
@@ -18,17 +17,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { GameSummary } from "@/types/game"
+import { formatArchetypeLabel } from "@/utils/archetype-mapping"
 
 interface StatisticsPageProps {
   user: User
 }
 
 type HistoryGame = GameSummary & { __createdAtMs: number }
-
-type HistorySortConfig = {
-  key: keyof GameSummary
-  direction: "asc" | "desc"
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
@@ -147,6 +142,7 @@ function toHistoryGame(rawGame: unknown): HistoryGame | null {
     opponentArchetype:
       readString(summary?.opponentArchetype, rawGame.opponentArchetype, summary?.opponentDeckName, rawGame.opponentDeckName) ||
       null,
+    favorite: readBoolean(summary?.favorite ?? rawGame.favorite),
     __createdAtMs: parsedDate?.getTime() ?? 0,
   }
 
@@ -156,12 +152,6 @@ function toHistoryGame(rawGame: unknown): HistoryGame | null {
   if (winnerPrizePath.length) historyGame.winnerPrizePath = winnerPrizePath
 
   return historyGame
-}
-
-function toSortableValue(value: unknown): number | string {
-  if (typeof value === "number") return value
-  if (typeof value === "boolean") return value ? 1 : 0
-  return String(value ?? "").toLowerCase()
 }
 
 const EMPTY_MODEL: StatisticsModel = {
@@ -199,10 +189,8 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
   const [historySearch, setHistorySearch] = useState("")
   const [historyGames, setHistoryGames] = useState<HistoryGame[]>([])
   const [selectedHistoryGame, setSelectedHistoryGame] = useState<HistoryGame | null>(null)
-  const [historySortConfig, setHistorySortConfig] = useState<HistorySortConfig>({
-    key: "date",
-    direction: "desc",
-  })
+  const [favoritePendingIds, setFavoritePendingIds] = useState<Set<string>>(new Set())
+  const [deletePendingIds, setDeletePendingIds] = useState<Set<string>>(new Set())
 
   const brandButtonClass =
     "h-9 rounded-full border-none px-5 text-sm bg-[#5e82ab] text-slate-50 hover:bg-[#4f739d] active:bg-[#44678f] dark:bg-[#b1cce8] dark:text-[#0b1220] dark:hover:bg-[#a1c2e4] dark:active:bg-[#93b7df]"
@@ -283,36 +271,48 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
 
   const filteredHistoryGames = useMemo(() => {
     const sortedGames = [...historyGames].sort((a, b) => {
-      const aValue = toSortableValue(a[historySortConfig.key])
-      const bValue = toSortableValue(b[historySortConfig.key])
-
-      if (aValue < bValue) return historySortConfig.direction === "asc" ? -1 : 1
-      if (aValue > bValue) return historySortConfig.direction === "asc" ? 1 : -1
-
-      return b.__createdAtMs - a.__createdAtMs
+      const favoriteDelta = Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))
+      if (favoriteDelta !== 0) return favoriteDelta
+      return b.__createdAtMs - a.__createdAtMs || b.id.localeCompare(a.id)
     })
 
     const searchLower = historySearch.trim().toLowerCase()
     if (!searchLower) return sortedGames
 
     return sortedGames.filter((game) => {
+      const userDeck = formatArchetypeLabel(game.userArchetype).toLowerCase()
+      const opponentDeck = formatArchetypeLabel(game.opponentArchetype).toLowerCase()
+      const resultLabel = game.userWon ? "win" : "loss"
+
       return (
-        game.userMainAttacker.toLowerCase().includes(searchLower) ||
-        game.opponentMainAttacker.toLowerCase().includes(searchLower) ||
+        game.date.toLowerCase().includes(searchLower) ||
+        userDeck.includes(searchLower) ||
+        opponentDeck.includes(searchLower) ||
         game.opponent.toLowerCase().includes(searchLower) ||
-        game.userOtherPokemon.some((pokemon) => pokemon.toLowerCase().includes(searchLower)) ||
-        game.opponentOtherPokemon.some((pokemon) => pokemon.toLowerCase().includes(searchLower)) ||
-        game.tags?.some((tag) => tag.text.toLowerCase().includes(searchLower)) ||
-        game.rawLog.toLowerCase().includes(searchLower)
+        resultLabel.includes(searchLower)
       )
     })
-  }, [historyGames, historySearch, historySortConfig])
+  }, [historyGames, historySearch])
 
-  const handleHistorySort = useCallback((key: keyof GameSummary) => {
-    setHistorySortConfig((previous) => ({
-      key,
-      direction: previous.key === key && previous.direction === "asc" ? "desc" : "asc",
-    }))
+  const persistHistoryGame = useCallback(async (game: HistoryGame) => {
+    const { __createdAtMs, ...rest } = game
+    const gameSummary: Record<string, unknown> = {
+      ...rest,
+      id: game.id,
+    }
+    if (__createdAtMs > 0) {
+      gameSummary.createdAt = new Date(__createdAtMs).toISOString()
+    }
+
+    const response = await fetch(`/api/games/${encodeURIComponent(game.id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameSummary }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to update game ${game.id}`)
+    }
   }, [])
 
   const handleHistoryUpdate = useCallback((updatedGame: GameSummary) => {
@@ -324,10 +324,63 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
     )
   }, [])
 
-  const handleHistoryDelete = useCallback((gameId: string) => {
-    setHistoryGames((previous) => previous.filter((game) => game.id !== gameId))
-    setSelectedHistoryGame((previous) => (previous?.id === gameId ? null : previous))
-  }, [])
+  const handleToggleFavorite = useCallback(
+    async (gameId: string) => {
+      if (favoritePendingIds.has(gameId)) return
+
+      const existing = historyGames.find((game) => game.id === gameId)
+      if (!existing) return
+
+      const optimistic = { ...existing, favorite: !existing.favorite }
+
+      setFavoritePendingIds((previous) => new Set(previous).add(gameId))
+      setHistoryGames((previous) => previous.map((game) => (game.id === gameId ? optimistic : game)))
+      setSelectedHistoryGame((previous) => (previous?.id === gameId ? optimistic : previous))
+
+      try {
+        await persistHistoryGame(optimistic)
+      } catch (error) {
+        console.error(error)
+        setHistoryGames((previous) => previous.map((game) => (game.id === gameId ? existing : game)))
+        setSelectedHistoryGame((previous) => (previous?.id === gameId ? existing : previous))
+      } finally {
+        setFavoritePendingIds((previous) => {
+          const next = new Set(previous)
+          next.delete(gameId)
+          return next
+        })
+      }
+    },
+    [favoritePendingIds, historyGames, persistHistoryGame],
+  )
+
+  const handleHistoryDelete = useCallback(
+    async (gameId: string) => {
+      if (deletePendingIds.has(gameId)) return
+      if (!window.confirm("Delete this imported game from your history?")) return
+
+      setDeletePendingIds((previous) => new Set(previous).add(gameId))
+
+      try {
+        const response = await fetch(`/api/games/${encodeURIComponent(gameId)}`, { method: "DELETE" })
+        if (!response.ok) {
+          throw new Error(`Failed to delete game ${gameId}`)
+        }
+
+        setHistoryGames((previous) => previous.filter((game) => game.id !== gameId))
+        setSelectedHistoryGame((previous) => (previous?.id === gameId ? null : previous))
+      } catch (error) {
+        console.error(error)
+      } finally {
+        setDeletePendingIds((previous) => {
+          const next = new Set(previous)
+          next.delete(gameId)
+          return next
+        })
+      }
+    },
+    [deletePendingIds],
+  )
 
   useEffect(() => {
     if (!selectedHistoryGame) return
@@ -379,7 +432,7 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
         </Button>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
         <UserProfile user={user} stats={model.overall} deckCount={model.decks.length} lastPlayedLabel={lastPlayedLabel} />
 
         <div className={`${panelClass} p-4 sm:p-5`}>
@@ -608,16 +661,85 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
                     onChange={(event) => setHistorySearch(event.target.value)}
                     className={historySearchInputClass}
                   />
+                  <p className="text-xs text-slate-500 dark:text-slate-300/80">
+                    Click any row to open full game detail. Favorited games are pinned first.
+                  </p>
 
                   {filteredHistoryGames.length > 0 ? (
-                    <GameList
-                      games={filteredHistoryGames}
-                      onSelectGame={(game) => setSelectedHistoryGame(game as HistoryGame)}
-                      onDeleteGame={handleHistoryDelete}
-                      sortConfig={historySortConfig}
-                      onSort={handleHistorySort}
-                      showTags={false}
-                    />
+                    <div className={subPanelClass}>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className={tableHeaderRowClass}>
+                            <TableHead className={`${tableHeadClass} w-12 text-center`}>Fav</TableHead>
+                            <TableHead className={tableHeadClass}>Date</TableHead>
+                            <TableHead className={tableHeadClass}>Your Deck</TableHead>
+                            <TableHead className={tableHeadClass}>Opponent Deck</TableHead>
+                            <TableHead className={tableHeadClass}>Result</TableHead>
+                            <TableHead className={`${tableHeadClass} w-12 text-right`}>Del</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredHistoryGames.map((game) => {
+                            const isFavorite = Boolean(game.favorite)
+                            const favoriteBusy = favoritePendingIds.has(game.id)
+                            const deleteBusy = deletePendingIds.has(game.id)
+
+                            return (
+                              <TableRow
+                                key={game.id}
+                                className={`${tableBodyRowClass} cursor-pointer ${isFavorite ? "bg-sky-50/50 dark:bg-sky-900/10" : ""}`}
+                                onClick={() => setSelectedHistoryGame(game)}
+                              >
+                                <TableCell className="text-center" onClick={(event) => event.stopPropagation()}>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className={`h-8 w-8 rounded-full ${
+                                      isFavorite
+                                        ? "text-amber-500 hover:text-amber-500 dark:text-amber-300 dark:hover:text-amber-300"
+                                        : "text-slate-400 hover:text-[#5e82ab] dark:text-slate-400 dark:hover:text-sky-200"
+                                    }`}
+                                    disabled={favoriteBusy}
+                                    onClick={() => void handleToggleFavorite(game.id)}
+                                    aria-label={isFavorite ? "Unfavorite game" : "Favorite game"}
+                                  >
+                                    <Star className="h-4 w-4" fill={isFavorite ? "currentColor" : "none"} />
+                                  </Button>
+                                </TableCell>
+                                <TableCell className="tabular-nums">{game.date}</TableCell>
+                                <TableCell className="font-medium">{formatArchetypeLabel(game.userArchetype)}</TableCell>
+                                <TableCell className="font-medium">{formatArchetypeLabel(game.opponentArchetype)}</TableCell>
+                                <TableCell>
+                                  <span
+                                    className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                      game.userWon
+                                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
+                                        : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200"
+                                    }`}
+                                  >
+                                    {game.userWon ? "Win" : "Loss"}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full text-rose-500 hover:text-rose-600 dark:text-rose-300 dark:hover:text-rose-200"
+                                    disabled={deleteBusy}
+                                    onClick={() => void handleHistoryDelete(game.id)}
+                                    aria-label="Delete game"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
                   ) : (
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                       {historySearch.trim() ? "No games found matching your search." : "No imported game history yet."}
