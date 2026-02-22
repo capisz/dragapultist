@@ -138,39 +138,89 @@ export function AuthHeader() {
 
               <DialogContent
                 className={cn(
-                  "max-w-xl rounded-2xl p-6",
+                  "max-h-[85dvh] max-w-2xl overflow-y-auto rounded-2xl p-6",
                   "border border-slate-200/70 bg-white/90 backdrop-blur-xl shadow-2xl",
-                  // lightened dark mode background (was #223a54/70)
                   "dark:border-slate-700/55 dark:bg-[#2c4a6a]/80",
                 )}
               >
-                <DialogHeader className="mb-3 space-y-2">
+                <DialogHeader className="mb-4 space-y-2">
                   <DialogTitle className="text-xl font-semibold tracking-tight text-[#3b608c] dark:text-sky-100">
                     How Dragapultist works
                   </DialogTitle>
                   <DialogDescription className="text-sm text-slate-600 dark:text-slate-200/80">
-                    Quick guide for importing logs and using Prize Mapper.
+                    Dragapultist helps you import your games, review what happened turn-by-turn, and track your results
+                    over time.
                   </DialogDescription>
                 </DialogHeader>
 
-                <ol className="space-y-3 text-sm leading-relaxed">
-                  <li className="text-slate-700 dark:text-slate-100">
-                    1) In Pokémon TCG Live, open a game log and copy the full text.
-                  </li>
-                  <li className="text-slate-700 dark:text-slate-100">
-                    2) Paste into <span className="font-semibold">Game log</span> and click{" "}
-                    <span className="font-semibold">Import</span>.
-                  </li>
-                  <li className="text-slate-700 dark:text-slate-100">
-                    3) Dragapultist parses the log into structured stats and saves it.
-                  </li>
-                  <li className="text-slate-700 dark:text-slate-100">
-                    4) Use <span className="font-semibold">Prize Mapper</span> to analyze matchups and prize paths.
-                  </li>
-                  <li className="text-slate-700 dark:text-slate-100">
-                    5) Use <span className="font-semibold">Player Database</span> to explore decks and matchup breakdowns.
-                  </li>
-                </ol>
+                <div className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-slate-200/75 bg-[#dce9f7]/55 px-4 py-3 dark:border-slate-600/50 dark:bg-[#355a7c]/45">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#3b608c] dark:text-sky-100">
+                        Input
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">
+                        Import logs manually or by clipboard
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300/85">
+                        Desktop users can auto-detect copied logs. Browser users can paste logs in the Game Log tab and
+                        import directly.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200/75 bg-[#dce9f7]/55 px-4 py-3 dark:border-slate-600/50 dark:bg-[#355a7c]/45">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#3b608c] dark:text-sky-100">
+                        Output
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">
+                        Structured game and matchup analytics
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300/85">
+                        Each import is parsed into turns, attackers, prize trades, archetypes, and searchable game history.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-4 dark:border-slate-600/55 dark:bg-[#24425f]/45">
+                    <h3 className="text-sm font-semibold text-[#3b608c] dark:text-sky-100">Workflow</h3>
+                    <ol className="mt-3 space-y-2 text-sm leading-relaxed text-slate-700 dark:text-slate-100">
+                      <li className="flex gap-2">
+                        <span className="mt-[1px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#5e82ab] text-[11px] font-semibold text-white dark:bg-sky-100 dark:text-[#102134]">
+                          1
+                        </span>
+                        <span>Copy a full PTCGL game log from coin flip through game end.</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <span className="mt-[1px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#5e82ab] text-[11px] font-semibold text-white dark:bg-sky-100 dark:text-[#102134]">
+                          2
+                        </span>
+                        <span>Import in the Game Log tab and confirm player orientation/archetypes if prompted.</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <span className="mt-[1px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#5e82ab] text-[11px] font-semibold text-white dark:bg-sky-100 dark:text-[#102134]">
+                          3
+                        </span>
+                        <span>Review full detail pages including turn actions, teams, prize map, and deck metadata.</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <span className="mt-[1px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#5e82ab] text-[11px] font-semibold text-white dark:bg-sky-100 dark:text-[#102134]">
+                          4
+                        </span>
+                        <span>Use Account Statistics for overview metrics, deck matchups, individual data, and history.</span>
+                      </li>
+                    </ol>
+                  </div>
+
+                  <div className="rounded-xl border border-dashed border-[#5e82ab]/35 bg-[#dce9f7]/35 px-4 py-3 dark:border-sky-100/25 dark:bg-[#355a7c]/35">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#3b608c] dark:text-sky-100">
+                      Import quality tip
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300/90">
+                      Truncated logs may not process correctly, and certain archetypes may need to be manually adjusted
+                      during import.
+                    </p>
+                  </div>
+                </div>
 
                 <div className="mt-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-3">
                   <p className="text-[11px] leading-snug text-slate-500 dark:text-slate-200/70">

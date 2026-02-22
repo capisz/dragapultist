@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
 import { auth } from "@/auth"
+import { cookies } from "next/headers"
+import { ObjectId } from "mongodb"
 
 type AnyGame = {
   id: string
-  userId?: string | null
+  userId?: string | ObjectId | null
   [key: string]: any
 }
 
@@ -12,10 +14,27 @@ function getSessionUserId(session: any): string | null {
   return session?.user?.id ? String(session.user.id) : null
 }
 
+async function getRequestUserId(): Promise<string | null> {
+  const session = await auth()
+  const sessionUserId = getSessionUserId(session)
+  if (sessionUserId) return sessionUserId
+
+  const jar = await cookies()
+  const cookieUserId = jar.get("userId")?.value
+  if (!cookieUserId || cookieUserId === "guest") return null
+  return cookieUserId
+}
+
+function userIdQueryValue(userId: string): string | { $in: Array<string | ObjectId> } {
+  if (ObjectId.isValid(userId)) {
+    return { $in: [userId, new ObjectId(userId)] }
+  }
+  return userId
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth()
-    const userId = getSessionUserId(session)
+    const userId = await getRequestUserId()
 
     // Guest: return empty list (avoid UI error states)
     if (!userId) {
@@ -29,9 +48,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const usernameParam = searchParams.get("username")
     const limitParam = searchParams.get("limit")
-    const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 100, 1000) : 500
+    const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 250, 5000) : 1000
 
-    const query: any = { userId }
+    const query: any = { userId: userIdQueryValue(userId) }
     if (usernameParam && usernameParam.trim() !== "") {
       const regex = new RegExp(usernameParam, "i")
       query.$or = [{ username: regex }, { opponent: regex }]
@@ -47,8 +66,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth()
-    const userId = getSessionUserId(session)
+    const userId = await getRequestUserId()
 
     if (!userId) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
@@ -75,7 +93,7 @@ export async function POST(req: NextRequest) {
     const collection = db.collection<AnyGame>("games")
 
     await collection.updateOne(
-      { id: finalDoc.id, userId: finalDoc.userId },
+      { id: finalDoc.id, userId: userIdQueryValue(userId) },
       { $set: finalDoc },
       { upsert: true },
     )

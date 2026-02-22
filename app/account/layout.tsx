@@ -1,8 +1,9 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { AuthHeader } from "@/components/auth/auth-header"
 
 export const metadata: Metadata = {
-  title: "Statistics - Pokémon TCG Analyzer",
+  title: "Account Statistics - Pokémon TCG Analyzer",
   description: "View your Pokémon TCG game statistics and deck performance",
 }
 
@@ -12,8 +13,14 @@ export default function AccountLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F8F6F2] to-[#F0EDE5] dark:from-[#1A1E24] dark:to-[#15181D]">
-      <div className="max-w-7xl mx-auto pt-8">{children}</div>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-6xl px-4 py-2 md:py-5">
+        <AuthHeader />
+      </div>
+
+      <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-10 md:px-6 md:pt-12">
+        {children}
+      </div>
     </div>
   )
 }

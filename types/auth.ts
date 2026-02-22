@@ -3,6 +3,8 @@ export interface User {
   email: string
   username: string
   verified: boolean
+  avatarImage?: string | null
+  bannerImage?: string | null
 }
 
 export interface AuthResponse {

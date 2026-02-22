@@ -18,6 +18,8 @@ function toUser(doc: any): User {
     email: doc.email ?? null,
     username: doc.username ?? null,
     verified: !!doc.verified,
+    avatarImage: typeof doc.avatarImage === "string" ? doc.avatarImage : null,
+    bannerImage: typeof doc.bannerImage === "string" ? doc.bannerImage : null,
   }
 }
 
@@ -57,6 +59,8 @@ export async function signUp(formData: FormData): Promise<AuthResponse> {
       email,
       passwordHash,
       verified: true,
+      avatarImage: null,
+      bannerImage: null,
       createdAt: now,
       updatedAt: now,
     })
@@ -66,6 +70,8 @@ export async function signUp(formData: FormData): Promise<AuthResponse> {
       email,
       username,
       verified: true,
+      avatarImage: null,
+      bannerImage: null,
     }
 
     const jar = await cookies()
@@ -115,6 +121,8 @@ export async function loginAsGuest(): Promise<User> {
     email: "guest@example.com",
     username: "Guest",
     verified: false,
+    avatarImage: null,
+    bannerImage: null,
   }
 
   const jar = await cookies()
@@ -139,6 +147,8 @@ export async function getUser(): Promise<User | null> {
       email: "guest@example.com",
       username: "Guest",
       verified: false,
+      avatarImage: null,
+      bannerImage: null,
     }
   }
 

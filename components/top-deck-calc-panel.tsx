@@ -97,7 +97,15 @@ const copyOptionSelected = cn(
     const { N, KA, KB } = normalized
 
     return draws.map((n) => {
-      if (N <= 0) return { n, pA: null as number | null, pB: null as number | null, pBoth: null as number | null }
+      if (N <= 0) {
+        return {
+          n,
+          pA: null as number | null,
+          pB: null as number | null,
+          pEither: null as number | null,
+          pBoth: null as number | null,
+        }
+      }
 
       const pA = KA > 0 ? probAtLeastOne(N, KA, n) : 0
       const pB = KB > 0 ? probAtLeastOne(N, KB, n) : 0
@@ -111,16 +119,19 @@ const copyOptionSelected = cn(
         pBoth = Math.max(0, Math.min(1, 1 - pNoA - pNoB + pNoAB))
       }
 
+      const pEither = KB > 0 ? Math.max(0, Math.min(1, pA + pB - pBoth)) : null
+
       return {
         n,
         pA,
         pB: KB > 0 ? pB : null,
+        pEither,
         pBoth: KB > 0 ? pBoth : null,
       }
     })
   }, [normalized])
 
-  const cols = showSecond ? "grid-cols-4" : "grid-cols-2"
+  const cols = showSecond ? "grid-cols-5" : "grid-cols-2"
   const fmt = (p: number | null) => (p == null ? "—" : pct(p))
 
   return (
@@ -315,6 +326,7 @@ const copyOptionSelected = cn(
             <div />
             <div className="text-right">Card A</div>
             {showSecond && <div className="text-right">Card B</div>}
+            {showSecond && <div className="text-right">Either</div>}
             {showSecond && <div className="text-right">Both</div>}
           </div>
         </div>
@@ -340,6 +352,7 @@ const copyOptionSelected = cn(
                 {showSecond && (
                   <>
                     <div className="text-right tabular-nums font-semibold">{fmt(r.pB)}</div>
+                    <div className="text-right tabular-nums font-semibold">{fmt(r.pEither)}</div>
                     <div className="text-right tabular-nums font-semibold">{fmt(r.pBoth)}</div>
                   </>
                 )}
@@ -349,6 +362,8 @@ const copyOptionSelected = cn(
         </div>
 
         <div className="px-4 pb-4 text-[11px] text-slate-600 dark:text-slate-200/70">
+          “Either” = at least one copy of A or at least one copy of B within the next N draws.
+          <br />
           “Both” = at least one copy of A and at least one copy of B within the next N draws.
         </div>
       </div>

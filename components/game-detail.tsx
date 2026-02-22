@@ -14,7 +14,7 @@ import { CheckIcon } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { GameSummary } from "@/types/game"
-import { ARCHETYPE_RULES } from "@/utils/archetype-mapping"
+import { ARCHETYPE_RULES, formatArchetypeLabel, isCustomArchetypeId } from "@/utils/archetype-mapping"
 
 interface DeckInfo {
   name: string
@@ -1174,6 +1174,9 @@ className={cn(
                           {rule.label}
                         </SelectItem>
                       ))}
+                      {isCustomArchetypeId(userArchetypeId) ? (
+                        <SelectItem value={userArchetypeId}>Custom: {formatArchetypeLabel(userArchetypeId)}</SelectItem>
+                      ) : null}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1193,6 +1196,11 @@ className={cn(
                           {rule.label}
                         </SelectItem>
                       ))}
+                      {isCustomArchetypeId(opponentArchetypeId) ? (
+                        <SelectItem value={opponentArchetypeId}>
+                          Custom: {formatArchetypeLabel(opponentArchetypeId)}
+                        </SelectItem>
+                      ) : null}
                     </SelectContent>
                   </Select>
                 </div>

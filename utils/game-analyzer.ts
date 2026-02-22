@@ -186,6 +186,47 @@ function stripOwnerPrefix(name: string): string {
   return (name ?? "").replace(/^[^'’]+['’]s\s+/i, "").trim()
 }
 
+const NON_POKEMON_REFERENCES = new Set([
+  "it",
+  "its",
+  "them",
+  "they",
+  "their",
+  "this",
+  "that",
+  "these",
+  "those",
+  "pokemon",
+  "pokémon",
+  "active pokemon",
+  "active pokémon",
+  "benched pokemon",
+  "benched pokémon",
+  "card",
+  "a card",
+])
+
+function normalizePokemonToken(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/’/g, "'")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function cleanPokemonReference(name: string): string {
+  const cleaned = stripOwnerPrefix(name ?? "")
+    .replace(/^the\s+/i, "")
+    .trim()
+  if (!cleaned) return ""
+
+  const token = normalizePokemonToken(cleaned)
+  if (!token || NON_POKEMON_REFERENCES.has(token)) return ""
+
+  return cleaned
+}
+
 export function analyzeGameLog(
   log: string,
   swapPlayers = false,
@@ -223,6 +264,34 @@ export function analyzeGameLog(
   // Track ACE SPEC cards used
   const userAceSpecs: Set<string> = new Set()
   const opponentAceSpecs: Set<string> = new Set()
+
+  function ensurePokemonEntry(
+    side: "user" | "opponent",
+    rawPokemonName: string,
+  ): { name: string; totalDamage: number; turnsOnBoard: number; attackCount: number } | null {
+    const pokemonName = cleanPokemonReference(rawPokemonName)
+    if (!pokemonName) return null
+
+    if (side === "user") {
+      userPokemon.add(pokemonName)
+      userStats[pokemonName] = userStats[pokemonName] || {
+        name: pokemonName,
+        totalDamage: 0,
+        turnsOnBoard: 0,
+        attackCount: 0,
+      }
+      return userStats[pokemonName]
+    }
+
+    opponentPokemon.add(pokemonName)
+    opponentStats[pokemonName] = opponentStats[pokemonName] || {
+      name: pokemonName,
+      totalDamage: 0,
+      turnsOnBoard: 0,
+      attackCount: 0,
+    }
+    return opponentStats[pokemonName]
+  }
 
   // --- Determine player names (anchor to preferredUsername if provided) ---
   const resolved = resolvePlayers(lines, preferredUsername)
@@ -314,64 +383,30 @@ export function analyzeGameLog(
       }
     }
 
-    // Active / bench Pokémon (FIX: handles "to the Bench" and "- drew X and played it to the Bench.")
+    // Active / bench Pokémon (handles "drew X and played it to ...")
     if (owner && content.includes("played")) {
+      const drewAndPlayedActive = content.match(/drew (.+?) and played it to the Active Spot\./i)
+      const drewAndPlayedBench = content.match(/drew (.+?) and played it to the Bench\./i)
       const playedActive = content.match(/played (.+?) to the Active Spot\./i)
       const playedBench =
         content.match(/played (.+?) to the Bench\./i) ||
-        content.match(/played (.+?) onto the Bench\./i) ||
-        content.match(/drew (.+?) and played it to the Bench\./i)
+        content.match(/played (.+?) onto the Bench\./i)
 
-      const playedNameRaw = (playedActive?.[1] || playedBench?.[1] || "").trim()
-      const playedName = stripOwnerPrefix(playedNameRaw)
-
-      if (playedName) {
-        if (owner === "user") {
-          userPokemon.add(playedName)
-          if (playedActive) userActive = playedName
-          userStats[playedName] = userStats[playedName] || {
-            name: playedName,
-            totalDamage: 0,
-            turnsOnBoard: 0,
-            attackCount: 0,
-          }
-        } else {
-          opponentPokemon.add(playedName)
-          if (playedActive) opponentActive = playedName
-          opponentStats[playedName] = opponentStats[playedName] || {
-            name: playedName,
-            totalDamage: 0,
-            turnsOnBoard: 0,
-            attackCount: 0,
-          }
-        }
+      const playedNameRaw = (drewAndPlayedActive?.[1] || drewAndPlayedBench?.[1] || playedActive?.[1] || playedBench?.[1] || "").trim()
+      const playedEntry = ensurePokemonEntry(owner, playedNameRaw)
+      if (playedEntry && (playedActive || drewAndPlayedActive)) {
+        if (owner === "user") userActive = playedEntry.name
+        else opponentActive = playedEntry.name
       }
     }
 
     // Switches (FIX: strip "X's" prefix from the captured name)
     if (owner && content.includes("is now in the Active Spot")) {
       const m = content.match(/(.+?) is now in the Active Spot\./i)
-      const pokemonName = stripOwnerPrefix((m?.[1] || "").trim())
-      if (pokemonName) {
-        if (owner === "user") {
-          userActive = pokemonName
-          userPokemon.add(pokemonName)
-          userStats[pokemonName] = userStats[pokemonName] || {
-            name: pokemonName,
-            totalDamage: 0,
-            turnsOnBoard: 0,
-            attackCount: 0,
-          }
-        } else {
-          opponentActive = pokemonName
-          opponentPokemon.add(pokemonName)
-          opponentStats[pokemonName] = opponentStats[pokemonName] || {
-            name: pokemonName,
-            totalDamage: 0,
-            turnsOnBoard: 0,
-            attackCount: 0,
-          }
-        }
+      const switchedEntry = ensurePokemonEntry(owner, (m?.[1] || "").trim())
+      if (switchedEntry) {
+        if (owner === "user") userActive = switchedEntry.name
+        else opponentActive = switchedEntry.name
       }
     }
 
@@ -380,28 +415,10 @@ export function analyzeGameLog(
       const pokemonName = content.match(/['’]s (.*?) used/i)?.[1] || ""
       const damage = Number.parseInt(content.match(/for (\d+) damage/)?.[1] || "0", 10)
 
-      if (pokemonName) {
-        if (owner === "user") {
-          userStats[pokemonName] = userStats[pokemonName] || {
-            name: pokemonName,
-            totalDamage: 0,
-            turnsOnBoard: 0,
-            attackCount: 0,
-          }
-          userStats[pokemonName].totalDamage += damage
-          userStats[pokemonName].attackCount++
-          userPokemon.add(pokemonName)
-        } else {
-          opponentStats[pokemonName] = opponentStats[pokemonName] || {
-            name: pokemonName,
-            totalDamage: 0,
-            turnsOnBoard: 0,
-            attackCount: 0,
-          }
-          opponentStats[pokemonName].totalDamage += damage
-          opponentStats[pokemonName].attackCount++
-          opponentPokemon.add(pokemonName)
-        }
+      const attackingEntry = ensurePokemonEntry(owner, pokemonName)
+      if (attackingEntry) {
+        attackingEntry.totalDamage += damage
+        attackingEntry.attackCount++
       }
 
       if (damage > 240) highDamageAttackCount++
