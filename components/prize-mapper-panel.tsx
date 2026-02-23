@@ -543,6 +543,7 @@ export function PrizeMapperPanel({ ptcglUsername }: { ptcglUsername?: string | n
     <SelectItem
       value="none"
       className={cn(
+        "bg-slate-100/45 dark:bg-white/[0.04]",
         "text-slate-900",
         "data-[highlighted]:bg-slate-200/60 data-[highlighted]:text-slate-900",
         "data-[state=checked]:bg-slate-200/70",
@@ -552,11 +553,12 @@ export function PrizeMapperPanel({ ptcglUsername }: { ptcglUsername?: string | n
       Select an archetype…
     </SelectItem>
 
-    {ARCHETYPE_RULES.map((r) => (
+    {ARCHETYPE_RULES.map((r, idx) => (
       <SelectItem
         key={r.id}
         value={r.id}
         className={cn(
+          idx % 2 === 0 ? "bg-transparent" : "bg-slate-100/35 dark:bg-white/[0.035]",
           "text-slate-900",
           "data-[highlighted]:bg-slate-200/60 data-[highlighted]:text-slate-900",
           "data-[state=checked]:bg-slate-200/70",

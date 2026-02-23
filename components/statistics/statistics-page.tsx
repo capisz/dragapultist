@@ -202,7 +202,8 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
     "rounded-2xl border border-slate-200/60 bg-white/50 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-slate-700/40 dark:bg-[#1b3048]/55 dark:shadow-[0_16px_38px_rgba(0,0,0,0.22)]"
   const tableHeaderRowClass = "border-slate-200/70 dark:border-slate-600/45"
   const tableHeadClass = "h-10 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-700/90 dark:text-slate-200"
-  const tableBodyRowClass = "border-slate-200/65 hover:bg-slate-100/65 dark:border-slate-600/40 dark:hover:bg-white/[0.05]"
+  const tableBodyRowClass =
+    "border-slate-200/65 odd:bg-white/45 even:bg-white/20 hover:bg-slate-100/65 dark:border-slate-600/40 dark:odd:bg-transparent dark:even:bg-white/[0.05] dark:hover:bg-white/[0.05]"
   const filterInputClass =
     "h-9 w-full max-w-xs bg-slate-100/90 text-gray-900 placeholder:text-slate-400 border border-slate-300 shadow-[0_0_22px_rgba(42,81,128,0.15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70 focus-visible:ring-offset-0 dark:bg-slate-500/70 dark:text-slate-100 dark:placeholder:text-slate-300/90 dark:border-slate-600 dark:shadow-[0_0_32px_rgba(56,189,248,0.1)] dark:focus-visible:ring-slate-300"
   const historySearchInputClass =

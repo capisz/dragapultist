@@ -17,7 +17,8 @@ const tablePanelClass =
   "rounded-2xl border border-slate-200/60 bg-white/50 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-slate-700/40 dark:bg-[#1b3048]/55 dark:shadow-[0_16px_38px_rgba(0,0,0,0.22)]"
 const tableHeaderRowClass = "border-slate-200/70 dark:border-slate-600/45"
 const tableHeadClass = "h-10 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-700/90 dark:text-slate-200"
-const tableRowClass = "border-slate-200/65 hover:bg-slate-100/65 dark:border-slate-600/40 dark:hover:bg-white/[0.05]"
+const tableRowClass =
+  "border-slate-200/65 odd:bg-white/45 even:bg-white/20 hover:bg-slate-100/65 dark:border-slate-600/40 dark:odd:bg-transparent dark:even:bg-white/[0.05] dark:hover:bg-white/[0.05]"
 
 function MetricCard({
   label,

@@ -148,13 +148,19 @@ export function GameList({
         <div className="text-right text-[11px] font-semibold tracking-[0.08em] uppercase">Actions</div>
       </div>
 
-      {games.map((game) => {
+      {games.map((game, rowIndex) => {
         const userLabel = formatArchetypeLabel((game as any).userArchetype)
         const oppLabel = formatArchetypeLabel((game as any).opponentArchetype)
         const isPendingDelete = pendingDeleteId === game.id
 
         return (
-          <div key={game.id} className={rowClasses}>
+          <div
+            key={game.id}
+            className={cn(
+              rowClasses,
+              rowIndex % 2 === 0 ? "dark:bg-slate-800/85" : "bg-slate-50/55 dark:bg-slate-700/80",
+            )}
+          >
             <div className="tabular-nums">{game.date}</div>
             <div className="font-medium">{game.opponent}</div>
 

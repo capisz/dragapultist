@@ -336,6 +336,7 @@ const rowSelectedHover = "hover:bg-slate-900/[0.09] dark:hover:bg-white/[0.08]"
                               }}
                               className={cn(
                                 "w-full flex items-center justify-between gap-3 px-3 py-3 text-left",
+                                i % 2 === 0 ? "bg-transparent" : "bg-slate-900/[0.025] dark:bg-white/[0.035]",
                                 rowBase,
                                 isSelected ? cn(rowSelected, rowSelectedHover) : rowHover,
                               )}
@@ -407,6 +408,7 @@ const rowSelectedHover = "hover:bg-slate-900/[0.09] dark:hover:bg-white/[0.08]"
           className={cn(
             "flex items-center justify-between gap-3",
             "px-3 py-2 text-sm",
+            mi % 2 === 0 ? "bg-transparent" : "bg-slate-900/[0.025] dark:bg-white/[0.04]",
             "transition-colors",
             "hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.04]",
           )}

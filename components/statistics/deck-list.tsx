@@ -67,7 +67,7 @@ export function DeckList({ decks, selectedDeckKey, onSelectDeck }: DeckListProps
 
   return (
     <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
-      {decks.map((deck) => {
+      {decks.map((deck, index) => {
         const selected = selectedDeckKey === deck.key
         return (
           <button
@@ -78,7 +78,10 @@ export function DeckList({ decks, selectedDeckKey, onSelectDeck }: DeckListProps
               "w-full rounded-2xl border px-3 py-3 text-left transition-colors",
               selected
                 ? "border-[#5e82ab]/45 bg-[#dce9f7]/80 text-[#2b486b] dark:border-sky-100/45 dark:bg-[#355273]/70 dark:text-sky-100"
-                : "border-slate-200/70 bg-white/50 text-slate-800 hover:bg-slate-100/70 dark:border-slate-600/40 dark:bg-[#1b3048]/45 dark:text-slate-200 dark:hover:bg-[#213851]/60",
+                : cn(
+                    "border-slate-200/70 text-slate-800 hover:bg-slate-100/70 dark:border-slate-600/40 dark:text-slate-200 dark:hover:bg-[#213851]/60",
+                    index % 2 === 0 ? "bg-white/50 dark:bg-[#1b3048]/45" : "bg-slate-50/65 dark:bg-[#213851]/60",
+                  ),
             )}
           >
             <div className="flex items-center justify-between gap-2">

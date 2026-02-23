@@ -1167,15 +1167,33 @@ className={cn(
                     <SelectTrigger className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 border-slate-300 dark:border-slate-600">
                       <SelectValue placeholder="Select your archetype" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={UNKNOWN_ARCHETYPE}>Not set / Unknown</SelectItem>
-                      {ARCHETYPE_RULES.map((rule) => (
-                        <SelectItem key={rule.id} value={rule.id}>
+                    <SelectContent className="bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-700">
+                      <SelectItem
+                        value={UNKNOWN_ARCHETYPE}
+                        className="bg-slate-100/45 text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900 dark:bg-white/[0.04] dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]"
+                      >
+                        Not set / Unknown
+                      </SelectItem>
+                      {ARCHETYPE_RULES.map((rule, index) => (
+                        <SelectItem
+                          key={rule.id}
+                          value={rule.id}
+                          className={cn(
+                            index % 2 === 0 ? "bg-transparent" : "bg-slate-100/35 dark:bg-white/[0.03]",
+                            "text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900",
+                            "dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]",
+                          )}
+                        >
                           {rule.label}
                         </SelectItem>
                       ))}
                       {isCustomArchetypeId(userArchetypeId) ? (
-                        <SelectItem value={userArchetypeId}>Custom: {formatArchetypeLabel(userArchetypeId)}</SelectItem>
+                        <SelectItem
+                          value={userArchetypeId}
+                          className="bg-slate-100/35 text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900 dark:bg-white/[0.03] dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]"
+                        >
+                          Custom: {formatArchetypeLabel(userArchetypeId)}
+                        </SelectItem>
                       ) : null}
                     </SelectContent>
                   </Select>
@@ -1189,15 +1207,31 @@ className={cn(
                     <SelectTrigger className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 border-slate-300 dark:border-slate-600">
                       <SelectValue placeholder="Select opponent archetype" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={UNKNOWN_ARCHETYPE}>Not set / Unknown</SelectItem>
-                      {ARCHETYPE_RULES.map((rule) => (
-                        <SelectItem key={rule.id} value={rule.id}>
+                    <SelectContent className="bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-700">
+                      <SelectItem
+                        value={UNKNOWN_ARCHETYPE}
+                        className="bg-slate-100/45 text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900 dark:bg-white/[0.04] dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]"
+                      >
+                        Not set / Unknown
+                      </SelectItem>
+                      {ARCHETYPE_RULES.map((rule, index) => (
+                        <SelectItem
+                          key={rule.id}
+                          value={rule.id}
+                          className={cn(
+                            index % 2 === 0 ? "bg-transparent" : "bg-slate-100/35 dark:bg-white/[0.03]",
+                            "text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900",
+                            "dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]",
+                          )}
+                        >
                           {rule.label}
                         </SelectItem>
                       ))}
                       {isCustomArchetypeId(opponentArchetypeId) ? (
-                        <SelectItem value={opponentArchetypeId}>
+                        <SelectItem
+                          value={opponentArchetypeId}
+                          className="bg-slate-100/35 text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900 dark:bg-white/[0.03] dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]"
+                        >
                           Custom: {formatArchetypeLabel(opponentArchetypeId)}
                         </SelectItem>
                       ) : null}
