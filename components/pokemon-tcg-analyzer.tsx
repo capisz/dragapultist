@@ -127,13 +127,24 @@ export function PokemonTCGAnalyzer() {
   }, [])
 
   const validateGameLog = useCallback((log: string) => {
-    const hasGamePatterns =
-      log.includes("chose") &&
-      log.includes("for the opening coin flip") &&
-      log.includes("won the coin toss") &&
-      log.includes("drew") &&
-      log.includes("Turn #")
-    return hasGamePatterns
+    const normalized = log.replace(/\r/g, "").trim()
+    if (!normalized) return false
+
+    const openingHandCount = (normalized.match(/drew 7 cards for the opening hand\./gi) || []).length
+    const hasTurnMarkers =
+      /(?:^|\n)Turn #\s*\d+\s*-\s*.+?['’]s Turn/i.test(normalized) ||
+      /(?:^|\n)\[[^\]]+\]['’]s Turn/i.test(normalized) ||
+      /(?:^|\n)[^\n\[]+['’]s Turn/i.test(normalized)
+    const hasCoreActions = /\b(played|used|attached|evolved|retreated|knocked out)\b/i.test(normalized)
+    const hasResult = /\b(wins\.|conceded\.|took all of (?:their|your) Prize cards\.)/i.test(normalized)
+
+    // Accept full logs like the standard "Setup + Turn # + result" format, while still
+    // allowing ongoing logs that haven't reached a winner line yet.
+    if (openingHandCount >= 1 && hasTurnMarkers && hasCoreActions) {
+      return hasResult || /ended their turn\./i.test(normalized)
+    }
+
+    return false
   }, [])
 
   const addGame = useCallback(

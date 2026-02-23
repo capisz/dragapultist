@@ -100,6 +100,10 @@ function normalizeName(n: string): string {
   return (n ?? "").trim().toLowerCase()
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
 function sameName(a: string, b: string): boolean {
   return normalizeName(a) !== "" && normalizeName(a) === normalizeName(b)
 }
@@ -227,6 +231,41 @@ function cleanPokemonReference(name: string): string {
   return cleaned
 }
 
+function isTurnMarkerLine(line: string): boolean {
+  const text = line.trim()
+  if (!text) return false
+  return (
+    /^Turn #\s*\d+\s*-\s*.+?['’]s Turn$/i.test(text) ||
+    /^\[[^\]]+\]['’]s Turn$/i.test(text) ||
+    /^[^[][^]*?['’]s Turn$/i.test(text)
+  )
+}
+
+function extractHalfTurnNumber(line: string): number | null {
+  const match = line.trim().match(/^Turn #\s*(\d+)\s*-\s*/i)
+  if (!match) return null
+  const value = Number.parseInt(match[1], 10)
+  return Number.isFinite(value) ? value : null
+}
+
+function extractTurnActor(line: string): string | null {
+  const text = line.trim()
+  const numbered = text.match(/^Turn #\s*\d+\s*-\s*(.+?)['’]s Turn$/i)
+  if (numbered?.[1]) return numbered[1].trim()
+
+  const bracketed = text.match(/^\[([^\]]+)\]['’]s Turn$/i)
+  if (bracketed?.[1]) {
+    const actor = bracketed[1].trim()
+    // Placeholder logs sometimes use [playerName]'s Turn
+    if (/^playername$/i.test(actor)) return null
+    return actor
+  }
+
+  const plain = text.match(/^(.+?)['’]s Turn$/i)
+  if (plain?.[1]) return plain[1].trim()
+  return null
+}
+
 export function analyzeGameLog(
   log: string,
   swapPlayers = false,
@@ -236,7 +275,7 @@ export function analyzeGameLog(
   opponentArchetypeOverrideId?: string | null, 
   preferredUsername?: string,
 ): GameSummary {
-  const lines = log.split("\n")
+  const lines = log.split(/\r?\n/)
   const userStats: PlayerStats = {}
   const opponentStats: PlayerStats = {}
   const userPokemon: Set<string> = new Set()
@@ -300,20 +339,36 @@ export function analyzeGameLog(
 
   // Determine who actually went first by looking for "decided to go second" or turn order
   let originalUserWentFirst = true
-  for (const line of lines) {
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index]
     if (line.includes("decided to go second")) {
       const playerWhoDecidedSecond = line.split(" ")[0]
       if (playerWhoDecidedSecond === username) {
         originalUserWentFirst = false
       }
       break
-    } else if (line.startsWith("Turn # 1")) {
-      const nextLineIndex = lines.indexOf(line) + 1
-      if (nextLineIndex < lines.length) {
-        const nextLine = lines[nextLineIndex]
-        if (nextLine.includes("Turn")) {
-          const firstPlayer = nextLine.split(" ")[0].replace("'s", "")
-          originalUserWentFirst = firstPlayer === username
+    } else if (isTurnMarkerLine(line)) {
+      const markerActor = extractTurnActor(line)
+      if (markerActor) {
+        if (sameName(markerActor, username)) originalUserWentFirst = true
+        else if (sameName(markerActor, opponent)) originalUserWentFirst = false
+        break
+      }
+
+      // Placeholder turn markers (e.g. [playerName]'s Turn): infer actor from first action line.
+      for (let lookahead = index + 1; lookahead < lines.length; lookahead++) {
+        const nextLine = lines[lookahead].trim()
+        if (!nextLine) continue
+        if (nextLine.startsWith("-") || nextLine.startsWith("•")) continue
+        if (isTurnMarkerLine(nextLine)) break
+
+        if (username && nextLine.startsWith(username)) {
+          originalUserWentFirst = true
+          break
+        }
+        if (opponent && nextLine.startsWith(opponent)) {
+          originalUserWentFirst = false
+          break
         }
       }
       break
@@ -332,6 +387,7 @@ export function analyzeGameLog(
 
     // --- Walk lines and collect stats ---
   let maxTurn = 0
+  let inferredHalfTurnCount = 0
   let lastActor: "user" | "opponent" | null = null
 
   lines.forEach((rawLine) => {
@@ -339,13 +395,14 @@ export function analyzeGameLog(
     if (!line) return
 
     // Count turns
-    if (line.startsWith("Turn #")) {
-      const turnNumber = Number.parseInt(line.split("#")[1], 10)
-      if (Number.isFinite(turnNumber)) {
-        maxTurn = Math.max(maxTurn, turnNumber)
-        currentTurn = turnNumber
-        turnCount++
-      }
+    if (isTurnMarkerLine(line)) {
+      const explicitHalfTurn = extractHalfTurnNumber(line)
+      const halfTurnNumber = explicitHalfTurn ?? inferredHalfTurnCount + 1
+      inferredHalfTurnCount = Math.max(inferredHalfTurnCount, halfTurnNumber)
+      maxTurn = Math.max(maxTurn, halfTurnNumber)
+      currentTurn = halfTurnNumber
+      turnCount++
+
       // reset lastActor at turn boundary (optional but helps)
       lastActor = null
       return
@@ -443,31 +500,36 @@ export function analyzeGameLog(
     }
 
     // Game result / concessions
-   if (content.includes("wins") || content.includes("conceded")) {
-  // Named wins line (e.g. "capisz wins.")
-  if (username && content.includes(`${username} wins`)) userWon = true
-  if (opponent && content.includes(`${opponent} wins`)) userWon = false
+    if (content.includes("wins") || content.includes("conceded")) {
+      const userWinsPattern = username ? new RegExp(`\\b${escapeRegex(username)}\\s+wins\\b`, "i") : null
+      const oppWinsPattern = opponent ? new RegExp(`\\b${escapeRegex(opponent)}\\s+wins\\b`, "i") : null
+      const userConcededPattern = username ? new RegExp(`\\b${escapeRegex(username)}\\s+conceded\\b`, "i") : null
+      const oppConcededPattern = opponent ? new RegExp(`\\b${escapeRegex(opponent)}\\s+conceded\\b`, "i") : null
 
-  // POV-style concession lines
-  if (/^Opponent conceded\./i.test(content)) {
-    userWon = true
-    opponentConceded = true
-  }
-  if (/^You conceded\./i.test(content)) {
-    userWon = false
-    userConceded = true
-  }
+      // Named wins line (e.g. "capisz wins.")
+      if (userWinsPattern?.test(content)) userWon = true
+      if (oppWinsPattern?.test(content)) userWon = false
 
-  // Named concessions (if present)
-  if (username && content.includes(`${username} conceded`)) {
-    userWon = false
-    userConceded = true
-  }
-  if (opponent && content.includes(`${opponent} conceded`)) {
-    userWon = true
-    opponentConceded = true
-  }
-}
+      // POV-style concession lines
+      if (/^Opponent conceded\./i.test(content)) {
+        userWon = true
+        opponentConceded = true
+      }
+      if (/^You conceded\./i.test(content)) {
+        userWon = false
+        userConceded = true
+      }
+
+      // Named concessions (if present)
+      if (userConcededPattern?.test(content)) {
+        userWon = false
+        userConceded = true
+      }
+      if (oppConcededPattern?.test(content)) {
+        userWon = true
+        opponentConceded = true
+      }
+    }
   })
 
   // Main attackers (still computed for display, but not user-controlled)
@@ -509,6 +571,8 @@ const winnerName = userWon ? username : opponent
 const winnerPrizePath = computeWinnerPrizePath(log, winnerName)
 
   // Base summary
+  const totalHalfTurns = maxTurn > 0 ? maxTurn : inferredHalfTurnCount
+
   const baseSummary = {
     id: Date.now().toString(),
     date: new Date().toLocaleDateString(),
@@ -518,7 +582,7 @@ const winnerPrizePath = computeWinnerPrizePath(log, winnerName)
     opponentMainAttacker,
     userOtherPokemon,
     opponentOtherPokemon,
-    turns: Math.ceil(maxTurn / 2),
+    turns: Math.ceil(totalHalfTurns / 2),
     userWon,
     damageDealt: totalDamageDealt,
     userPrizeCardsTaken,
@@ -567,7 +631,7 @@ export function getGameDataForConfirmation(
   suggestedUserArchetype?: string | null
   suggestedOpponentArchetype?: string | null
 } {
-  const lines = log.split("\n")
+  const lines = log.split(/\r?\n/)
 
   // Use the same resolver as analyzeGameLog so the dialog matches the actual saved game.
   const resolved = resolvePlayers(lines, preferredUsername)
@@ -689,7 +753,7 @@ function computeWinnerPrizePath(rawLog: string, winnerName: string): string[] {
 }
 
 export function parseGameTurns(log: string, preferredUsername?: string): GameTurn[] {
-  const lines = log.split("\n")
+  const lines = log.split(/\r?\n/)
   const turns: GameTurn[] = []
   let currentTurn: GameTurn | null = null
   const resolved = resolvePlayers(lines, preferredUsername)
@@ -729,26 +793,31 @@ export function parseGameTurns(log: string, preferredUsername?: string): GameTur
   const removePlayerNames = (action: string): string => {
     let cleanedAction = action
     if (username) {
-      cleanedAction = cleanedAction.replace(`${username}'s `, "")
-      cleanedAction = cleanedAction.replace(username + " ", "")
+      const escaped = escapeRegex(username)
+      cleanedAction = cleanedAction.replace(new RegExp(`^${escaped}['’]s\\s+`, "i"), "")
+      cleanedAction = cleanedAction.replace(new RegExp(`^${escaped}\\s+`, "i"), "")
     }
     if (opponent) {
-      cleanedAction = cleanedAction.replace(`${opponent}'s `, "")
-      cleanedAction = cleanedAction.replace(opponent + " ", "")
+      const escaped = escapeRegex(opponent)
+      cleanedAction = cleanedAction.replace(new RegExp(`^${escaped}['’]s\\s+`, "i"), "")
+      cleanedAction = cleanedAction.replace(new RegExp(`^${escaped}\\s+`, "i"), "")
     }
     return cleanedAction
   }
 
   let currentGameTurn = 0
+  let currentHalfTurn = 0
 
   lines.forEach((line) => {
     if (line.trim() === "") return
 
     // Check for turn markers
-    if (line.startsWith("Turn #")) {
+    if (isTurnMarkerLine(line)) {
       isInSetup = false
-      const turnNumber = Number.parseInt(line.split("#")[1])
-      const gameNumber = Math.ceil(turnNumber / 2)
+      const explicitHalfTurn = extractHalfTurnNumber(line)
+      const halfTurn = explicitHalfTurn ?? currentHalfTurn + 1
+      currentHalfTurn = Math.max(currentHalfTurn, halfTurn)
+      const gameNumber = Math.ceil(halfTurn / 2)
 
       if (gameNumber !== currentGameTurn) {
         if (currentTurn) {
@@ -797,10 +866,10 @@ export function parseGameTurns(log: string, preferredUsername?: string): GameTur
       if (line.startsWith("Opponent")) {
         currentTurn.opponentActions.push("Opponent conceded the game")
         gameEndMessage = "You won by opponent's concession"
-      } else if (line.includes(`${opponent} conceded`)) {
+      } else if (opponent && new RegExp(`\\b${escapeRegex(opponent)}\\s+conceded\\b`, "i").test(line)) {
         currentTurn.opponentActions.push("Opponent conceded the game")
         gameEndMessage = "You won by opponent's concession"
-      } else if (line.includes(`${username} conceded`)) {
+      } else if (username && new RegExp(`\\b${escapeRegex(username)}\\s+conceded\\b`, "i").test(line)) {
         currentTurn.userActions.push("You conceded the game")
         gameEndMessage = "Opponent won by your concession"
       }
@@ -809,9 +878,9 @@ export function parseGameTurns(log: string, preferredUsername?: string): GameTur
 
     // Handle regular win conditions
     if (line.includes("wins")) {
-      if (line.includes(`${username} wins`)) {
+      if (username && new RegExp(`\\b${escapeRegex(username)}\\s+wins\\b`, "i").test(line)) {
         gameEndMessage = "You won by taking all prize cards"
-      } else if (line.includes(`${opponent} wins`)) {
+      } else if (opponent && new RegExp(`\\b${escapeRegex(opponent)}\\s+wins\\b`, "i").test(line)) {
         gameEndMessage = "Opponent won by taking all prize cards"
       }
     }
@@ -822,9 +891,9 @@ export function parseGameTurns(log: string, preferredUsername?: string): GameTur
       currentTurn.opponentActions.push(cleanedAction)
     } else if (line.trim().startsWith("-") || line.trim().startsWith("•")) {
       // Add sub-actions to the last player who acted in this turn
-      if (line.includes(`${username}'s`)) {
+      if (username && new RegExp(`\\b${escapeRegex(username)}['’]s\\b`, "i").test(line)) {
         currentTurn.userActions.push(cleanedAction)
-      } else if (line.includes(`${opponent}'s`)) {
+      } else if (opponent && new RegExp(`\\b${escapeRegex(opponent)}['’]s\\b`, "i").test(line)) {
         currentTurn.opponentActions.push(cleanedAction)
       } else {
         // If we can't determine ownership, add to the last player who acted
