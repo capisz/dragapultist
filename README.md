@@ -30,6 +30,14 @@ Paste in a full game log and get a structured, replay-style view of turns, prize
 
 ---
 
+## 🧭 Architecture Diagrams
+
+You can view the C4-style architecture diagrams in this folder:
+
+- [docs/architecture](docs/architecture/README.md)
+
+---
+
 ## ✨ Features
 
 - Paste Pokémon TCG Live export text and parse it into structured turns
