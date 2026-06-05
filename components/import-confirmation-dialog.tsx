@@ -16,6 +16,7 @@ import {
   isCustomArchetypeId,
   parseCustomArchetypeId,
 } from "@/utils/archetype-mapping"
+import { FALLBACK_POKEMON_SPRITE, type PokemonSpriteOption } from "@/utils/pokeapi-sprites"
 
 interface ImportConfirmationDialogProps {
   open: boolean
@@ -41,11 +42,6 @@ interface ImportConfirmationDialogProps {
 const UNKNOWN_ARCHETYPE = "__unknown__"
 type Side = "user" | "opponent"
 
-type PokemonSpriteOption = {
-  id: string
-  label: string
-}
-
 type CustomArchetypeBuilderState = {
   open: boolean
   firstQuery: string
@@ -62,6 +58,25 @@ const EMPTY_CUSTOM_BUILDER: CustomArchetypeBuilderState = {
   includeSecondPokemon: false,
   secondQuery: "",
   secondPokemonId: null,
+}
+
+function PokemonSuggestionSprite({ option }: { option: PokemonSpriteOption }) {
+  const candidates = option.spriteUrls?.length
+    ? option.spriteUrls
+    : [option.spriteUrl, `/sprites/${option.id}.png`, FALLBACK_POKEMON_SPRITE].filter(Boolean)
+  const [idx, setIdx] = useState(0)
+  const src = candidates[Math.min(idx, candidates.length - 1)] ?? FALLBACK_POKEMON_SPRITE
+
+  return (
+    <img
+      src={src}
+      alt={option.label}
+      loading="lazy"
+      decoding="async"
+      className="h-5 w-5 rounded-sm object-contain"
+      onError={() => setIdx((value) => Math.min(value + 1, candidates.length - 1))}
+    />
+  )
 }
 
 function normalizeSearchQuery(value: string): string {
@@ -193,14 +208,7 @@ function PokemonSearchField({
                     : "hover:bg-slate-100 dark:hover:bg-slate-800/70 text-slate-700 dark:text-slate-200"
                 }`}
               >
-                <img
-                  src={`/sprites/${option.id}.png`}
-                  alt={option.label}
-                  className="h-5 w-5 rounded-sm object-contain"
-                  onError={(event) => {
-                    event.currentTarget.src = "/sprites/substitute.png"
-                  }}
-                />
+                <PokemonSuggestionSprite option={option} />
                 <span className="truncate">{option.label}</span>
                 {selected ? <Check className="ml-auto h-3.5 w-3.5" /> : null}
               </button>

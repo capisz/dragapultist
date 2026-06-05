@@ -1,5 +1,12 @@
 // utils/archetype-mapping.ts
 import type { GameSummary } from "../types/game"
+import {
+  FALLBACK_POKEMON_SPRITE,
+  formatPokemonSpriteLabel as formatPokemonSpriteLabelFromId,
+  getPokemonSpriteCandidateSources,
+  getPokemonSpritePrimarySource,
+  normalizePokemonSpriteId,
+} from "./pokeapi-sprites"
 
 export type IconSpec =
   | string // single sprite file, e.g. "gardevoir.png"
@@ -21,414 +28,55 @@ interface CustomArchetypeSpec {
   secondPokemonId: string | null
 }
 
-// NOTE: Use sprite filenames that exist in /public/sprites
+// Sprite IDs resolve through PokeAPI first, then local /public/sprites fallbacks.
 export const ARCHETYPE_RULES: ArchetypeRule[] = [
   {
-    id: "gholdengo-lunatone",
-    label: "Gholdengo/Lunatone",
-    mustInclude: ["gholdengo", "lunatone"],
-    iconSpecs: ["gholdengo.png", "lunatone.png"],
-    sprite: "gholdengo.png",
-    aliases: ["Gholdengo/Lunatone"],
-  },
-  {
-    id: "dragapult-dusknoir",
-    label: "Dragapult / Dusknoir",
-    mustInclude: ["dragapult", "dusknoir"],
-    iconSpecs: ["dragapult.png", "dusknoir.png"],
+    id: "dragapult-ex",
+    label: "Dragapult ex",
+    mustInclude: ["dragapult"],
+    iconSpecs: ["dragapult.png"],
     sprite: "dragapult.png",
-    aliases: ["Dragapult / Dusknoir"],
+    aliases: ["Dragapult ex", "Dragapult"],
   },
   {
-    id: "charizard-pidgeot",
-    label: "Charizard / Pidgeot",
-    mustInclude: ["charizard", "pidgeot"],
-    iconSpecs: ["charizard.png", "pidgeot.png"],
-    sprite: "charizard.png",
-    aliases: ["Charizard / Pidgeot"],
-  },
-
-  // Keep BEFORE gardevoir-ex
-  {
-    id: "gardevoir-ex-jellicent",
-    label: "Gardevoir / Jellicent",
-    mustInclude: ["gardevoir", "jellicent"],
-    iconSpecs: ["gardevoir.png", "jellicent.png"],
-    sprite: "gardevoir.png",
-    aliases: ["gardevoir-jellicent", "Gardevoir / Jellicent", "Gardevoir / Jellicent ex"],
-  },
-  {
-    id: "gardevoir-ex",
-    label: "Gardevoir ex",
-    mustInclude: ["gardevoir", "ex"],
-    iconSpecs: ["gardevoir.png"],
-    sprite: "gardevoir.png",
-    aliases: ["Gardevoir ex", "Gardevoir"],
-  },
-
-  {
-    id: "charizard-noctowl",
-    label: "Charizard / Noctowl",
-    mustInclude: ["charizard", "noctowl"],
-    iconSpecs: ["charizard.png", "noctowl.png"],
-    sprite: "charizard.png",
-    aliases: ["Charizard / Noctowl"],
-  },
-  {
-    id: "mega-absol-box",
-    label: "Mega Absol Box",
-    mustInclude: ["absol"],
-    iconSpecs: ["absol-mega.png"],
-    sprite: "absol-mega.png",
-    aliases: ["Mega Absol Box", "Mega Absol"],
-  },
-  {
-    id: "lopunny-dusknoir",
-    label: "Lopunny / Dusknoir",
-    mustInclude: ["lopunny", "dusknoir"],
-    iconSpecs: ["lopunny.png", "dusknoir.png"],
-    sprite: "lopunny.png",
-    aliases: ["Lopunny / Dusknoir"],
-  },
-  {
-    id: "grimmsnarl-froslass",
-    label: "Grimmsnarl / Froslass",
-    mustInclude: ["grimmsnarl", "froslass"],
-    iconSpecs: ["grimmsnarl.png", "froslass.png"],
-    sprite: "grimmsnarl.png",
-    aliases: ["Grimmsnarl / Froslass"],
-  },
-  {
-    id: "kangaskhan-bouffalant",
-    label: "Kangaskhan / Bouffalant",
-    mustInclude: ["kangaskhan", "bouffalant"],
-    iconSpecs: ["kangaskhan.png", "bouffalant.png"],
-    sprite: "kangaskhan.png",
-    aliases: ["Kangaskhan / Bouffalant"],
-  },
-  {
-    id: "ceruledge-ex",
-    label: "Ceruledge ex",
-    mustInclude: ["ceruledge"],
-    iconSpecs: ["ceruledge.png"],
-    sprite: "ceruledge.png",
-    aliases: ["Ceruledge ex", "Ceruledge"],
-  },
-
-  // Your request: Tera Box shows Ogerpon (teal OR wellspring) + Noctowl
-  {
-    id: "tera-box",
-    label: "Tera Box",
-    mustInclude: ["tera"],
-    iconSpecs: [
-      {
-        candidates: ["ogerpon.png", "ogerpon-wellspring.png", "ogerpon-hearthflame.png", "ogerpon-cornerstone.png"],
-      },
-      "noctowl.png",
-    ],
-    sprite: "noctowl.png",
-    aliases: ["Tera Box"],
-  },
-
-  {
-    id: "dragapult-charizard",
-    label: "Dragapult / Charizard",
-    mustInclude: ["dragapult", "charizard"],
-    iconSpecs: ["dragapult.png", "charizard.png"],
-    sprite: "dragapult.png",
-    aliases: ["Dragapult / Charizard", "Charizard Dragapult"],
-  },
-  {
-    id: "flareon-noctowl",
-    label: "Flareon / Noctowl",
-    mustInclude: ["flareon", "noctowl"],
-    iconSpecs: ["flareon.png", "noctowl.png"],
-    sprite: "flareon.png",
-    aliases: ["Flareon / Noctowl"],
-  },
-  {
-    id: "alakazam-dudunsparce",
-    label: "Alakazam / Dudunsparce",
-    mustInclude: ["alakazam", "dudunsparce"],
-    iconSpecs: ["alakazam.png", "dudunsparce.png"],
-    sprite: "alakazam.png",
-    aliases: ["Alakazam / Dudunsparce"],
-  },
-
-  {
-    id: "raging-bolt-ogerpon",
-    label: "Raging Bolt / Ogerpon",
-    mustInclude: ["raging bolt", "ogerpon"],
-    iconSpecs: [
-      "raging-bolt.png",
-      {
-        candidates: ["ogerpon.png", "ogerpon-wellspring.png", "ogerpon-hearthflame.png", "ogerpon-cornerstone.png"],
-      },
-    ],
+    id: "raging-bolt-ex",
+    label: "Raging Bolt ex",
+    mustInclude: ["raging bolt"],
+    iconSpecs: ["raging-bolt.png"],
     sprite: "raging-bolt.png",
-    aliases: ["Raging Bolt / Ogerpon", "Raging Bolt Ogerpon"],
-  },
-
-  {
-    id: "gholdengo-joltik",
-    label: "Gholdengo / Joltik Box",
-    mustInclude: ["gholdengo", "joltik"],
-    iconSpecs: ["gholdengo.png", "joltik.png"],
-    sprite: "gholdengo.png",
-    aliases: ["Gholdengo / Joltik Box"],
+    aliases: ["Raging Bolt ex", "Raging Bolt"],
   },
   {
-    id: "froslass-munkidori",
-    label: "Froslass / Munkidori",
-    mustInclude: ["froslass", "munkidori"],
-    iconSpecs: ["froslass.png", "munkidori.png"],
-    sprite: "froslass.png",
-    aliases: ["Froslass / Munkidori"],
-  },
-  {
-    id: "dragapult-blaziken",
-    label: "Dragapult / Blaziken",
-    mustInclude: ["dragapult", "blaziken"],
-    iconSpecs: ["dragapult.png", "blaziken.png"],
-    sprite: "dragapult.png",
-    aliases: ["Dragapult / Blaziken"],
-  },
-
-  {
-    id: "gholdengo-typhlosion",
-    label: "Gholdengo / Typhlosion",
-    mustInclude: ["gholdengo", "typhlosion"],
-    iconSpecs: ["gholdengo.png", "typhlosion.png"],
-    sprite: "gholdengo.png",
-    aliases: ["Gholdengo / Typhlosion"],
-  },
-  {
-    id: "gholdengo-ex",
-    label: "Gholdengo ex",
-    mustInclude: ["gholdengo"],
-    iconSpecs: ["gholdengo.png"],
-    sprite: "gholdengo.png",
-    aliases: ["Gholdengo ex", "Gholdengo"],
-  },
-
-  {
-    id: "joltik-box",
-    label: "Joltik Box",
-    mustInclude: ["joltik"],
-    iconSpecs: ["joltik.png"],
-    sprite: "joltik.png",
-    aliases: ["Joltik Box"],
-  },
-  {
-    id: "marnies-grimmsnarl-ex",
-    label: "Marnie’s Grimmsnarl ex",
-    mustInclude: ["grimmsnarl", "ex"],
-    iconSpecs: ["grimmsnarl.png"],
-    sprite: "grimmsnarl.png",
-    aliases: ["Marnie’s Grimmsnarl ex", "Marnies Grimmsnarl ex"],
-  },
-  {
-    id: "slaking-ex",
-    label: "Slaking ex",
-    mustInclude: ["slaking"],
-    iconSpecs: ["slaking.png"],
-    sprite: "slaking.png",
-    aliases: ["Slaking ex", "Slaking"],
-  },
-  {
-    id: "n-zoroark-ex",
-    label: "N's Zoroark ex",
-    mustInclude: ["zoroark"],
-    iconSpecs: ["zoroark.png"],
-    sprite: "zoroark.png",
-    aliases: ["N's Zoroark ex", "Ns Zoroark ex"],
-  },
-  {
-    id: "pidgeot-control",
-    label: "Pidgeot Control",
-    mustInclude: ["pidgeot"],
-    iconSpecs: ["pidgeot.png"],
-    sprite: "pidgeot.png",
-    aliases: ["Pidgeot Control"],
-  },
-  {
-    id: "iron-hands-magneton",
-    label: "Iron Hands / Magneton",
-    mustInclude: ["iron hands", "magneton"],
-    iconSpecs: ["iron-hands.png", "magneton.png"],
-    sprite: "iron-hands.png",
-    aliases: ["Iron Hands Magneton", "Iron Hands / Magneton"],
-  },
-  {
-    id: "slowking",
-    label: "Slowking",
-    mustInclude: ["slowking"],
-    iconSpecs: ["slowking.png"],
-    sprite: "slowking.png",
-    aliases: ["Slowking"],
-  },
-  {
-    id: "mega-venusaur-ex",
-    label: "Mega Venusaur ex",
-    mustInclude: ["venusaur", "mega"],
-    iconSpecs: ["venusaur-mega.png"],
-    sprite: "venusaur-mega.png",
-    aliases: ["Mega Venusaur ex"],
-  },
-  {
-    id: "iron-thorns-crustle",
-    label: "Iron Thorns / Crustle",
-    mustInclude: ["iron thorns", "crustle"],
-    iconSpecs: ["iron-thorns.png", "crustle.png"],
-    sprite: "iron-thorns.png",
-    aliases: ["Iron Thorns Crustle", "Iron Thorns / Crustle"],
-  },
-  {
-    id: "crustle",
-    label: "Crustle",
-    mustInclude: ["crustle"],
-    iconSpecs: ["crustle.png"],
-    sprite: "crustle.png",
-    aliases: ["Crustle"],
-  },
-  {
-    id: "cynthias-garchomp-ex",
-    label: "Cynthia's Garchomp ex",
-    mustInclude: ["garchomp"],
-    iconSpecs: ["garchomp.png"],
-    sprite: "garchomp.png",
-    aliases: ["Cynthia's Garchomp ex", "Cynthias Garchomp ex"],
-  },
-  {
-    id: "ethans-typhlosion",
-    label: "Ethan's Typhlosion",
-    mustInclude: ["typhlosion"],
-    iconSpecs: ["typhlosion.png"],
-    sprite: "typhlosion.png",
-    aliases: ["Ethan's Typhlosion", "Ethans Typhlosion"],
-  },
-  {
-    id: "greninja-ex",
-    label: "Greninja ex",
-    mustInclude: ["greninja"],
-    iconSpecs: ["greninja.png"],
-    sprite: "greninja.png",
-    aliases: ["Greninja ex", "Greninja"],
-  },
-  {
-    id: "conkeldurr",
-    label: "Conkeldurr",
-    mustInclude: ["conkeldurr"],
-    iconSpecs: ["conkeldurr.png"],
-    sprite: "conkeldurr.png",
-    aliases: ["Conkeldurr"],
-  },
-  {
-    id: "gutsy-swing",
-    label: "Gutsy Swing",
-    mustInclude: ["gutsy swing"],
-    iconSpecs: ["conkeldurr.png"],
-    sprite: "conkeldurr.png",
-    aliases: ["Gutsy Swing"],
-  },
-  {
-    id: "ho-oh-armarouge",
-    label: "Ho-Oh / Armarouge",
-    mustInclude: ["ho oh", "armarouge"],
-    iconSpecs: ["ho-oh.png", "armarouge.png"],
-    sprite: "ho-oh.png",
-    aliases: ["Ho-Oh Armarouge", "Ho-Oh / Armarouge"],
-  },
-  {
-    id: "ursaluna-lunatone",
-    label: "Ursaluna / Lunatone",
-    mustInclude: ["ursaluna", "lunatone"],
-    iconSpecs: ["ursaluna.png", "lunatone.png"],
-    sprite: "ursaluna.png",
-    aliases: ["Ursaluna Lunatone", "Ursaluna / Lunatone"],
-  },
-  {
-    id: "sharpedo-toxtricity",
-    label: "Sharpedo / Toxtricity",
-    mustInclude: ["sharpedo", "toxtricity"],
-    iconSpecs: [
-      "sharpedo.png",
-      { candidates: ["toxtricity.png", "toxtricity-amped.png", "toxtricity-low-key.png"] },
-    ],
-    sprite: "sharpedo.png",
-    aliases: ["Sharpedo Toxtricity", "Sharpedo / Toxtricity"],
-  },
-  {
-    id: "chien-pao-baxcalibur",
-    label: "Chien-Pao / Baxcalibur",
-    mustInclude: ["chien pao", "baxcalibur"],
-    iconSpecs: ["chien-pao.png", "baxcalibur.png"],
-    sprite: "chien-pao.png",
-    aliases: ["Chien-Pao Baxcalibur", "Chien-Pao / Baxcalibur"],
-  },
-  {
-    id: "lucario-hariyama",
-    label: "Lucario / Hariyama",
-    mustInclude: ["lucario", "hariyama"],
-    iconSpecs: ["lucario.png", "hariyama.png"],
-    sprite: "lucario.png",
-    aliases: ["Lucario Hariyama", "Lucario / Hariyama"],
-  },
-  {
-    id: "seaking-festival-lead",
-    label: "Seaking / Festival Lead",
-    mustInclude: ["seaking", "dipplin"],
-    iconSpecs: ["seaking.png", "dipplin.png"],
-    sprite: "seaking.png",
-    aliases: ["Seaking Festival Lead", "Seaking / Festival Lead"],
+    id: "alakazam-powerful-hand",
+    label: "Alakazam Powerful Hand",
+    mustInclude: ["alakazam"],
+    iconSpecs: ["alakazam.png"],
+    sprite: "alakazam.png",
+    aliases: ["Alakazam Powerful Hand", "Alakazam"],
   },
   {
     id: "festival-lead",
     label: "Festival Lead",
     mustInclude: ["dipplin"],
-    iconSpecs: ["dipplin.png"],
+    iconSpecs: ["dipplin.png", "thwackey.png"],
     sprite: "dipplin.png",
-    aliases: ["Festival Lead"],
+    aliases: ["Festival Lead", "Dipplin Festival Lead"],
   },
   {
     id: "rockets-mewtwo-ex",
     label: "Rocket's Mewtwo ex",
     mustInclude: ["mewtwo"],
-    iconSpecs: ["mewtwo.png"],
+    iconSpecs: ["mewtwo.png", "spidops.png"],
     sprite: "mewtwo.png",
     aliases: ["Rocket's Mewtwo ex", "Rockets Mewtwo ex"],
   },
   {
-    id: "toxtricity-brute-bonnet",
-    label: "Toxtricity / Brute Bonnet",
-    mustInclude: ["toxtricity", "brute bonnet"],
-    iconSpecs: [{ candidates: ["toxtricity.png", "toxtricity-amped.png", "toxtricity-low-key.png"] }, "brute-bonnet.png"],
-    sprite: "toxtricity.png",
-    aliases: ["Toxtricity Brute Bonnet", "Toxtricity / Brute Bonnet"],
-  },
-  {
-    id: "roaring-moon-ex",
-    label: "Roaring Moon ex",
-    mustInclude: ["roaring moon"],
-    iconSpecs: ["roaring-moon.png"],
-    sprite: "roaring-moon.png",
-    aliases: ["Roaring Moon ex", "Roaring Moon"],
-  },
-  {
-    id: "great-tusk-mill",
-    label: "Great Tusk Mill",
-    mustInclude: ["great tusk"],
-    iconSpecs: ["great-tusk.png"],
-    sprite: "great-tusk.png",
-    aliases: ["Great Tusk Mill"],
-  },
-  {
-    id: "hops-zacian",
-    label: "Hop's Zacian",
-    mustInclude: ["zacian"],
-    iconSpecs: ["zacian.png"],
-    sprite: "zacian.png",
-    aliases: ["Hop's Zacian", "Hops Zacian"],
+    id: "mega-lopunny-ex",
+    label: "Mega Lopunny ex",
+    mustInclude: ["lopunny", "mega"],
+    iconSpecs: ["lopunny-mega.png"],
+    sprite: "lopunny-mega.png",
+    aliases: ["Mega Lopunny ex"],
   },
   {
     id: "ogerpon-meganium",
@@ -442,12 +90,127 @@ export const ARCHETYPE_RULES: ArchetypeRule[] = [
     aliases: ["Ogerpon Meganium", "Ogerpon / Meganium"],
   },
   {
+    id: "tera-box",
+    label: "Tera Box",
+    mustInclude: ["noctowl", "ogerpon"],
+    iconSpecs: [
+      "noctowl.png",
+      { candidates: ["ogerpon-wellspring.png", "ogerpon.png", "ogerpon-hearthflame.png", "ogerpon-cornerstone.png"] },
+    ],
+    sprite: "noctowl.png",
+    aliases: ["Tera Box", "Noctowl Ogerpon", "Noctowl / Ogerpon"],
+  },
+  {
     id: "ogerpon-box",
     label: "Ogerpon Box",
     mustInclude: ["ogerpon"],
     iconSpecs: [{ candidates: ["ogerpon.png", "ogerpon-wellspring.png", "ogerpon-hearthflame.png", "ogerpon-cornerstone.png"] }],
     sprite: "ogerpon.png",
     aliases: ["Ogerpon Box"],
+  },
+  {
+    id: "crustle-mysterious-rock-inn",
+    label: "Crustle Mysterious Rock Inn",
+    mustInclude: ["crustle"],
+    iconSpecs: ["crustle.png"],
+    sprite: "crustle.png",
+    aliases: ["Crustle", "Crustle Mysterious Rock Inn"],
+  },
+  {
+    id: "hydrapple-ex",
+    label: "Hydrapple ex",
+    mustInclude: ["hydrapple"],
+    iconSpecs: ["hydrapple.png"],
+    sprite: "hydrapple.png",
+    aliases: ["Hydrapple ex", "Hydrapple"],
+  },
+  {
+    id: "cynthias-garchomp-ex",
+    label: "Cynthia's Garchomp ex",
+    mustInclude: ["garchomp"],
+    iconSpecs: ["garchomp.png"],
+    sprite: "garchomp.png",
+    aliases: ["Cynthia's Garchomp ex", "Cynthias Garchomp ex"],
+  },
+  {
+    id: "n-zoroark-ex",
+    label: "N's Zoroark ex",
+    mustInclude: ["zoroark"],
+    iconSpecs: ["zoroark.png"],
+    sprite: "zoroark.png",
+    aliases: ["N's Zoroark ex", "Ns Zoroark ex"],
+  },
+  {
+    id: "mega-lucario-ex",
+    label: "Mega Lucario ex",
+    mustInclude: ["lucario", "mega"],
+    iconSpecs: ["lucario-mega.png"],
+    sprite: "lucario-mega.png",
+    aliases: ["Mega Lucario ex"],
+  },
+  {
+    id: "rockets-honchkrow",
+    label: "Rocket's Honchkrow",
+    mustInclude: ["honchkrow"],
+    iconSpecs: ["honchkrow.png", "porygon2.png"],
+    sprite: "honchkrow.png",
+    aliases: ["Rocket's Honchkrow", "Rockets Honchkrow"],
+  },
+  {
+    id: "mega-starmie-ex",
+    label: "Mega Starmie ex",
+    mustInclude: ["starmie", "mega"],
+    iconSpecs: ["starmie-mega.png"],
+    sprite: "starmie-mega.png",
+    aliases: ["Mega Starmie ex"],
+  },
+  {
+    id: "slowking-seek-inspiration",
+    label: "Slowking Seek Inspiration",
+    mustInclude: ["slowking"],
+    iconSpecs: ["slowking.png"],
+    sprite: "slowking.png",
+    aliases: ["Slowking", "Slowking Seek Inspiration"],
+  },
+  {
+    id: "lillies-clefairy-ex",
+    label: "Lillie's Clefairy ex",
+    mustInclude: ["clefairy"],
+    iconSpecs: ["clefairy.png"],
+    sprite: "clefairy.png",
+    aliases: ["Lillie's Clefairy ex", "Lillies Clefairy ex"],
+  },
+  {
+    id: "marnies-grimmsnarl-ex",
+    label: "Marnie’s Grimmsnarl ex",
+    mustInclude: ["grimmsnarl"],
+    iconSpecs: ["grimmsnarl.png"],
+    sprite: "grimmsnarl.png",
+    aliases: ["Marnie’s Grimmsnarl ex", "Marnies Grimmsnarl ex"],
+  },
+  {
+    id: "okidogi-adrena-power",
+    label: "Okidogi Adrena-Power",
+    mustInclude: ["okidogi"],
+    iconSpecs: ["okidogi.png"],
+    sprite: "okidogi.png",
+    aliases: ["Okidogi", "Okidogi Adrena-Power", "Okidogi Adrena Power"],
+  },
+  {
+    id: "greninja-ex",
+    label: "Greninja ex",
+    mustInclude: ["greninja"],
+    iconSpecs: ["greninja.png"],
+    sprite: "greninja.png",
+    aliases: ["Greninja ex", "Greninja"],
+  },
+  {
+    id: "mega-absol-box",
+    label: "Mega Absol Box",
+    mustInclude: ["absol"],
+    iconSpecs: ["absol-mega.png", "kangaskhan-mega.png"],
+    sprite: "absol-mega.png",
+    aliases: ["Mega Absol Box", "Mega Absol"],
   },
   {
     id: "mega-kangaskhan-ex",
@@ -458,44 +221,60 @@ export const ARCHETYPE_RULES: ArchetypeRule[] = [
     aliases: ["Mega Kangaskhan ex"],
   },
   {
-    id: "kangaskhan-forretress",
-    label: "Kangaskhan / Forretress",
-    mustInclude: ["kangaskhan", "forretress"],
-    iconSpecs: ["kangaskhan.png", "forretress.png"],
-    sprite: "kangaskhan.png",
-    aliases: ["Kangaskhan Forretress", "Kangaskhan / Forretress"],
+    id: "mega-diancie-ex",
+    label: "Mega Diancie ex",
+    mustInclude: ["diancie", "mega"],
+    iconSpecs: ["diancie-mega.png"],
+    sprite: "diancie-mega.png",
+    aliases: ["Mega Diancie ex"],
   },
   {
-    id: "okidogi",
-    label: "Okidogi",
-    mustInclude: ["okidogi"],
-    iconSpecs: ["okidogi.png"],
-    sprite: "okidogi.png",
-    aliases: ["Okidogi"],
+    id: "hops-trevenant",
+    label: "Hop's Trevenant",
+    mustInclude: ["trevenant"],
+    iconSpecs: ["trevenant.png"],
+    sprite: "trevenant.png",
+    aliases: ["Hop's Trevenant", "Hops Trevenant"],
   },
   {
-    id: "adrena-power",
-    label: "Adrena-Power",
-    mustInclude: ["adrena power"],
-    iconSpecs: ["okidogi.png"],
-    sprite: "okidogi.png",
-    aliases: ["Adrena-Power", "Adrena Power"],
+    id: "ethans-typhlosion",
+    label: "Ethan's Typhlosion",
+    mustInclude: ["typhlosion"],
+    iconSpecs: ["typhlosion.png"],
+    sprite: "typhlosion.png",
+    aliases: ["Ethan's Typhlosion", "Ethans Typhlosion"],
   },
   {
-    id: "toxtricity-box",
-    label: "Toxtricity Box",
+    id: "bloodmoon-ursaluna-mad-bite",
+    label: "Bloodmoon Ursaluna Mad Bite",
+    mustInclude: ["ursaluna"],
+    iconSpecs: ["ursaluna-bloodmoon.png"],
+    sprite: "ursaluna-bloodmoon.png",
+    aliases: ["Bloodmoon Ursaluna Mad Bite", "Bloodmoon Ursaluna", "Ursaluna Mad Bite"],
+  },
+  {
+    id: "toxtricity-sinister-surge",
+    label: "Toxtricity Sinister Surge",
     mustInclude: ["toxtricity"],
     iconSpecs: [{ candidates: ["toxtricity.png", "toxtricity-amped.png", "toxtricity-low-key.png"] }],
     sprite: "toxtricity.png",
-    aliases: ["Toxtricity Box"],
+    aliases: ["Toxtricity", "Toxtricity Sinister Surge"],
   },
   {
-    id: "manectric-eelektrik",
-    label: "Manectric / Eelektrik",
-    mustInclude: ["manectric", "eelektrik"],
-    iconSpecs: ["manectric.png", "eelektrik.png"],
-    sprite: "manectric.png",
-    aliases: ["Manectric Eelektrik", "Manectric / Eelektrik"],
+    id: "yanmega-ex",
+    label: "Yanmega ex",
+    mustInclude: ["yanmega"],
+    iconSpecs: ["yanmega.png"],
+    sprite: "yanmega.png",
+    aliases: ["Yanmega ex", "Yanmega"],
+  },
+  {
+    id: "stevens-metagross-ex",
+    label: "Steven's Metagross ex",
+    mustInclude: ["metagross"],
+    iconSpecs: ["metagross.png"],
+    sprite: "metagross.png",
+    aliases: ["Steven's Metagross ex", "Stevens Metagross ex"],
   },
   {
     id: "archaludon-ex",
@@ -505,15 +284,69 @@ export const ARCHETYPE_RULES: ArchetypeRule[] = [
     sprite: "archaludon.png",
     aliases: ["Archaludon ex", "Archaludon"],
   },
-
-  // Keep generic Dragapult last
   {
-    id: "dragapult-ex",
-    label: "Dragapult ex",
-    mustInclude: ["dragapult"],
-    iconSpecs: ["dragapult.png"],
-    sprite: "dragapult.png",
-    aliases: ["Dragapult ex", "Dragapult"],
+    id: "flareon-ex",
+    label: "Flareon ex",
+    mustInclude: ["flareon"],
+    iconSpecs: ["flareon.png"],
+    sprite: "flareon.png",
+    aliases: ["Flareon ex", "Flareon"],
+  },
+  {
+    id: "froslass-munkidori",
+    label: "Froslass / Munkidori",
+    mustInclude: ["froslass", "munkidori"],
+    iconSpecs: ["froslass.png", "munkidori.png"],
+    sprite: "froslass.png",
+    aliases: ["Froslass Munkidori", "Froslass / Munkidori"],
+  },
+  {
+    id: "ceruledge-ex",
+    label: "Ceruledge ex",
+    mustInclude: ["ceruledge"],
+    iconSpecs: ["ceruledge.png"],
+    sprite: "ceruledge.png",
+    aliases: ["Ceruledge ex", "Ceruledge"],
+  },
+  {
+    id: "rockets-spidops",
+    label: "Rocket's Spidops",
+    mustInclude: ["spidops"],
+    iconSpecs: ["spidops.png"],
+    sprite: "spidops.png",
+    aliases: ["Rocket's Spidops", "Rockets Spidops"],
+  },
+  {
+    id: "mega-venusaur-ex",
+    label: "Mega Venusaur ex",
+    mustInclude: ["venusaur", "mega"],
+    iconSpecs: ["venusaur-mega.png"],
+    sprite: "venusaur-mega.png",
+    aliases: ["Mega Venusaur ex"],
+  },
+  {
+    id: "mega-sharpedo-ex",
+    label: "Mega Sharpedo ex",
+    mustInclude: ["sharpedo", "mega"],
+    iconSpecs: ["sharpedo-mega.png"],
+    sprite: "sharpedo-mega.png",
+    aliases: ["Mega Sharpedo ex"],
+  },
+  {
+    id: "mega-froslass-ex",
+    label: "Mega Froslass ex",
+    mustInclude: ["froslass", "mega"],
+    iconSpecs: ["froslass-mega.png"],
+    sprite: "froslass-mega.png",
+    aliases: ["Mega Froslass ex"],
+  },
+  {
+    id: "mega-gardevoir-ex",
+    label: "Mega Gardevoir ex",
+    mustInclude: ["gardevoir", "mega"],
+    iconSpecs: ["gardevoir-mega.png"],
+    sprite: "gardevoir-mega.png",
+    aliases: ["Mega Gardevoir ex"],
   },
 ]
 
@@ -531,24 +364,11 @@ function slugify(input: string): string {
 }
 
 function normalizeSpriteId(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\.png$/i, "")
-    .replace(/[^a-z0-9-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
+  return normalizePokemonSpriteId(value)
 }
 
 export function formatPokemonSpriteLabel(spriteId: string): string {
-  const normalized = normalizeSpriteId(spriteId)
-  if (!normalized) return "Unknown"
-
-  return normalized
-    .split("-")
-    .filter(Boolean)
-    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
-    .join(" ")
+  return formatPokemonSpriteLabelFromId(spriteId)
 }
 
 export function parseCustomArchetypeId(value?: string | null): CustomArchetypeSpec | null {
@@ -633,28 +453,28 @@ export function formatArchetypeLabel(value?: string | null): string {
     .replace(/\b\w/g, (ch) => ch.toUpperCase())
 }
 
-const FALLBACK_ICON = "/sprites/substitute.png"
+const FALLBACK_ICON = FALLBACK_POKEMON_SPRITE
 
 export function getArchetypeSpritePath(value?: string | null): string {
   const custom = parseCustomArchetypeId(value ?? null)
-  if (custom) return `/sprites/${custom.firstPokemonId}.png`
+  if (custom) return getPokemonSpritePrimarySource(custom.firstPokemonId, { preference: "artwork" })
 
   const id = canonicalizeArchetypeId(value ?? null)
   const rule = id ? ARCHETYPE_RULES.find((r) => r.id === id) : undefined
-  if (rule?.sprite) return `/sprites/${rule.sprite}`
+  if (rule?.sprite) return getPokemonSpritePrimarySource(rule.sprite, { preference: "artwork" })
   return FALLBACK_ICON
 }
 
 /**
  * Returns candidates for each icon slot: string[][] where each inner array is tried in order.
- * Example: [[/sprites/ogerpon-teal..., /sprites/ogerpon-wellspring...], [/sprites/noctowl.png]]
+ * Example: [[PokeAPI Ogerpon candidates..., local fallbacks...], [PokeAPI Noctowl candidates...]]
  */
 export function getArchetypeIconCandidatePaths(value?: string | null): string[][] {
   const custom = parseCustomArchetypeId(value ?? null)
   if (custom) {
-    const slots: string[][] = [[`/sprites/${custom.firstPokemonId}.png`, FALLBACK_ICON]]
+    const slots: string[][] = [getPokemonSpriteCandidateSources(custom.firstPokemonId)]
     if (custom.secondPokemonId) {
-      slots.push([`/sprites/${custom.secondPokemonId}.png`, FALLBACK_ICON])
+      slots.push(getPokemonSpriteCandidateSources(custom.secondPokemonId))
     }
     return slots
   }
@@ -664,13 +484,17 @@ export function getArchetypeIconCandidatePaths(value?: string | null): string[][
 
   const specs = rule?.iconSpecs
   if (!specs || specs.length === 0) {
-    const single = rule?.sprite ? `/sprites/${rule.sprite}` : FALLBACK_ICON
-    return [[single, FALLBACK_ICON]]
+    return [rule?.sprite ? getPokemonSpriteCandidateSources(rule.sprite) : [FALLBACK_ICON]]
   }
 
   return specs.map((s) => {
-    if (typeof s === "string") return [`/sprites/${s}`, FALLBACK_ICON]
-    return [...s.candidates.map((c) => `/sprites/${c}`), FALLBACK_ICON]
+    if (typeof s === "string") return getPokemonSpriteCandidateSources(s)
+    return [
+      ...s.candidates.flatMap((c) =>
+        getPokemonSpriteCandidateSources(c, { includeFallback: false }),
+      ),
+      FALLBACK_ICON,
+    ]
   })
 }
 

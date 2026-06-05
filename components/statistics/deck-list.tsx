@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { getArchetypeIconCandidatePaths } from "@/utils/archetype-mapping"
 import type { DeckStat } from "./types"
@@ -21,14 +20,14 @@ function CandidateSprite({
   const src = candidates[Math.min(idx, candidates.length - 1)] ?? FALLBACK_ICON
 
   return (
-    <Image
+    <img
       src={src}
       alt={alt}
-      width={size}
-      height={size}
+      loading="lazy"
+      decoding="async"
+      style={{ width: size, height: size }}
       className="rounded-full border border-slate-200 bg-white/80 object-cover dark:border-slate-600 dark:bg-slate-900/70"
       onError={() => setIdx((prev) => (prev < candidates.length - 1 ? prev + 1 : prev))}
-      unoptimized
     />
   )
 }
@@ -39,10 +38,10 @@ function ArchetypeIconPair({ archetypeId }: { archetypeId: string | null }) {
   const slotB = slots?.[1]?.length ? slots[1] : []
 
   return (
-    <span className="inline-flex items-center">
+    <span className="inline-flex items-center gap-1.5">
       <CandidateSprite candidates={slotA} alt="Deck icon A" />
       {slotB.length > 0 ? (
-        <span className="-ml-1.5">
+        <span>
           <CandidateSprite candidates={slotB} alt="Deck icon B" />
         </span>
       ) : null}

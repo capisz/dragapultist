@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { GameSummary } from "@/types/game"
 import { ARCHETYPE_RULES, formatArchetypeLabel, isCustomArchetypeId } from "@/utils/archetype-mapping"
+import { getPokemonSpriteCandidateSourcesForDisplayName } from "@/utils/pokeapi-sprites"
 
 interface DeckInfo {
   name: string
@@ -1495,55 +1496,7 @@ function uniquePreserveOrder(values: string[]) {
 }
 
 function buildPrizeSpriteCandidates(displayName: string): string[] {
-  const raw = stripOwnerPrefix(displayName)
-  const n0 = normalizeLoose(raw)
-  if (!n0) return [FALLBACK_ICON]
-
-  const base = n0.replace(/\bex\b/g, "").replace(/\s+/g, " ").trim()
-  const tokens = base.split(" ").filter(Boolean).filter((t) => t !== "mask")
-
-  if (tokens.includes("ogerpon")) {
-    const tset = new Set(tokens)
-    const form =
-      tset.has("wellspring")
-        ? "ogerpon-wellspring"
-        : tset.has("hearthflame")
-          ? "ogerpon-hearthflame"
-          : tset.has("cornerstone")
-            ? "ogerpon-cornerstone"
-            : "ogerpon"
-
-    return uniquePreserveOrder([
-      `/sprites/${form}.png`,
-      `/sprites/${form}.webp`,
-      `/sprites/ogerpon.png`,
-      `/sprites/ogerpon.webp`,
-      FALLBACK_ICON,
-    ])
-  }
-
-  const slug = tokens.join("-")
-  const slugUnderscore = tokens.join("_")
-
-  let swapped: string | null = null
-  let swappedUnderscore: string | null = null
-  if (tokens.length >= 2) {
-    const swappedTokens = [...tokens.slice(1), tokens[0]]
-    swapped = swappedTokens.join("-")
-    swappedUnderscore = swappedTokens.join("_")
-  }
-
-  return uniquePreserveOrder([
-    `/sprites/${slug}.png`,
-    `/sprites/${slug}.webp`,
-    `/sprites/${slugUnderscore}.png`,
-    `/sprites/${slugUnderscore}.webp`,
-    swapped ? `/sprites/${swapped}.png` : "",
-    swapped ? `/sprites/${swapped}.webp` : "",
-    swappedUnderscore ? `/sprites/${swappedUnderscore}.png` : "",
-    swappedUnderscore ? `/sprites/${swappedUnderscore}.webp` : "",
-    FALLBACK_ICON,
-  ])
+  return getPokemonSpriteCandidateSourcesForDisplayName(displayName)
 }
 
 function extractTwoPlayersFromRawLog(rawLog: string): { p1: string; p2: string } {

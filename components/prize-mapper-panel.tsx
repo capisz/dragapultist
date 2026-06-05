@@ -11,6 +11,7 @@ import {
   getArchetypeIconCandidatePaths,
   inferArchetypesForSummary,
 } from "@/utils/archetype-mapping"
+import { getPokemonSpriteCandidateSourcesForDisplayName } from "@/utils/pokeapi-sprites"
 import {
   Select,
   SelectContent,
@@ -143,66 +144,8 @@ function deriveWinnerKOSequenceFromRawLog(rawLog: string, winnerName: string): s
   return out
 }
 
-/**
- * Sprite candidates for a KO name.
- * Handles:
- * - “X ex” -> sprite without ex
- * - “Wellspring Mask Ogerpon ex” -> ogerpon-wellspring.png
- * - “Mega Lopunny ex” -> tries mega-lopunny and lopunny-mega
- */
 function buildPrizeSpriteCandidates(displayName: string): string[] {
-  const raw = stripOwnerPrefix(displayName)
-  const n0 = normalizeLoose(raw)
-  if (!n0) return [FALLBACK_ICON]
-
-  const base = n0.replace(/\bex\b/g, "").replace(/\s+/g, " ").trim()
-
-  // Drop filler token “mask”
-  const tokens = base.split(" ").filter(Boolean).filter((t) => t !== "mask")
-
-  // Ogerpon masks
-  if (tokens.includes("ogerpon")) {
-    const tset = new Set(tokens)
-    const form =
-      tset.has("wellspring")
-        ? "ogerpon-wellspring"
-        : tset.has("hearthflame")
-          ? "ogerpon-hearthflame"
-          : tset.has("cornerstone")
-            ? "ogerpon-cornerstone"
-            : "ogerpon"
-
-    return uniquePreserveOrder([
-      `/sprites/${form}.png`,
-      `/sprites/${form}.webp`,
-      `/sprites/ogerpon.png`,
-      `/sprites/ogerpon.webp`,
-      FALLBACK_ICON,
-    ])
-  }
-
-  const slug = tokens.join("-")
-  const slugUnderscore = tokens.join("_")
-
-  let swapped: string | null = null
-  let swappedUnderscore: string | null = null
-  if (tokens.length >= 2) {
-    const swappedTokens = [...tokens.slice(1), tokens[0]]
-    swapped = swappedTokens.join("-")
-    swappedUnderscore = swappedTokens.join("_")
-  }
-
-  return uniquePreserveOrder([
-    `/sprites/${slug}.png`,
-    `/sprites/${slug}.webp`,
-    `/sprites/${slugUnderscore}.png`,
-    `/sprites/${slugUnderscore}.webp`,
-    swapped ? `/sprites/${swapped}.png` : "",
-    swapped ? `/sprites/${swapped}.webp` : "",
-    swappedUnderscore ? `/sprites/${swappedUnderscore}.png` : "",
-    swappedUnderscore ? `/sprites/${swappedUnderscore}.webp` : "",
-    FALLBACK_ICON,
-  ])
+  return getPokemonSpriteCandidateSourcesForDisplayName(displayName)
 }
 
 function CandidateSprite({
@@ -238,14 +181,14 @@ function CandidateSprite({
 function ArchetypeIconPair({ archetypeId }: { archetypeId: string | null }) {
   const slots = getArchetypeIconCandidatePaths(archetypeId)
   return (
-    <div className="flex items-center gap-0">
+    <div className="flex items-center gap-1.5">
       {slots.slice(0, 3).map((cands, i) => (
         <CandidateSprite
           key={`${archetypeId ?? "unknown"}-${i}`}
           candidates={cands.length ? cands : [FALLBACK_ICON]}
           alt="icon"
           size={32}
-          className={`opacity-80 dark:opacity-100 ${i === 0 ? "-ml-0.5" : "-ml-1.5"}`} //fixes icon spacing even if theres padding :)
+          className="opacity-80 dark:opacity-100"
         />
       ))}
     </div>

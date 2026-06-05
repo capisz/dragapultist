@@ -81,18 +81,17 @@ function ArchetypeIconPair({ archetypeId, size = 26 }: { archetypeId: string | n
   const slotA = slots?.[0]?.length ? slots[0] : [FALLBACK_ICON]
   const slotB = slots?.[1]?.length ? slots[1] : null
 
-  // Tailwind -ml-1 = 0.25rem = 4px
-  const overlapPx = 4
-  const totalW = size * 2 - overlapPx
+  const gapPx = Math.max(6, Math.round(size * 0.25))
+  const totalW = size * 2 + gapPx
 
   return (
-    <div className="flex items-center" style={{ width: totalW }}>
+    <div className="flex items-center" style={{ width: totalW, columnGap: gapPx }}>
       <CandidateSprite candidates={slotA} alt="icon" size={size} />
 
       {slotB ? (
-        <CandidateSprite candidates={slotB} alt="icon" size={size} className="-ml-1" />
+        <CandidateSprite candidates={slotB} alt="icon" size={size} />
       ) : (
-        <span aria-hidden className="-ml-1 shrink-0" style={{ width: size, height: size }} />
+        <span aria-hidden className="shrink-0" style={{ width: size, height: size }} />
       )}
     </div>
   )

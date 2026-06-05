@@ -2,21 +2,26 @@ import { readdir } from "node:fs/promises"
 import path from "node:path"
 import { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
-import { formatPokemonSpriteLabel } from "@/utils/archetype-mapping"
-
-type PokemonSpriteOption = {
-  id: string
-  label: string
-}
+import {
+  formatPokemonSpriteLabel,
+  getPokemonSpriteCandidateSources,
+  normalizePokemonSearchText,
+  normalizePokemonSpriteId,
+  type PokemonSpriteOption,
+} from "@/utils/pokeapi-sprites"
 
 let cachedOptions: PokemonSpriteOption[] | null = null
 
-function toPokemonSpriteId(filename: string): string | null {
-  if (!filename.toLowerCase().endsWith(".png")) return null
-  const id = filename.replace(/\.png$/i, "").trim().toLowerCase()
-  if (!id || id === "substitute") return null
-  if (!/^[a-z0-9-]+$/.test(id)) return null
-  return id
+const ADDITIONAL_POKEAPI_ONLY_SPRITE_IDS = ["starmie-mega", "froslass-mega"]
+
+function buildPokemonSpriteOption(id: string): PokemonSpriteOption {
+  const spriteUrls = getPokemonSpriteCandidateSources(id)
+  return {
+    id,
+    label: formatPokemonSpriteLabel(id),
+    spriteUrl: spriteUrls[0] ?? "/sprites/substitute.png",
+    spriteUrls,
+  }
 }
 
 async function loadPokemonSpriteOptions(): Promise<PokemonSpriteOption[]> {
@@ -28,9 +33,17 @@ async function loadPokemonSpriteOptions(): Promise<PokemonSpriteOption[]> {
   const byId = new Map<string, PokemonSpriteOption>()
   for (const file of files) {
     if (!file.isFile()) continue
-    const id = toPokemonSpriteId(file.name)
-    if (!id || byId.has(id)) continue
-    byId.set(id, { id, label: formatPokemonSpriteLabel(id) })
+    if (!/\.(png|webp)$/i.test(file.name)) continue
+
+    const id = normalizePokemonSpriteId(file.name)
+    if (!id || id === "substitute" || byId.has(id)) continue
+
+    byId.set(id, buildPokemonSpriteOption(id))
+  }
+
+  for (const id of ADDITIONAL_POKEAPI_ONLY_SPRITE_IDS) {
+    if (byId.has(id)) continue
+    byId.set(id, buildPokemonSpriteOption(id))
   }
 
   cachedOptions = Array.from(byId.values()).sort((a, b) => a.label.localeCompare(b.label))
@@ -38,11 +51,7 @@ async function loadPokemonSpriteOptions(): Promise<PokemonSpriteOption[]> {
 }
 
 function normalizeSearchQuery(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, " ")
-    .replace(/\s+/g, " ")
+  return normalizePokemonSearchText(value)
 }
 
 function scoreOption(option: PokemonSpriteOption, normalizedQuery: string): number {
@@ -50,10 +59,16 @@ function scoreOption(option: PokemonSpriteOption, normalizedQuery: string): numb
 
   const idText = option.id.replace(/-/g, " ")
   const labelText = option.label.toLowerCase()
+  const queryText = normalizedQuery.replace(/-/g, " ")
+  const queryId = normalizedQuery.replace(/\s+/g, "-")
+  const queryTokens = queryText.split(" ").filter(Boolean)
 
-  if (option.id === normalizedQuery || labelText === normalizedQuery) return 6
-  if (idText.startsWith(normalizedQuery) || labelText.startsWith(normalizedQuery)) return 5
-  if (idText.includes(normalizedQuery) || labelText.includes(normalizedQuery)) return 4
+  if (option.id === queryId || labelText === queryText) return 6
+  if (idText.startsWith(queryText) || labelText.startsWith(queryText)) return 5
+  if (idText.includes(queryText) || labelText.includes(queryText)) return 4
+  if (queryTokens.length > 1 && queryTokens.every((token) => idText.includes(token) || labelText.includes(token))) {
+    return 3
+  }
   return 0
 }
 
