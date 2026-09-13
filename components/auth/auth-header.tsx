@@ -24,7 +24,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
-import { getUser, logout, loginAsGuest } from "@/app/actions"
+import { getUser, loginAsGuest } from "@/app/actions"
+import { firebaseLogout } from "@/lib/firebase-session-client"
+import { AuthPanel } from "./auth-panel"
 import { LoginForm } from "@/components/auth/login-form"
 import { SignUpForm } from "@/components/auth/signup-form"
 
@@ -46,7 +48,9 @@ export function AuthHeader() {
   const router = useRouter()
 
   const { resolvedTheme, theme, setTheme } = useTheme()
-  const isDarkMode = (resolvedTheme ?? theme) === "dark"
+  const [themeMounted, setThemeMounted] = useState(false)
+  useEffect(() => setThemeMounted(true), [])
+  const isDarkMode = themeMounted && (resolvedTheme ?? theme) === "dark"
   const toggleDarkMode = () => setTheme(isDarkMode ? "light" : "dark")
 
   const [user, setUser] = useState<HeaderUser>(null)
@@ -54,9 +58,10 @@ export function AuthHeader() {
   const [authTab, setAuthTab] = useState<"login" | "signup">("login")
 
   useEffect(() => {
-    getUser()
-      .then((u: any) => setUser(u ?? null))
-      .catch(() => setUser(null))
+    const refresh = () => getUser().then((u: any) => setUser(u ?? null)).catch(() => setUser(null))
+    void refresh()
+    window.addEventListener("dragapultist-auth-changed", refresh)
+    return () => window.removeEventListener("dragapultist-auth-changed", refresh)
   }, [])
 
   const isGuest = useMemo(() => {
@@ -71,7 +76,7 @@ export function AuthHeader() {
 
   async function handleSignOut() {
     try {
-      await logout()
+      await firebaseLogout()
     } finally {
       setUser(null)
       router.refresh()
@@ -82,6 +87,7 @@ export function AuthHeader() {
   async function handleGuest() {
     const u = await loginAsGuest()
     setUser(u as any)
+    window.dispatchEvent(new Event("dragapultist-auth-changed"))
     setAuthOpen(false)
     router.refresh()
   }
@@ -94,14 +100,14 @@ export function AuthHeader() {
   }
 
   return (
-    <div className={cn("text-foreground transition-colors h-8 bg-transparent", montserrat.className)}>
+    <div className={cn("text-foreground transition-colors h-auto bg-transparent", montserrat.className)}>
       <header className="container mx-auto px-0">
-        <div className="flex items-center justify-between gap-3 py-1">
+        <div className="header-row flex items-center justify-between gap-2 py-1">
           {/* Left */}
-          <div className="flex items-center gap-2">
+          <div className="header-identity flex items-center gap-2">
             <img
               src="/dreepy-nobg.png"
-              alt="Dragapultist character"
+              alt="Dreepy"
               className="h-8 w-10 md:h-16 md:w-14 object-contain drop-shadow-[0_0_22px_rgba(42,81,128,0.9)] dark:drop-shadow-[0_0_16px_rgba(186,230,253,0.25)] opacity-80"
             />
             <div className="flex flex-col">
@@ -115,7 +121,7 @@ export function AuthHeader() {
           </div>
 
           {/* Right: Help -> Auth -> Theme */}
-          <div className="flex items-center gap-2">
+          <div className="header-utilities flex items-center gap-1">
             {/* Help button (LEFT of Sign in) */}
             <Dialog>
               <DialogTrigger asChild>
@@ -132,7 +138,7 @@ export function AuthHeader() {
                     transition-all duration-200 hover:scale-110 hover:-translate-y-0.5 active:scale-95
                   "
                 >
-                  <HelpCircle size={40} className="transition-transform duration-200" />
+                  <HelpCircle aria-label="Help" size={40} className="transition-transform duration-200" />
                 </Button>
               </DialogTrigger>
 
@@ -241,69 +247,7 @@ export function AuthHeader() {
                   </Button>
                 </DialogTrigger>
 
-                <DialogContent
-                  className={cn(
-                    "max-w-md rounded-2xl p-6",
-                    "border border-slate-200/70 bg-white/80 backdrop-blur-xl shadow-2xl",
-                    // lightened dark mode background (was #223a54/65)
-                    "dark:border-slate-700/55 dark:bg-[#2c4a6a]/75",
-                  )}
-                >
-                  <DialogHeader className="mb-4 space-y-2">
-                    <DialogTitle className="text-xl font-semibold tracking-tight text-[#3b608c] dark:text-sky-100">
-                      {authTab === "login" ? "Sign in" : "Create account"}
-                    </DialogTitle>
-                    <DialogDescription className="text-sm text-slate-600 dark:text-slate-200/80">
-                      Save games to the database and unlock your account stats.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  {/* Segmented tabs */}
-                  <div className="mb-3 rounded-full p-1 border border-slate-200/70 bg-white/50 dark:border-slate-700/55 dark:bg-slate-900/20">
-                    <div className="grid grid-cols-2 gap-1">
-                      <Button
-                        type="button"
-                        onClick={() => setAuthTab("login")}
-                        className={cn(
-                          "h-10 rounded-full shadow-none",
-                          authTab === "login"
-                            ? BRAND_BTN
-                            : "bg-transparent text-slate-700 hover:bg-white/60 dark:text-slate-100 dark:hover:bg-slate-50/10",
-                        )}
-                      >
-                        Log in
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => setAuthTab("signup")}
-                        className={cn(
-                          "h-10 rounded-full shadow-none",
-                          authTab === "signup"
-                            ? BRAND_BTN
-                            : "bg-transparent text-slate-700 hover:bg-white/60 dark:text-slate-100 dark:hover:bg-slate-50/10",
-                        )}
-                      >
-                        Create account
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* One Guest button (ONLY here) */}
-                  <Button
-                    type="button"
-                    onClick={handleGuest}
-                    className={cn("w-full h-11 rounded-full mb-4", BRAND_BTN)}
-                  >
-                    Continue as Guest
-                  </Button>
-
-                  {/* Forms */}
-                  {authTab === "login" ? (
-                    <LoginForm onSuccess={refreshUserAndClose} />
-                  ) : (
-                    <SignUpForm onSuccess={refreshUserAndClose} />
-                  )}
-                </DialogContent>
+                <DialogContent className="option-a-auth"><AuthPanel onSuccess={refreshUserAndClose} onGuest={handleGuest} /></DialogContent>
               </Dialog>
             ) : (
               <DropdownMenu>

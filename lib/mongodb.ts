@@ -1,31 +1,37 @@
 // lib/mongodb.ts
 import { MongoClient } from "mongodb"
 
-const uri = process.env.MONGODB_URI
-if (!uri) {
-  throw new Error("Please set MONGODB_URI in your .env.local")
-}
-
 const options = {}
-
-let client: MongoClient
-let clientPromise: Promise<MongoClient>
+let productionPromise: Promise<MongoClient> | undefined
 
 declare global {
-  // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined
 }
 
-if (process.env.NODE_ENV === "development") {
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, options)
-    global._mongoClientPromise = client.connect()
+function connection(): Promise<MongoClient> {
+  const uri = process.env.MONGODB_URI
+  if (!uri) return Promise.reject(new Error("Please set MONGODB_URI in your environment"))
+
+  if (process.env.NODE_ENV === "development") {
+    if (!global._mongoClientPromise) {
+      global._mongoClientPromise = new MongoClient(uri, options).connect()
+    }
+    return global._mongoClientPromise
   }
-  clientPromise = global._mongoClientPromise
-} else {
-  client = new MongoClient(uri, options)
-  clientPromise = client.connect()
+
+  productionPromise ??= new MongoClient(uri, options).connect()
+  return productionPromise
 }
 
-export default clientPromise
+// Route modules are evaluated during a Next.js build. Defer network activity until
+// a request actually awaits the client so builds never touch MongoDB.
+const lazyClientPromise = {
+  then<TResult1 = MongoClient, TResult2 = never>(
+    onfulfilled?: ((value: MongoClient) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ) {
+    return connection().then(onfulfilled, onrejected)
+  },
+} as Promise<MongoClient>
 
+export default lazyClientPromise

@@ -29,10 +29,10 @@ export function SiteFooter() {
             
 
             <Link
-              href="https://prize-checkr-io.vercel.app/"
+              href="https://prizecheck.us/"
               className="hover:underline"
             >
-              PrizeCheckDrillr.io
+              prizecheck.us
             </Link>
 
              <Link

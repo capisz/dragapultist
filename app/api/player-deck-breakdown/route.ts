@@ -1,9 +1,15 @@
 // app/api/player-deck-breakdown/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
+import { getRequestUserId, userIdQueryValue } from "@/lib/request-user"
+import { APP_DATABASE_NAME } from "@/lib/app-database"
+import { allowRequest } from "@/lib/rate-limit"
+import { errorEnvelope } from "@/lib/api-contract"
+import { publicDeckBreakdownResponseSchema } from "@/lib/player-contract"
 
 type GameDoc = {
   username: string
+  opponent?: string
   userWon: boolean
   userArchetype?: string | null
   opponentArchetype?: string | null
@@ -15,29 +21,54 @@ function escapeRegex(s: string) {
 
 export async function GET(req: NextRequest) {
   try {
+    const userId = await getRequestUserId()
+    if (!userId) return NextResponse.json(errorEnvelope("UNAUTHORIZED", "Sign in to load your player history."), { status: 401 })
+    if (!allowRequest(`player-deck:${userId}`, 60, 60_000)) {
+      return NextResponse.json(errorEnvelope("RATE_LIMITED", "Too many matchup requests. Try again shortly.", true), { status: 429 })
+    }
     const { searchParams } = new URL(req.url)
-    const username = (searchParams.get("username") || "").trim()
-    const archetypeIdRaw = (searchParams.get("archetypeId") || "").trim()
+    const username = (searchParams.get("username") || "").trim().slice(0, 80)
+    const archetypeIdRaw = (searchParams.get("archetypeId") || "").trim().slice(0, 120)
 
-    if (!username) return NextResponse.json({ breakdown: null }, { status: 400 })
+    if (!username) return NextResponse.json(errorEnvelope("VALIDATION_ERROR", "A username is required."), { status: 400 })
 
     const wantUnknown = !archetypeIdRaw || archetypeIdRaw === "__unknown__"
 
     const client = await clientPromise
-    const db = client.db(process.env.MONGODB_DB || "dragapultist")
+    const db = client.db(APP_DATABASE_NAME)
     const collection = db.collection<GameDoc>("games")
 
     const usernameRegex = new RegExp(`^${escapeRegex(username)}$`, "i")
 
-    const match: any = { username: { $regex: usernameRegex } }
+    const participantMatch: any = { "participants.username": { $regex: usernameRegex } }
     if (wantUnknown) {
-      match.$or = [{ userArchetype: null }, { userArchetype: { $exists: false } }]
+      participantMatch.$or = [{ "participants.archetypeId": null }, { "participants.archetypeId": { $exists: false } }]
     } else {
-      match.userArchetype = archetypeIdRaw
+      participantMatch["participants.archetypeId"] = archetypeIdRaw
     }
 
     const pipeline = [
-      { $match: match },
+      { $match: { userId: userIdQueryValue(userId) } },
+      {
+        $project: {
+          participants: [
+            {
+              username: "$username",
+              won: "$userWon",
+              archetypeId: { $ifNull: ["$userArchetype", null] },
+              opponentArchetypeId: { $ifNull: ["$opponentArchetype", null] },
+            },
+            {
+              username: "$opponent",
+              won: { $eq: ["$userWon", false] },
+              archetypeId: { $ifNull: ["$opponentArchetype", null] },
+              opponentArchetypeId: { $ifNull: ["$userArchetype", null] },
+            },
+          ],
+        },
+      },
+      { $unwind: "$participants" },
+      { $match: participantMatch },
       {
         $facet: {
           overall: [
@@ -45,16 +76,16 @@ export async function GET(req: NextRequest) {
               $group: {
                 _id: null,
                 games: { $sum: 1 },
-                wins: { $sum: { $cond: [{ $eq: ["$userWon", true] }, 1, 0] } },
+                wins: { $sum: { $cond: ["$participants.won", 1, 0] } },
               },
             },
           ],
           matchups: [
             {
               $group: {
-                _id: "$opponentArchetype",
+                _id: "$participants.opponentArchetypeId",
                 games: { $sum: 1 },
-                wins: { $sum: { $cond: [{ $eq: ["$userWon", true] }, 1, 0] } },
+                wins: { $sum: { $cond: ["$participants.won", 1, 0] } },
               },
             },
             { $sort: { games: -1 } },
@@ -83,7 +114,7 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    return NextResponse.json({
+    return NextResponse.json(publicDeckBreakdownResponseSchema.parse({
       breakdown: {
         archetypeId: wantUnknown ? null : archetypeIdRaw,
         games,
@@ -92,9 +123,9 @@ export async function GET(req: NextRequest) {
         winRate,
         matchups,
       },
-    })
+    }), { headers: { "Cache-Control": "private, no-store" } })
   } catch (err) {
     console.error("GET /api/player-deck-breakdown error:", err)
-    return NextResponse.json({ breakdown: null }, { status: 500 })
+    return NextResponse.json(errorEnvelope("UNAVAILABLE", "Matchup data is temporarily unavailable.", true), { status: 503 })
   }
 }

@@ -10,7 +10,6 @@ import { CardStatistics } from "./card-statistics"
 import { GameDetail } from "@/components/game-detail"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { OverallStats } from "./overall-stats"
-import { buildStatistics } from "./statistics-utils"
 import type { StatisticsModel } from "./types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { GameSummary } from "@/types/game"
 import { formatArchetypeLabel } from "@/utils/archetype-mapping"
+import { remoteGamePersistence } from "@/lib/game-persistence"
 
 interface StatisticsPageProps {
   user: User
@@ -143,6 +143,10 @@ function toHistoryGame(rawGame: unknown): HistoryGame | null {
       readString(summary?.opponentArchetype, rawGame.opponentArchetype, summary?.opponentDeckName, rawGame.opponentDeckName) ||
       null,
     favorite: readBoolean(summary?.favorite ?? rawGame.favorite),
+    revision: readNumber(summary?.revision ?? rawGame.revision) || undefined,
+    notes: isRecord(summary?.notes ?? rawGame.notes) ? (summary?.notes ?? rawGame.notes) as Record<number, string> : undefined,
+    deckList: readString(summary?.deckList, rawGame.deckList),
+    deckName: readString(summary?.deckName, rawGame.deckName),
     __createdAtMs: parsedDate?.getTime() ?? 0,
   }
 
@@ -191,6 +195,7 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
   const [selectedHistoryGame, setSelectedHistoryGame] = useState<HistoryGame | null>(null)
   const [favoritePendingIds, setFavoritePendingIds] = useState<Set<string>>(new Set())
   const [deletePendingIds, setDeletePendingIds] = useState<Set<string>>(new Set())
+  const [historyNextCursor, setHistoryNextCursor] = useState<string | null>(null)
 
   const brandButtonClass =
     "h-9 rounded-full border-none px-5 text-sm bg-[#5e82ab] text-slate-50 hover:bg-[#4f739d] active:bg-[#44678f] dark:bg-[#b1cce8] dark:text-[#0b1220] dark:hover:bg-[#a1c2e4] dark:active:bg-[#93b7df]"
@@ -213,27 +218,53 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch("/api/games?limit=5000")
+      const response = await fetch("/api/statistics")
       if (!response.ok) throw new Error(`Failed to load games (${response.status})`)
 
-      const payload = (await response.json()) as { games?: unknown[] }
-      const rawGames = Array.isArray(payload.games) ? payload.games : []
-      const parsed = buildStatistics(rawGames)
+      const payload = (await response.json()) as {
+        model?: StatisticsModel
+        historyGames?: unknown[]
+        historyNextCursor?: string | null
+      }
+      const rawGames = Array.isArray(payload.historyGames) ? payload.historyGames : []
+      const parsed = payload.model ?? EMPTY_MODEL
       const parsedHistoryGames = rawGames
         .map(toHistoryGame)
         .filter((game): game is HistoryGame => game !== null)
         .sort((a, b) => b.__createdAtMs - a.__createdAtMs || b.id.localeCompare(a.id))
       setModel(parsed)
       setHistoryGames(parsedHistoryGames)
+      setHistoryNextCursor(typeof payload.historyNextCursor === "string" ? payload.historyNextCursor : null)
     } catch (err) {
       console.error("Failed to load statistics", err)
       setModel(EMPTY_MODEL)
       setHistoryGames([])
+      setHistoryNextCursor(null)
       setError("Could not load your statistics right now.")
     } finally {
       setLoading(false)
     }
   }, [])
+
+  const loadMoreHistory = useCallback(async () => {
+    if (!historyNextCursor) return
+    const response = await fetch(`/api/games?limit=100&cursor=${encodeURIComponent(historyNextCursor)}`, {
+      cache: "no-store",
+    })
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      setError("Could not load more game history right now.")
+      return
+    }
+    const moreGames: HistoryGame[] = (Array.isArray(payload?.games) ? payload.games : [])
+      .map(toHistoryGame)
+      .filter((game: HistoryGame | null): game is HistoryGame => game !== null)
+    setHistoryGames((previous) => [
+      ...previous,
+      ...moreGames.filter((game) => !previous.some((item) => item.id === game.id)),
+    ])
+    setHistoryNextCursor(typeof payload?.nextCursor === "string" ? payload.nextCursor : null)
+  }, [historyNextCursor])
 
   useEffect(() => {
     void loadStats()
@@ -296,34 +327,32 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
   }, [historyGames, historySearch])
 
   const persistHistoryGame = useCallback(async (game: HistoryGame) => {
-    const { __createdAtMs, ...rest } = game
-    const gameSummary: Record<string, unknown> = {
-      ...rest,
-      id: game.id,
-    }
-    if (__createdAtMs > 0) {
-      gameSummary.createdAt = new Date(__createdAtMs).toISOString()
-    }
-
-    const response = await fetch(`/api/games/${encodeURIComponent(game.id)}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gameSummary }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to update game ${game.id}`)
-    }
+    return remoteGamePersistence.update(game.id, {
+      favorite: Boolean(game.favorite),
+      notes: game.notes ?? {},
+      tags: game.tags,
+      deckList: game.deckList ?? "",
+      deckName: game.deckName ?? "",
+      perspective: {
+        username: game.username,
+        userArchetype: game.userArchetype,
+        opponentArchetype: game.opponentArchetype,
+      },
+    }, game.revision ?? 1)
   }, [])
 
-  const handleHistoryUpdate = useCallback((updatedGame: GameSummary) => {
-    setHistoryGames((previous) =>
-      previous.map((game) => (game.id === updatedGame.id ? ({ ...game, ...updatedGame } as HistoryGame) : game)),
-    )
-    setSelectedHistoryGame((previous) =>
-      previous?.id === updatedGame.id ? ({ ...previous, ...updatedGame } as HistoryGame) : previous,
-    )
-  }, [])
+  const handleHistoryUpdate = useCallback(async (updatedGame: GameSummary) => {
+    try {
+      const saved = await persistHistoryGame(updatedGame as HistoryGame)
+      const canonical = toHistoryGame(saved.game)
+      if (!canonical) return false
+      setHistoryGames((previous) => previous.map((game) => game.id === canonical.id ? canonical : game))
+      setSelectedHistoryGame(canonical)
+      return true
+    } catch {
+      return false
+    }
+  }, [persistHistoryGame])
 
   const handleToggleFavorite = useCallback(
     async (gameId: string) => {
@@ -339,7 +368,12 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
       setSelectedHistoryGame((previous) => (previous?.id === gameId ? optimistic : previous))
 
       try {
-        await persistHistoryGame(optimistic)
+        const saved = await remoteGamePersistence.update(gameId, { favorite: Boolean(optimistic.favorite) }, existing.revision ?? 1)
+        const canonical = toHistoryGame(saved.game)
+        if (canonical) {
+          setHistoryGames((previous) => previous.map((game) => game.id === gameId ? canonical : game))
+          setSelectedHistoryGame((previous) => previous?.id === gameId ? canonical : previous)
+        }
       } catch (error) {
         console.error(error)
         setHistoryGames((previous) => previous.map((game) => (game.id === gameId ? existing : game)))
@@ -352,8 +386,22 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
         })
       }
     },
-    [favoritePendingIds, historyGames, persistHistoryGame],
+    [favoritePendingIds, historyGames],
   )
+
+  const openHistoryGame = useCallback(async (game: HistoryGame) => {
+    if (game.rawLog) {
+      setSelectedHistoryGame(game)
+      return
+    }
+    try {
+      const detail = await remoteGamePersistence.get(game.id)
+      const detailed = toHistoryGame(detail)
+      if (detailed) setSelectedHistoryGame(detailed)
+    } catch {
+      setError("Could not load that game right now.")
+    }
+  }, [])
 
   const handleHistoryDelete = useCallback(
     async (gameId: string) => {
@@ -363,10 +411,8 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
       setDeletePendingIds((previous) => new Set(previous).add(gameId))
 
       try {
-        const response = await fetch(`/api/games/${encodeURIComponent(gameId)}`, { method: "DELETE" })
-        if (!response.ok) {
-          throw new Error(`Failed to delete game ${gameId}`)
-        }
+        const existing = historyGames.find(game => game.id === gameId)
+        await remoteGamePersistence.remove(gameId, existing?.revision)
 
         setHistoryGames((previous) => previous.filter((game) => game.id !== gameId))
         setSelectedHistoryGame((previous) => (previous?.id === gameId ? null : previous))
@@ -380,7 +426,7 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
         })
       }
     },
-    [deletePendingIds],
+    [deletePendingIds, historyGames],
   )
 
   useEffect(() => {
@@ -667,6 +713,7 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
                   </p>
 
                   {filteredHistoryGames.length > 0 ? (
+                    <div className="space-y-3">
                     <div className={subPanelClass}>
                       <Table>
                         <TableHeader>
@@ -689,7 +736,7 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
                               <TableRow
                                 key={game.id}
                                 className={`${tableBodyRowClass} cursor-pointer ${isFavorite ? "bg-sky-50/50 dark:bg-sky-900/10" : ""}`}
-                                onClick={() => setSelectedHistoryGame(game)}
+                                onClick={() => void openHistoryGame(game)}
                               >
                                 <TableCell className="text-center" onClick={(event) => event.stopPropagation()}>
                                   <Button
@@ -740,6 +787,12 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
                           })}
                         </TableBody>
                       </Table>
+                    </div>
+                    {historyNextCursor && !historySearch.trim() ? (
+                      <Button type="button" variant="outline" onClick={() => void loadMoreHistory()}>
+                        Load more games
+                      </Button>
+                    ) : null}
                     </div>
                   ) : (
                     <p className="text-sm text-slate-600 dark:text-slate-300">

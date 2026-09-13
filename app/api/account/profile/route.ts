@@ -1,22 +1,25 @@
 import { NextRequest, NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
-import { getRequestUserObjectId } from "@/lib/request-user"
+import { getRequestUserId } from "@/lib/request-user"
+import { assertMutationRequest } from "@/lib/session"
+import { APP_DATABASE_NAME } from "@/lib/app-database"
 
 const MAX_IMAGE_CHARS = 1_500_000
 const MAX_TOTAL_IMAGE_CHARS = 2_500_000
+class ProfileInputError extends Error {}
 
 function normalizeImageField(value: unknown): { provided: boolean; value: string | null } {
   if (value === undefined) return { provided: false, value: null }
   if (value === null) return { provided: true, value: null }
-  if (typeof value !== "string") throw new Error("Image fields must be strings or null.")
+  if (typeof value !== "string") throw new ProfileInputError("Image fields must be strings or null.")
 
   const trimmed = value.trim()
   if (!trimmed) return { provided: true, value: null }
-  if (!trimmed.startsWith("data:image/") || !trimmed.includes(";base64,")) {
-    throw new Error("Image must be a base64 data URL.")
+  if (!/^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=\s]+$/i.test(trimmed)) {
+    throw new ProfileInputError("Image must be a PNG, JPEG, WebP, or GIF base64 data URL.")
   }
   if (trimmed.length > MAX_IMAGE_CHARS) {
-    throw new Error("Image is too large.")
+    throw new ProfileInputError("Image is too large.")
   }
 
   return { provided: true, value: trimmed }
@@ -24,8 +27,14 @@ function normalizeImageField(value: unknown): { provided: boolean; value: string
 
 export async function PUT(req: NextRequest) {
   try {
-    const userObjectId = await getRequestUserObjectId()
-    if (!userObjectId) {
+    await assertMutationRequest(req)
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid request origin." }, { status: 403 })
+  }
+
+  try {
+    const userId = await getRequestUserId()
+    if (!userId) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
     }
 
@@ -49,11 +58,11 @@ export async function PUT(req: NextRequest) {
     if (banner.provided) updateDoc.bannerImage = banner.value
 
     const client = await clientPromise
-    const db = client.db(process.env.MONGODB_DB || "dragapultist")
+    const db = client.db(APP_DATABASE_NAME)
     const users = db.collection("users")
 
     const existing = await users.findOne(
-      { _id: userObjectId },
+      { firebaseUid: userId },
       { projection: { avatarImage: 1, bannerImage: 1 } },
     )
 
@@ -67,7 +76,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Combined image size is too large." }, { status: 400 })
     }
 
-    const result = await users.updateOne({ _id: userObjectId }, { $set: updateDoc })
+    const result = await users.updateOne({ firebaseUid: userId }, { $set: updateDoc })
 
     if (!result.matchedCount) {
       return NextResponse.json({ ok: false, error: "User not found." }, { status: 404 })
@@ -79,7 +88,10 @@ export async function PUT(req: NextRequest) {
       bannerImage: banner.provided ? banner.value : undefined,
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to update profile."
-    return NextResponse.json({ ok: false, error: message }, { status: 400 })
+    if (err instanceof ProfileInputError) {
+      return NextResponse.json({ ok: false, error: err.message }, { status: 400 })
+    }
+    console.error("PUT /api/account/profile error:", err)
+    return NextResponse.json({ ok: false, error: "Failed to update profile." }, { status: 500 })
   }
 }

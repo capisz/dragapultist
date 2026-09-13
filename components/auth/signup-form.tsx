@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 
-// Cookie-based server action (NOT next-auth)
-import { signUp } from "@/app/actions"
+// Firebase client sign-up followed by a verified server-session exchange.
+import { firebaseSignUp } from "@/lib/firebase-session-client"
 
 interface SignUpFormProps {
   onSuccess?: () => void
@@ -20,23 +20,27 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [notice, setNotice] = useState("")
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError("")
+    setNotice("")
     setLoading(true)
 
     try {
       const formData = new FormData(e.currentTarget)
-      const res = await signUp(formData)
-
-      if (!res?.success) {
-        setError(res?.message || "Failed to create account.")
-        return
+      const result = await firebaseSignUp(
+        String(formData.get("username") || ""),
+        String(formData.get("email") || ""),
+        String(formData.get("password") || ""),
+      )
+      if (result.verificationRequired) {
+        setNotice("Account created. Check your email, verify it, then sign in.")
+      } else {
+        router.refresh()
+        onSuccess?.()
       }
-
-      router.refresh()
-      onSuccess?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create account.")
     } finally {
@@ -96,7 +100,8 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
         />
       </div>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {notice && <p role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{notice}</p>}
+      {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <Button
         type="submit"

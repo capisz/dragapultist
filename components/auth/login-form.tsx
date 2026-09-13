@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
-import { login } from "@/app/actions"
+import { firebaseLogin } from "@/lib/firebase-session-client"
 
 interface LoginFormProps {
   onSuccess?: () => void
@@ -33,12 +33,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
     try {
       const formData = new FormData(e.currentTarget)
-      const res = await login(formData)
-
-      if (!res?.success) {
-        setError(res?.message || "Invalid email or password.")
-        return
-      }
+      await firebaseLogin(String(formData.get("email") || ""), String(formData.get("password") || ""))
 
       router.refresh()
       onSuccess?.()
@@ -87,7 +82,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         />
       </div>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <Button type="submit" disabled={loading} className={cn("w-full rounded-full h-11", BRAND_BTN)}>
         {loading ? "Signing in..." : "Sign in"}

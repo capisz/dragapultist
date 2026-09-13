@@ -6,9 +6,9 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Keep header constrained, keep analyzer/footer full-width */}
-      <div className="max-w-6xl mx-auto px-4 py-2 md:py-6 space-y-1 md:space-y-0">
+      <div className="option-a-header"><div className="max-w-[1280px] mx-auto header-inner px-4 py-2">
         <AuthHeader />
-      </div>
+      </div></div>
 
       <PokemonTCGAnalyzer />
     </div>

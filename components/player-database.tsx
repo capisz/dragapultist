@@ -1,465 +1,144 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ChevronDown } from "lucide-react"
-import {
-  canonicalizeArchetypeId,
-  formatArchetypeLabel,
-  getArchetypeIconCandidatePaths,
-} from "@/utils/archetype-mapping"
+import { useEffect, useRef, useState } from 'react'
+import { canonicalizeArchetypeId, formatArchetypeLabel } from '@/utils/archetype-mapping'
+import { playerResults, playerBreakdown, type PublicPlayer, type PublicBreakdown } from '@/utils/public-player-view'
+import { ArchetypeIconPair } from './archetype-icon-pair'
 
-interface PlayerDeckStat {
-  archetypeId: string | null
-  games: number
-  wins: number
-  winRate: number // 0..100 (computed in API)
-}
-
-interface PlayerSummary {
-  username: string
-  totalGames: number
-  wins: number
-  losses: number
-  winRate: number
-  lastPlayed: string | null
-  decks: string[]
-  deckStats?: PlayerDeckStat[]
-}
-
-type MatchupStat = {
-  opponentArchetypeId: string | null
-  games: number
-  wins: number
-  winRate: number
-}
-
-type DeckBreakdown = {
-  archetypeId: string | null
-  games: number
-  wins: number
-  losses: number
-  winRate: number
-  matchups: MatchupStat[]
-}
-
-const FALLBACK_ICON = "/sprites/substitute.png"
-
-function CandidateSprite({
-  candidates,
-  alt,
-  size = 26,
-  className,
-}: {
-  candidates: string[]
-  alt: string
-  size?: number
-  className?: string
-}) {
-  const [idx, setIdx] = useState(0)
-  const src = candidates[Math.min(idx, candidates.length - 1)] ?? FALLBACK_ICON
-
-  return (
-    <img
-      src={src}
-      alt={alt}
-      loading="lazy"
-      decoding="async"
-      style={{ width: size, height: size }}
-      className={cn("object-contain shrink-0 bg-transparent", className)}
-      onError={() => setIdx((v) => Math.min(v + 1, candidates.length - 1))}
-    />
-  )
-}
-
-function ArchetypeIconPair({ archetypeId, size = 26 }: { archetypeId: string | null; size?: number }) {
-  const slots = getArchetypeIconCandidatePaths(archetypeId)
-
-  const slotA = slots?.[0]?.length ? slots[0] : [FALLBACK_ICON]
-  const slotB = slots?.[1]?.length ? slots[1] : null
-
-  const gapPx = Math.max(6, Math.round(size * 0.25))
-  const totalW = size * 2 + gapPx
-
-  return (
-    <div className="flex items-center" style={{ width: totalW, columnGap: gapPx }}>
-      <CandidateSprite candidates={slotA} alt="icon" size={size} />
-
-      {slotB ? (
-        <CandidateSprite candidates={slotB} alt="icon" size={size} />
-      ) : (
-        <span aria-hidden className="shrink-0" style={{ width: size, height: size }} />
-      )}
-    </div>
-  )
-}
-
-function deckKey(username: string, archetypeId: string | null) {
-  return `${username}::${archetypeId ?? "__unknown__"}`
-}
+const canonical = (id: string | null) => canonicalizeArchetypeId(id) ?? id
+const deckKey = (username: string, id: string | null) => `${username}::${id ?? '__unknown__'}`
 
 export function PlayerDatabasePanel() {
-  const [query, setQuery] = useState("")
-  const [players, setPlayers] = useState<PlayerSummary[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [submitted, setSubmitted] = useState('')
+  const [players, setPlayers] = useState<PublicPlayer[]>([])
+  const [status, setStatus] = useState<'idle'|'loading'|'results'|'unavailable'|'error'>('idle')
+  const [selected, setSelected] = useState<string | null>(null)
+  const [compare, setCompare] = useState<string[]>([])
+  const [breakdown, setBreakdown] = useState<PublicBreakdown | null>(null)
+  const [deckStatus, setDeckStatus] = useState<'idle'|'loading'|'ready'|'error'>('idle')
+  const [deckId, setDeckId] = useState<string | null>(null)
+  const request = useRef<AbortController | null>(null)
+  const deckRequest = useRef<AbortController | null>(null)
+  const cache = useRef(new Map<string, PublicBreakdown | null>())
+  const pendingDeck = useRef<string | null>(null)
 
-  const [isButtonPressed, setIsButtonPressed] = useState(false)
+  useEffect(() => () => { request.current?.abort(); deckRequest.current?.abort() }, [])
 
-  const [openUsername, setOpenUsername] = useState<string | null>(null)
-  const [openDeck, setOpenDeck] = useState<string | null>(null)
-
-  const [breakdowns, setBreakdowns] = useState<Record<string, DeckBreakdown | undefined>>({})
-  const [breakdownLoading, setBreakdownLoading] = useState<Record<string, boolean | undefined>>({})
-
-  const handleSearch = async () => {
-    const trimmed = query.trim()
-    if (!trimmed) {
-      setPlayers([])
-      setError(null)
-      setOpenUsername(null)
-      setOpenDeck(null)
-      return
-    }
-
-    try {
-      setLoading(true)
-      setError(null)
-
-      const res = await fetch(`/api/player-search?query=${encodeURIComponent(trimmed)}`)
-      if (!res.ok) throw new Error(`Status ${res.status}`)
-
-      const data = await res.json()
-      setPlayers((data.players || []) as PlayerSummary[])
-      setOpenUsername(null)
-      setOpenDeck(null)
-    } catch (err) {
-      console.error("Player search failed", err)
-      setError("Could not search players. Please try again.")
-      setPlayers([])
-      setOpenUsername(null)
-      setOpenDeck(null)
-    } finally {
-      setLoading(false)
-    }
+  function closeDeck() {
+    deckRequest.current?.abort()
+    pendingDeck.current = null
+    setDeckStatus('idle')
+    setBreakdown(null)
   }
 
-  const ensureDeckBreakdown = async (username: string, archetypeId: string | null) => {
-    const key = deckKey(username, archetypeId)
-    if (breakdowns[key] || breakdownLoading[key]) return
-
+  async function search(value = query) {
+    const term = value.trim()
+    request.current?.abort()
+    closeDeck()
+    setPlayers([]); setSelected(null); setCompare([]); setSubmitted(term)
+    if (!term) { setStatus('idle'); return }
+    const controller = new AbortController()
+    request.current = controller
+    setStatus('loading')
     try {
-      setBreakdownLoading((m) => ({ ...m, [key]: true }))
-      const res = await fetch(
-        `/api/player-deck-breakdown?username=${encodeURIComponent(username)}&archetypeId=${encodeURIComponent(
-          archetypeId ?? "__unknown__",
-        )}`,
-      )
-      if (!res.ok) throw new Error(`Status ${res.status}`)
-      const data = (await res.json()) as { breakdown?: DeckBreakdown }
-      setBreakdowns((m) => ({ ...m, [key]: data.breakdown }))
-    } catch (e) {
-      console.error("Deck breakdown fetch failed", e)
-      setBreakdowns((m) => ({ ...m, [key]: undefined }))
-    } finally {
-      setBreakdownLoading((m) => ({ ...m, [key]: false }))
-    }
+      const response = await fetch(`/api/player-search?query=${encodeURIComponent(term)}`, { signal: controller.signal })
+      if (controller.signal.aborted) return
+      if (!response.ok) { setStatus(response.status >= 500 ? 'unavailable' : 'error'); return }
+      const data = playerResults.parse(await response.json())
+      if (controller.signal.aborted) return
+      cache.current.clear()
+      setPlayers(data.players)
+      setSelected(data.players[0]?.username ?? null)
+      setStatus('results')
+    } catch { if (!controller.signal.aborted) setStatus('unavailable') }
   }
 
-  const filteredPlayers = useMemo(() => players, [players])
+  async function loadDeck(username: string, id: string | null, retry = false) {
+    const key = deckKey(username, id)
+    if (pendingDeck.current === key && !retry) return
+    deckRequest.current?.abort()
+    setDeckId(id)
+    if (cache.current.has(key) && !retry) {
+      pendingDeck.current = null
+      setBreakdown(cache.current.get(key) ?? null); setDeckStatus('ready'); return
+    }
+    const controller = new AbortController()
+    deckRequest.current = controller
+    pendingDeck.current = key
+    setDeckStatus('loading'); setBreakdown(null)
+    try {
+      const response = await fetch(`/api/player-deck-breakdown?username=${encodeURIComponent(username)}&archetypeId=${encodeURIComponent(id ?? '__unknown__')}`, { signal: controller.signal })
+      if (!response.ok) throw new Error('unavailable')
+      const data = playerBreakdown.parse(await response.json())
+      if (controller.signal.aborted) return
+      cache.current.set(key, data.breakdown)
+      setBreakdown(data.breakdown); setDeckStatus('ready')
+    } catch { if (!controller.signal.aborted) setDeckStatus('error') }
+    finally { if (deckRequest.current === controller) pendingDeck.current = null }
+  }
 
-  // Theme-safe surfaces:
-  // Light: use black overlays (gives "slate-100/200" feel without matching the page)
-  // Dark: use *darker* slate overlays (avoid the bright grey look from white overlays)
- // --- Surface tokens (match GameDetail card depth) ---
-// --- Surface tokens (dark mode matches the older deep-navy look) ---
-const surfaceCard = cn(
-  "rounded-2xl overflow-hidden",
-  "bg-white/70",
-  "border border-slate-200/70",
-  "shadow-[0_10px_30px_rgba(2,6,23,0.10)]",
-  "ring-1 ring-slate-900/5",
-  "dark:bg-[#233a54]",
-  "dark:border-white/10",
-  "dark:shadow-[0_18px_55px_rgba(0,0,0,0.45)]",
-  "dark:ring-white/5",
-)
+  const player = players.find(value => value.username === selected)
+  const decks = player?.deckStats.map(deck => ({ ...deck, archetypeId: canonical(deck.archetypeId) })).sort((a, b) => b.games - a.games) ?? []
 
-const surfaceInset = cn(
-  "rounded-2xl overflow-hidden",
-  "bg-white/55",
-  "border border-slate-200/60",
-  "ring-1 ring-slate-900/5",
-  "dark:bg-[#192a42]",
-  "dark:border-white/10",
-  "dark:ring-white/5",
-)
-
-const rowBase = cn(
-  "transition-colors duration-150",
-  "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 dark:focus-visible:ring-sky-200/40",
-)
-
-const rowHover = "hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.04]"
-const rowSelected = "bg-slate-900/[0.07] dark:bg-white/[0.06]"
-const rowSelectedHover = "hover:bg-slate-900/[0.09] dark:hover:bg-white/[0.08]"
-
-  return (
-    
-    <div className="space-y-4">
-      
-     <header className="space-y-1">
-  <h2 className="text-xl font-semibold tracking-tight text-slate-700/80 dark:text-sky-100">
-    Player Database
-  </h2>
-  <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
-    Search for players in our database to view their saved games and archetype win-rate breakdowns.
-  </p>
-</header>
-
-
-      
-      <div className="flex flex-wrap gap-2 items-center">
-        
-        <Input
-          placeholder="Search by PTCGL username (e.g. azulgg)"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSearch()
-          }}
-          className={cn(
-            "h-10 w-full sm:w-72 rounded-xl",
-            "bg-slate-100/90 text-slate-900 placeholder:text-slate-400 border border-slate-200/60",
-            "shadow-[0_0_22px_rgba(42,81,128,0.1)]",
-            "focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-0",
-            "dark:bg-slate-500/60 dark:text-slate-100 dark:placeholder:text-slate-200/70",
-            "dark:border-slate-900/35 dark:shadow-[0_0_32px_rgba(56,189,248,0.10)] dark:focus-visible:ring-slate-400",
-          )}
-        />
-
-        <Button
-          type="button"
-          onMouseDown={() => setIsButtonPressed(true)}
-          onMouseUp={() => setIsButtonPressed(false)}
-          onMouseLeave={() => setIsButtonPressed(false)}
-          onClick={handleSearch}
-          className={cn(
-            "rounded-full px-5 h-9 text-sm transition-transform duration-150",
-            "bg-[#5e82ab] text-slate-50 hover:bg-sky-800/50",
-            "dark:bg-[#b1cce8] dark:text-[#121212] dark:hover:bg-[#a1c2e4]",
-            isButtonPressed ? "scale-95" : "scale-100",
-          )}
-        >
-          {loading ? "Searching..." : "Search"}
-        </Button>
+  return <section className="player-explorer" aria-label="Player Database">
+    <form className="player-search" onSubmit={event => { event.preventDefault(); search() }}>
+      <label htmlFor="player-query" className="sr-only">PTCGL username</label>
+      <input id="player-query" value={query} maxLength={100} onChange={event => setQuery(event.target.value)} placeholder="Search a PTCGL username" />
+      <button className="action">{status === 'loading' ? 'Searching…' : 'Search players'}</button>
+    </form>
+    {status === 'loading' && <p role="status">Searching recorded players…</p>}
+    {(status === 'unavailable' || status === 'error') && <div className="tool-status" role="alert">
+      <p>{status === 'unavailable' ? 'Player data is unavailable.' : 'This search could not be completed.'}</p>
+      <button className="secondary" onClick={() => search(submitted)}>Retry search</button>
+    </div>}
+    {status === 'results' && !players.length && <p role="status">No players found for “{submitted}”.</p>}
+    {status === 'results' && !!players.length && <>
+      <div className="player-workspace">
+        <aside className="player-roster" aria-label="Returned players">
+          <p className="result-count">{players.length} players</p>
+          {players.map(value => <div key={value.username} className="player-roster-row">
+            <button aria-pressed={selected === value.username} onClick={() => { closeDeck(); setSelected(selected === value.username ? null : value.username) }}>
+              <strong>{value.username}</strong><span>{value.wins} W · {value.losses} L · {value.totalGames} games</span>
+            </button>
+            <label><input type="checkbox" checked={compare.includes(value.username)} disabled={compare.length >= 2 && !compare.includes(value.username)}
+              onChange={event => setCompare(previous => event.target.checked ? [...previous, value.username] : previous.filter(name => name !== value.username))} />Compare {value.username}</label>
+          </div>)}
+        </aside>
+        {player && <div className="player-profile">
+          <header className="player-summary"><div><h3>{player.username}</h3><p>Last played: {player.lastPlayed ?? 'Not available'}</p></div>
+            <div className="compact-record"><strong>{player.winRate.toFixed(1)}%</strong><span>{player.wins} W · {player.losses} L · {player.totalGames} games</span></div>
+          </header>
+          <div className="player-detail-grid">
+            <section className="player-decks" aria-label="Deck archetypes"><h4>Archetypes</h4>
+              {!decks.length && <p>No deck history recorded.</p>}
+              {decks.map((deck, index) => <button key={`${deck.archetypeId}-${index}`} className="distribution-row"
+                aria-expanded={deckStatus !== 'idle' && deckId === deck.archetypeId}
+                aria-pressed={deckStatus !== 'idle' && deckId === deck.archetypeId}
+                onClick={() => deckStatus !== 'idle' && deckId === deck.archetypeId ? closeDeck() : loadDeck(player.username, deck.archetypeId)}>
+                <ArchetypeIconPair archetypeId={deck.archetypeId} />
+                <span className="deck-name">{formatArchetypeLabel(deck.archetypeId)}<small>{deck.games} games · {deck.wins} W · {deck.games - deck.wins} L</small></span>
+                <strong>{deck.winRate.toFixed(1)}%</strong>
+              </button>)}
+            </section>
+            {deckStatus !== 'idle' && <section className="matchup-breakdown" aria-label="Deck matchups" aria-live="polite">
+              <header><div className="archetype-label"><ArchetypeIconPair archetypeId={deckId} /><h4>{formatArchetypeLabel(deckId)}</h4></div><button className="icon-button" aria-label="Close matchup breakdown" onClick={closeDeck}>×</button></header>
+              {deckStatus === 'loading' && <p>Loading matchup breakdown…</p>}
+              {deckStatus === 'error' && <div role="alert"><p>Matchup data is unavailable.</p><button className="secondary" onClick={() => loadDeck(player.username, deckId, true)}>Retry breakdown</button></div>}
+              {deckStatus === 'ready' && breakdown && <p className="breakdown-record">{breakdown.wins}/{breakdown.games} wins · {breakdown.losses} losses · {breakdown.winRate.toFixed(1)}%</p>}
+              {deckStatus === 'ready' && (!breakdown || !breakdown.matchups.length) && <p>No matchup records were returned for this deck.</p>}
+              {deckStatus === 'ready' && breakdown?.matchups.map((match, index) => <div className="matchup-line" key={index}>
+                <ArchetypeIconPair archetypeId={canonical(match.opponentArchetypeId)} size={26} />
+                <span>vs {formatArchetypeLabel(canonical(match.opponentArchetypeId))}</span>
+                <strong>{match.winRate.toFixed(1)}%<small>{match.wins}/{match.games} wins</small></strong>
+              </div>)}
+            </section>}
+          </div>
+        </div>}
       </div>
-
-      {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
-
-      {/* Results */}
-      {filteredPlayers.length > 0 && (
-        <div className="mt-2 space-y-2">
-          {filteredPlayers.map((p) => {
-            const isOpen = openUsername === p.username
-
-            const deckStats = (p.deckStats ?? [])
-              .map((d) => ({
-                ...d,
-                archetypeId: canonicalizeArchetypeId(d.archetypeId) ?? d.archetypeId ?? null,
-              }))
-              .sort((a, b) => b.games - a.games)
-
-            const topDeckStats = deckStats.slice(0, 5)
-
-            return (
-              <Collapsible
-                key={p.username}
-                open={isOpen}
-                onOpenChange={(v) => {
-                  setOpenUsername(v ? p.username : null)
-                  if (!v) setOpenDeck(null)
-                }}
-                className={surfaceCard}
-              >
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-  "w-full text-left p-3 transition-colors",
-  "hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.05]",
-)}
-
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-semibold text-slate-900 dark:text-slate-50 truncate">
-                          {p.username}
-                        </div>
-                        <div className="text-xs text-slate-600 dark:text-slate-300/80">
-                          {p.totalGames} games • {p.wins}–{p.losses} ({p.winRate}%)
-                          {p.lastPlayed && ` • Last played ${p.lastPlayed}`}
-                        </div>
-                      </div>
-
-                      <ChevronDown
-                        className={cn(
-                          "h-5 w-5 text-slate-500 dark:text-slate-200/80 transition-transform",
-                          isOpen && "rotate-180",
-                        )}
-                      />
-                    </div>
-                  </button>
-                </CollapsibleTrigger>
-
-                <CollapsibleContent className="px-3 pb-3">
-                  {topDeckStats.length > 0 ? (
-                   <div className={cn(surfaceInset, "divide-y divide-slate-900/10 dark:divide-white/10")}>
-
-                      {topDeckStats.map((d, i) => {
-                        const losses = d.games - d.wins
-                        const dk = deckKey(p.username, d.archetypeId)
-                        const isSelected = openDeck === dk
-
-                        return (
-                          <div key={`${dk}::row::${i}`}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const next = isSelected ? null : dk
-                                setOpenDeck(next)
-                                if (!isSelected) ensureDeckBreakdown(p.username, d.archetypeId)
-                              }}
-                              className={cn(
-                                "w-full flex items-center justify-between gap-3 px-3 py-3 text-left",
-                                i % 2 === 0 ? "bg-transparent" : "bg-slate-900/[0.025] dark:bg-white/[0.035]",
-                                rowBase,
-                                isSelected ? cn(rowSelected, rowSelectedHover) : rowHover,
-                              )}
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <ArchetypeIconPair archetypeId={d.archetypeId} size={28} />
-                                <div className="min-w-0">
-                                  <div className="font-medium text-slate-900 dark:text-slate-100 truncate">
-                                    {formatArchetypeLabel(d.archetypeId)}
-                                  </div>
-                                  <div className="text-xs text-slate-600 dark:text-slate-200/70 tabular-nums">
-                                    {d.games} game{d.games !== 1 && "s"}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="text-right tabular-nums">
-                                <div className="font-semibold text-slate-900 dark:text-slate-100">
-                                  {d.winRate.toFixed(1)}%
-                                </div>
-                                <div className="text-xs text-slate-600 dark:text-slate-200/70">
-                                  {d.wins}–{losses}
-                                </div>
-                              </div>
-                            </button>
-
-                            {/* Animated dropdown */}
-                            <div
-                              className={cn(
-                                "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
-                                isSelected ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
-                              )}
-                            >
-                              <div className="overflow-hidden">
-                                {isSelected && (
-                                  <div
-  className={cn(
-    "border-t border-slate-900/10 dark:border-white/10",
-    "bg-slate-900/[0.03] dark:bg-[#1b2e48]",
-    "p-0",
-  )}
->
-
-
-                                    {breakdownLoading[dk] ? (
-                                      <div className="text-xs text-slate-600 dark:text-slate-200/70 py-2">
-                                        Loading…
-                                      </div>
-                                    ) : breakdowns[dk] ? (
-                                      <div className={cn(surfaceInset)}>
-
-  {/* summary row (aligned) */}
-  <div className="px-3 py-2 text-[11px] text-slate-700 dark:text-slate-200/80 tabular-nums border-b border-slate-900/10 dark:border-white/10">
-    {breakdowns[dk]!.wins}/{breakdowns[dk]!.games} wins • {breakdowns[dk]!.winRate.toFixed(1)}%
-  </div>
-
-  {breakdowns[dk]!.matchups.length === 0 ? (
-  <div className="px-3 py-3 text-xs text-slate-600 dark:text-slate-200/70">
-    No matchup data recorded for this deck yet.
-  </div>
-) : (
-  <div className="divide-y divide-black/10 dark:divide-white/10">
-    {breakdowns[dk]!.matchups.slice(0, 8).map((m, mi) => {
-      const mid = canonicalizeArchetypeId(m.opponentArchetypeId) ?? m.opponentArchetypeId ?? null
-
-      return (
-        <div
-          key={`${dk}-m-${mi}-${mid ?? "__unknown__"}`}
-          className={cn(
-            "flex items-center justify-between gap-3",
-            "px-3 py-2 text-sm",
-            mi % 2 === 0 ? "bg-transparent" : "bg-slate-900/[0.025] dark:bg-white/[0.04]",
-            "transition-colors",
-            "hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.04]",
-          )}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <ArchetypeIconPair archetypeId={mid} size={22} />
-            <span className="truncate">vs {formatArchetypeLabel(mid)}</span>
-          </div>
-
-          <div className="text-right tabular-nums">
-            <span className="font-semibold">{m.winRate.toFixed(1)}%</span>{" "}
-            <span className="text-slate-600 dark:text-slate-200/70">
-              ({m.wins}/{m.games})
-            </span>
-          </div>
-        </div>
-      )
-    })}
-  </div>
-)}
-</div>
-
-                                    ) : (
-                                      <div className="text-xs text-slate-600 dark:text-slate-200/70 py-2">
-                                        No breakdown available (check /api/player-deck-breakdown).
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-600 dark:text-slate-200/70">
-                      No deck history recorded yet for this player.
-                    </p>
-                  )}
-                </CollapsibleContent>
-              </Collapsible>
-            )
-          })}
-        </div>
-      )}
-
-      {!loading && !error && filteredPlayers.length === 0 && query.trim() && (
-        <p className="text-sm text-slate-600 dark:text-slate-200/70">
-          No players found matching “{query.trim()}”.
-        </p>
-      )}
-    </div>
-  )
+      {!!compare.length && <section className="player-comparison" aria-label="Player comparison"><h3>Compare players <small>{compare.length}/2 selected</small></h3><div>
+        {players.filter(value => compare.includes(value.username)).map(value => <article key={value.username}><h4>{value.username}</h4><strong>{value.winRate.toFixed(1)}%</strong><p>{value.wins} W · {value.losses} L / {value.totalGames} games</p><p>Last activity: {value.lastPlayed ?? 'Not available'}</p></article>)}
+      </div></section>}
+    </>}
+  </section>
 }

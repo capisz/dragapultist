@@ -24,8 +24,23 @@ export interface GameSummary {
   totalBenchedPokemon: number
   weaknessBonus: boolean
   actionPackedTurns: { user: number; opponent: number }
-  winnerPrizePath?: string[]            // e.g. ["Wellspring Mask Ogerpon ex", "Mew ex", ...]
-  userArchetype?: string | null         // archetype id (e.g. "raging-bolt-ogerpon")
-  opponentArchetype?: string | null     // archetype id
+  winnerPrizePath?: string[]
+  userArchetype?: string | null
+  opponentArchetype?: string | null
   favorite?: boolean
+  turnCount?: number
+  notes?: Record<number, string>
+  deckList?: string
+  deckName?: string
+  revision?: number
+  schemaVersion?: number
+  parserVersion?: number
+  noteCount?: number
+  hasDeck?: boolean
+}
+
+export interface GameTurn {
+  turnNumber: number
+  userActions: string[]
+  opponentActions: string[]
 }

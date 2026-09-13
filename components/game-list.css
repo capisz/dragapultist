@@ -1,4 +1,50 @@
-.hover\:scale-105:hover {
-  transform: scale(1.05);
-  z-index: 10;
-}
+.match-history { color:#172b46; }
+.dark .match-history { color:#edf4fc; }
+.match-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:20px; }
+.match-metrics>div { display:flex; flex-direction:column; gap:4px; padding:18px; background:rgb(255 255 255 / .52); border-radius:16px; }
+.match-metrics strong { font-size:24px; font-variant-numeric:tabular-nums; }
+.match-metrics span,.constellation-heading p,.constellation-date { font-size:12px; color:#465e79; }
+.dark .match-metrics span,.dark .constellation-heading p,.dark .constellation-date {color:#c2d4e8;}
+.constellation-layout { display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:20px; align-items:start; }
+.constellation-panel { min-width:0; border:1px solid rgb(74 107 143 / .2); border-radius:20px; background:rgb(255 255 255 / .55); padding:24px; }
+.dark .constellation-panel,.dark .match-metrics>div {background:rgb(17 33 53 / .48);}
+.constellation-heading {display:flex; flex-wrap:wrap; justify-content:space-between; gap:16px;}
+.constellation-heading h2 {font-size:20px; font-weight:600; margin-bottom:4px;}
+.match-sort {display:flex; flex-wrap:wrap; gap:6px;}
+.match-sort button {min-height:44px; font-size:12px; padding:0 8px; border-radius:8px;}
+.match-sort button[aria-pressed=true] {color:#234f86; background:rgb(255 255 255 / .65);}
+.dark .match-sort button[aria-pressed=true] {color:#c9e1ff; background:#2c4868;}
+.constellation-field {display:grid; grid-template-columns:repeat(auto-fill,minmax(82px,1fr)); gap:26px 12px; padding:30px 0 12px;}
+.constellation-position {display:flex; flex-direction:column; align-items:center; gap:7px; min-width:0; transition:transform 200ms ease;}
+.constellation-point,.constellation-point:hover,.constellation-point:focus,.constellation-point:focus-visible,.constellation-point:active {display:flex; align-items:center; justify-content:center; width:56px; height:56px; padding:0; border:0!important; outline:0!important; box-shadow:none!important; background:transparent!important; border-radius:0; transition:transform 200ms ease; -webkit-tap-highlight-color:transparent;}
+.constellation-point[data-active=true] {transform:scale(1.35);}
+.constellation-identity {position:relative; display:flex; align-items:center; justify-content:center;}
+.match-sprite {width:48px; height:48px; display:inline-flex; align-items:center; justify-content:center;}
+.match-sprite img {width:48px; height:48px; object-fit:contain; image-rendering:pixelated;}
+.outcome-dot {position:absolute; right:-5px; bottom:0; border-radius:50%; width:20px; height:20px; display:grid; place-items:center; font-size:11px; font-weight:700; color:white; background:#52647a;}
+.outcome-dot[data-outcome=W] {background:#216e54;} .outcome-dot[data-outcome=L] {background:#ac3d50;} .outcome-dot[data-outcome=T] {background:#e3b83c;color:#312704;}
+.constellation-date {font-size:10px; font-variant-numeric:tabular-nums;}
+.match-brief-space {position:sticky; top:24px; min-width:0;}
+.match-brief,.brief-placeholder {padding:22px; border-radius:18px; background:rgb(255 255 255 / .5); overflow-wrap:anywhere;}
+.dark .match-brief,.dark .brief-placeholder {background:rgb(18 34 56 / .58);}
+.match-brief {animation:brief-reveal 200ms ease both;}
+.brief-eyebrow {display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; font-size:12px; margin-bottom:16px;}
+.outcome-label {font-weight:700;}
+.match-brief h3,.brief-placeholder h3 {font-size:18px; font-weight:600;}
+.brief-matchup {margin:10px 0 20px; font-size:14px;}
+.brief-matchup span {color:#58718e; margin:0 4px;}
+.match-brief dl>div {display:flex; justify-content:space-between; gap:12px; margin:10px 0; font-size:13px;}
+.match-brief dd {font-weight:600;}
+.brief-tags {display:flex; flex-wrap:wrap; gap:6px; margin:16px 0;}
+.brief-tags span {font-size:12px; background:rgb(112 134 160 / .12); padding:4px 9px; border-radius:20px;}
+.brief-open {width:100%; background:#365f9a; color:white; min-height:44px;}
+.match-brief button {min-height:44px;}
+.brief-placeholder p {font-size:14px; margin-top:12px;}
+.match-empty {padding:50px 0; overflow-wrap:anywhere;}
+.match-empty h3 {font-size:20px; font-weight:600; margin-bottom:8px;}
+@keyframes brief-reveal {from {opacity:0;transform:translateY(5px)} to {opacity:1;transform:translateY(0)}}
+@media(max-width:900px) {.constellation-layout {grid-template-columns:minmax(0,1fr);} .match-brief-space {position:static;} .match-metrics {grid-template-columns:repeat(2,minmax(0,1fr));} .constellation-panel {padding:18px;} }
+@media(prefers-reduced-motion:reduce) {.constellation-point,.constellation-position {transition:none;} .match-brief {animation:none;}}
+.constellation-point:focus-visible {transform:scale(1.35);}
+.match-history {container-type:inline-size;}
+@container(max-width:850px) {.constellation-layout {grid-template-columns:minmax(0,1fr);} .match-brief-space {position:static;} .match-metrics {grid-template-columns:repeat(2,minmax(0,1fr));}}

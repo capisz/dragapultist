@@ -5,6 +5,7 @@ flowchart LR
   User["Player"]
   PTCGL["PTCGL Logs"]
   Mongo["MongoDB"]
+  Firebase["Firebase Authentication\nSpark plan"]
   FS["Server Filesystem\n/public/sprites"]
   Analytics["Vercel Analytics"]
 
@@ -13,8 +14,8 @@ flowchart LR
     Web["Web Client (Next.js/React)\n- AuthHeader/Login/Signup\n- PokemonTCGAnalyzer tabs\n- StatisticsPage"]
     Parser["Domain Utilities\nutils/game-analyzer.ts\nutils/archetype-mapping.ts\nstatistics/statistics-utils.ts"]
     API["API Route Handlers (/api/*)\n- games(+id)\n- player-search\n- player-deck-breakdown\n- account/profile\n- pokemon-sprites\n- imports, players, prize-maps"]
-    Actions["Server Actions\napp/actions.ts\n(cookie auth flows)"]
-    Auth["Auth Module\n/auth.ts (NextAuth Credentials)\nlib/request-user.ts fallback"]
+    Actions["Server Actions\napp/actions.ts\nguest choice + verified user read"]
+    Auth["Auth Boundary\nFirebase ID token exchange\nHttpOnly session + CSRF/origin"]
     DBLib["Data Access Layer\nlib/mongodb.ts + request-user helpers"]
   end
 
@@ -25,8 +26,10 @@ flowchart LR
 
   Web -->|"client-side parsing/inference"| Parser
   Web -->|"fetch JSON"| API
-  Web -->|"login/signUp/getUser/logout"| Actions
-  Web -. "optional /api/auth path" .-> Auth
+  Web -->|"guest/getUser"| Actions
+  Web -->|"signup/login/logout"| Firebase
+  Web -->|"ID token/session exchange"| Auth
+  Auth -->|"verify/revoke"| Firebase
   Web -->|"telemetry"| Analytics
 
   API -->|"uses parsing/stat helpers"| Parser

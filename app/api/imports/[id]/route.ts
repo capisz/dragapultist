@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
-import { getRequestUserObjectId } from "@/lib/request-user"
+import { getRequestUserId, userIdQueryValue } from "@/lib/request-user"
+import { APP_DATABASE_NAME } from "@/lib/app-database"
 
 type RouteContext = { params: Promise<{ id: string }> }
 
 export async function GET(_: Request, { params }: RouteContext) {
   const { id } = await params
-  const userObjectId = await getRequestUserObjectId()
-  if (!userObjectId) {
+  const userId = await getRequestUserId()
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   if (!ObjectId.isValid(id)) {
@@ -16,11 +17,11 @@ export async function GET(_: Request, { params }: RouteContext) {
   }
 
   const client = await clientPromise
-  const db = client.db(process.env.MONGODB_DB || "dragapultist")
+  const db = client.db(APP_DATABASE_NAME)
 
   const doc = await db.collection("imports").findOne({
     _id: new ObjectId(id),
-    userId: userObjectId,
+    userId: userIdQueryValue(userId),
   })
 
   if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 })

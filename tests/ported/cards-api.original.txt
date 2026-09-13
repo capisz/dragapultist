@@ -1,0 +1,50 @@
+import { expect, it } from 'vitest'
+import { NextRequest } from 'next/server'
+import { POST } from '../app/api/cards/route'
+function request(body: string) {
+  return new NextRequest('http://localhost/api/cards',{method:'POST',body,headers:{'Content-Type':'application/json'}})
+}
+it('resolves both the main set and gallery with their shared code', async () => {
+  const response = await POST(request(JSON.stringify({ids:['brs-1','brs-tg12']})))
+  const data = await response.json()
+  expect(response.status).toBe(200)
+  expect(data.missingIds).toEqual([])
+  expect(data.cards[1].name).toBe('Oranguru')
+})
+it('reports missing IDs without treating placeholders as real cards', async () => {
+  const response = await POST(request(JSON.stringify({ids:['zzz-999']})))
+  expect((await response.json()).missingIds).toEqual(['zzz-999'])
+})
+it('rejects malformed JSON, invalid IDs, and oversized payloads', async () => {
+  expect((await POST(request('{'))).status).toBe(400)
+  expect((await POST(request('{"ids":["<script>"]}'))).status).toBe(400)
+  expect((await POST(request(' '.repeat(20001)))).status).toBe(413)
+})
+
+it('resolves every featured deck card after rebuilding the index', async () => {
+  const { FEATURED_DECKS } = await import('../lib/featured-decks')
+  const { parseIdsFromText } = await import('../lib/deck-parser')
+  const ids = [...new Set(FEATURED_DECKS.flatMap(deck=>parseIdsFromText(deck.importText).uniqueIds))]
+  const response = await POST(request(JSON.stringify({ids})))
+  expect(response.status).toBe(200)
+  expect((await response.json()).missingIds).toEqual([])
+})
+
+it('keeps search codes importable, exact names first, and results bounded', async () => {
+  const { GET } = await import('../app/api/cards/route')
+  for (const query of ['Dawn', 'Oranguru', 'energy', 'charizard']) {
+    const response = await GET(new NextRequest(`http://localhost/api/cards?q=${query}`))
+    const { cards } = await response.json()
+    expect(cards.length).toBeGreaterThan(0)
+    expect(cards.length).toBeLessThanOrEqual(12)
+    expect(new Set(cards.map((card: {code:string}) => card.code)).size).toBe(cards.length)
+    const hydrated = await POST(request(JSON.stringify({ids:cards.map((card: {code:string})=>card.code.replace(' ', '-'))})))
+    const data = await hydrated.json()
+    expect(data.missingIds).toEqual([])
+    expect(data.cards.map((card: {name:string})=>card.name)).toEqual(cards.map((card: {name:string})=>card.name))
+    if (query === 'Dawn' || query === 'Oranguru') expect(cards[0].name).toBe(query)
+  }
+  for (const query of ['a', 'x'.repeat(81), 'no-such-pokemon-xyz']) {
+    expect(await (await GET(new NextRequest(`http://localhost/api/cards?q=${query}`))).json()).toEqual({cards:[]})
+  }
+})

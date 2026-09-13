@@ -1,3 +1,4 @@
+import "@/components/option-a.css"
 // app/layout.tsx
 import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"

@@ -919,17 +919,19 @@ export function parseGameTurns(log: string, preferredUsername?: string): GameTur
     })
   }
 
+  // Assignments occur inside the line iterator, so make the post-loop type explicit.
+  const finalTurn = currentTurn as GameTurn | null
   // Add the last turn if it exists and include the game end message
-  if (currentTurn && (currentTurn.userActions.length > 0 || currentTurn.opponentActions.length > 0)) {
+  if (finalTurn && (finalTurn.userActions.length > 0 || finalTurn.opponentActions.length > 0)) {
     if (gameEndMessage) {
       // Add the game end message to the appropriate player's actions
       if (gameEndMessage.startsWith("You won")) {
-        currentTurn.userActions.push(gameEndMessage)
+        finalTurn.userActions.push(gameEndMessage)
       } else {
-        currentTurn.opponentActions.push(gameEndMessage)
+        finalTurn.opponentActions.push(gameEndMessage)
       }
     }
-    turns.push(currentTurn)
+    turns.push(finalTurn)
   }
 
   return turns

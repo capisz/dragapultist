@@ -1,240 +1,100 @@
-// components/game-list.tsx
 "use client"
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { GameSummary } from '@/types/game'
+import { Button } from '@/components/ui/button'
+import { MatchSprite } from './match-sprite'
+import { matchOutcome, matchupName, type ReviewGame } from '@/utils/match-presentation'
+import './game-list.css'
 
-import { useEffect, useRef, useState } from "react"
-import type { GameSummary } from "@/types/game"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { ChevronDown, ChevronUp } from "lucide-react"
-import { formatArchetypeLabel } from "@/utils/archetype-mapping"
-
-type SortConfig = {
-  key: keyof GameSummary
-  direction: "asc" | "desc"
-}
-
+type SortConfig = { key: keyof GameSummary; direction: 'asc' | 'desc' }
 interface GameListProps {
+  toolbar?: ReactNode
   games: GameSummary[]
   onSelectGame: (game: GameSummary) => void
   onDeleteGame: (id: string) => void
   sortConfig: SortConfig
   onSort: (key: keyof GameSummary) => void
   showTags?: boolean
-  isDarkMode?: boolean // analyzer passes this
+  isDarkMode?: boolean
+  restoreMatchId?: string | null
+  hasHistory?: boolean
 }
 
-export function GameList({
-  games,
-  onSelectGame,
-  onDeleteGame,
-  sortConfig,
-  onSort,
-  showTags = true,
-}: GameListProps) {
+export function GameList({ toolbar, games, onSelectGame, onDeleteGame, sortConfig, onSort, restoreMatchId, hasHistory }: GameListProps) {
+  const [activeId, setActiveId] = useState<string | null>(restoreMatchId ?? null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
-  const deleteTimerRef = useRef<NodeJS.Timeout | null>(null)
-
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const field = useRef<HTMLDivElement>(null)
+  const active = games.find(game => game.id === activeId)
+  const [neighborOffsets, setNeighborOffsets] = useState<Record<string, { x: number; y: number }>>({})
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
   useEffect(() => {
-    return () => {
-      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current)
-    }
-  }, [])
-
-  const startDeleteTimer = (id: string) => {
-    if (pendingDeleteId === id) {
-      if (deleteTimerRef.current) {
-        clearTimeout(deleteTimerRef.current)
-        deleteTimerRef.current = null
-      }
-      setPendingDeleteId(null)
-      onDeleteGame(id)
-      return
-    }
-
+    if (restoreMatchId) field.current?.querySelector<HTMLButtonElement>(`[data-match-id="${CSS.escape(restoreMatchId)}"]`)?.focus({ preventScroll: true })
+  }, [restoreMatchId])
+  function selectPoint(id: string) {
+    setActiveId(id)
+    setPendingDeleteId(null)
+    const points = Array.from(field.current?.querySelectorAll<HTMLElement>('.constellation-position') ?? [])
+    const selected = points.find(point => point.querySelector('[data-match-id]')?.getAttribute('data-match-id') === id)
+    if (!selected) return
+    const origin = { x: selected.offsetLeft + selected.offsetWidth / 2, y: selected.offsetTop + selected.offsetHeight / 2 }
+    const distances = points.filter(point => point !== selected).map(point => {
+      const x = point.offsetLeft + point.offsetWidth / 2 - origin.x
+      const y = point.offsetTop + point.offsetHeight / 2 - origin.y
+      return { id: point.querySelector('[data-match-id]')!.getAttribute('data-match-id')!, x, y, distance: Math.hypot(x, y) }
+    }).sort((a, b) => a.distance - b.distance)
+    const nearest = distances[0]?.distance ?? 0
+    setNeighborOffsets(Object.fromEntries(distances.filter(point => point.distance <= nearest * 1.25).slice(0, 4).map(point => [point.id, { x: point.x / point.distance * 5, y: point.y / point.distance * 5 }])))
+  }
+  function remove(id: string) {
+    if (pendingDeleteId === id) { onDeleteGame(id); setPendingDeleteId(null); setActiveId(null); return }
     setPendingDeleteId(id)
-    if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current)
-    deleteTimerRef.current = setTimeout(() => setPendingDeleteId(null), 3000)
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => setPendingDeleteId(null), 3000)
   }
-
-  const renderSortableHeader = (label: string, key: keyof GameSummary) => {
-    const isActive = sortConfig.key === key
-    const Icon = sortConfig.direction === "asc" ? ChevronUp : ChevronDown
-
-    return (
-      <button
-        type="button"
-        onClick={() => onSort(key)}
-        className={cn(
-          "inline-flex items-center gap-1 text-[11px] font-semibold tracking-[0.08em] uppercase",
-          "text-slate-700 hover:text-slate-900",
-          "dark:text-slate-200 dark:hover:text-white",
-        )}
-      >
-        <span>{label}</span>
-        {isActive && <Icon className="h-3 w-3" aria-hidden="true" />}
-      </button>
-    )
-  }
-
-  const containerClasses = cn(
-    "overflow-hidden rounded-3xl border",
-    "border-slate-200 bg-slate-50",
-    "dark:border-slate-600/40 dark:bg-slate-700/40",
-  )
-
-  const headerClasses = cn(
-    "grid grid-cols-[1.1fr,1.3fr,2.4fr,1.3fr,0.9fr,1.2fr,1.5fr] items-center px-4 py-2.5",
-    "bg-slate-200/60 text-slate-800 border-b border-slate-200",
-    "dark:bg-slate-600/90 dark:text-slate-50 dark:border-slate-800",
-  )
-
-  const rowClasses = cn(
-    "grid grid-cols-[1.1fr,1.3fr,2.4fr,1.3fr,0.9fr,1.2fr,1.5fr] items-center px-4 py-2.5 text-[13px] border-t",
-    "border-slate-200 bg-white hover:bg-slate-50 text-slate-900",
-    "dark:border-slate-800/60 dark:bg-slate-800/85 dark:hover:bg-slate-700/80 dark:text-slate-50",
-  )
-
-  const resultPillClasses = (win: boolean) =>
-    cn(
-      "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold border",
-      win
-        ? [
-            "border-emerald-500 text-emerald-700 bg-emerald-50",
-            "dark:border-emerald-400 dark:text-emerald-200 dark:bg-emerald-500/10",
-          ]
-        : [
-            "border-rose-400 text-rose-700 bg-rose-50",
-            "dark:border-rose-300 dark:text-rose-200 dark:bg-rose-500/10",
-          ],
-    )
-
-  const deleteButtonClasses = (isPending: boolean) =>
-    cn(
-      "rounded-full px-3 py-1 text-xs font-semibold border transition-colors",
-      isPending
-        ? [
-            "border-rose-500 bg-rose-100 text-rose-700",
-            "dark:border-rose-400 dark:bg-rose-500/25 dark:text-rose-50",
-          ]
-        : [
-            "border-rose-400 bg-rose-50 text-rose-600 hover:bg-rose-100",
-            "dark:border-rose-400 dark:bg-transparent dark:text-rose-200 dark:hover:bg-rose-500/20",
-          ],
-    )
-
-  const viewButtonClasses = cn(
-    "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
-    "border-slate-300 bg-white text-slate-800 hover:bg-slate-100",
-    "dark:border-slate-500 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800",
-  )
-
-  const labelPillClasses = (variant: "you" | "opp") =>
-    cn(
-      "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
-      variant === "you"
-        ? ["bg-emerald-100 text-emerald-700", "dark:bg-emerald-500/20 dark:text-emerald-200"]
-        : ["bg-rose-100 text-rose-700", "dark:bg-rose-500/20 dark:text-rose-200"],
-    )
-
-  return (
-    <div className={containerClasses}>
-      <div className={headerClasses}>
-        <div>{renderSortableHeader("Date", "date")}</div>
-        <div>{renderSortableHeader("Opponent", "opponent")}</div>
-        <div className="text-[11px] font-semibold tracking-[0.08em] uppercase">Matchup</div>
-        <div>{renderSortableHeader("Result", "userWon")}</div>
-        <div className="text-right">{renderSortableHeader("Turns", "turns")}</div>
-        <div className="text-right text-[11px] font-semibold tracking-[0.08em] uppercase">Prize trade</div>
-        <div className="text-right text-[11px] font-semibold tracking-[0.08em] uppercase">Actions</div>
-      </div>
-
-      {games.map((game, rowIndex) => {
-        const userLabel = formatArchetypeLabel((game as any).userArchetype)
-        const oppLabel = formatArchetypeLabel((game as any).opponentArchetype)
-        const isPendingDelete = pendingDeleteId === game.id
-
-        return (
-          <div
-            key={game.id}
-            className={cn(
-              rowClasses,
-              rowIndex % 2 === 0 ? "dark:bg-slate-800/85" : "bg-slate-50/55 dark:bg-slate-700/80",
-            )}
-          >
-            <div className="tabular-nums">{game.date}</div>
-            <div className="font-medium">{game.opponent}</div>
-
-            <div className="flex flex-col gap-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className={labelPillClasses("you")}>You</span>
-                <span>{userLabel}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className={labelPillClasses("opp")}>Opp</span>
-                <span>{oppLabel}</span>
-              </div>
-            </div>
-
-            <div className="flex justify-start md:justify-center">
-              <span className={resultPillClasses(game.userWon)}>
-                {game.userWon ? "Win" : "Loss"}
-                <span className="ml-2 text-[11px] font-normal opacity-80">
-                  {game.wentFirst ? "(went first)" : "(went second)"}
-                </span>
-              </span>
-            </div>
-
-            <div className="text-right tabular-nums">
-              {game.turns} <span className="text-[11px] opacity-70">turns</span>
-            </div>
-
-            <div className="text-right">
-              {game.userPrizeCardsTaken} – {game.opponentPrizeCardsTaken}
-            </div>
-
-            <div className="flex items-center justify-end gap-2">
-              {showTags && (
-                <div className="flex flex-wrap gap-1 justify-end mr-1">
-                  {game.tags?.map((tag) => (
-                    <span
-                      key={tag.text}
-                      className={cn(
-                        "px-2.5 py-0.5 rounded-full text-[11px] font-medium border",
-                        "bg-slate-50 dark:bg-slate-900/80",
-                      )}
-                      style={{
-                        borderColor: tag.color,
-                        color: tag.color,
-                      }}
-                    >
-                      {tag.text}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <Button type="button" onClick={() => onSelectGame(game)} className={viewButtonClasses} variant="outline">
-                View
-              </Button>
-
-              <Button
-                type="button"
-                onClick={() => startDeleteTimer(game.id)}
-                className={deleteButtonClasses(isPendingDelete)}
-                variant="outline"
-              >
-                {isPendingDelete ? "Confirm" : "Delete"}
-              </Button>
-            </div>
-          </div>
-        )
-      })}
-
-      {games.length === 0 && (
-        <div className="px-4 py-4 text-sm text-slate-600 dark:text-slate-300">
-          No games yet. Import a log to get started.
-        </div>
-      )}
+  const wins = games.filter(game => matchOutcome(game).code === 'W').length
+  const losses = games.filter(game => matchOutcome(game).code === 'L').length
+  return <section className="match-history" aria-label="Match history">
+    <div className="games-working-band">{toolbar}<div className="match-metrics" aria-live="polite" aria-atomic="true">
+      <div><strong>{games.length}</strong><span>Visible matches</span></div>
+      <div><strong>{games.length ? `${Math.round(wins / games.length * 100)}%` : '—'}</strong><span>Win rate</span></div>
+      <div><strong>{wins} W · {losses} L{games.length - wins - losses > 0 ? ` · ${games.length - wins - losses} T` : ''}</strong><span>Results</span></div>
+      <div><strong>{games.length ? (games.reduce((sum, game) => sum + game.turns, 0) / games.length).toFixed(1) : '—'}</strong><span>Average rounds</span></div>
     </div>
-  )
+        <div className="constellation-heading"><span className="sr-only">Focus or tap a match to see its brief.</span>
+          <div className="match-sort" aria-label="Sort matches">{(['date', 'opponent', 'userWon', 'turns'] as const).map(key => <button key={key} type="button" onClick={() => onSort(key)} aria-pressed={sortConfig.key === key}>{key === 'userWon' ? 'Result' : key === 'turns' ? 'Rounds' : key[0].toUpperCase() + key.slice(1)}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button>)}</div>
+        </div>
+    </div>
+    <div className="constellation-layout">
+      <div className="constellation-panel">
+
+        {games.length ? <div ref={field} className="constellation-field" role="group" aria-label="Matches" onKeyDown={event => { if (event.key === 'Escape') { setActiveId(null); setNeighborOffsets({}); setPendingDeleteId(null) } }}>
+          {games.map((game, index) => {
+            const outcome = matchOutcome(game)
+            return <div key={game.id} className="constellation-position" style={{transform: active && neighborOffsets[game.id] ? `translate(${neighborOffsets[game.id].x}px, ${neighborOffsets[game.id].y}px)` : undefined}}>
+              <button type="button" data-match-id={game.id} className="constellation-point" data-active={activeId === game.id}
+                aria-label={`${outcome.label} against ${game.opponent}, ${matchupName(game)} versus ${matchupName(game, true)}, ${game.date}. Open match review.`}
+                onPointerEnter={event => { if (event.pointerType === 'mouse') selectPoint(game.id) }}
+                onFocus={() => selectPoint(game.id)}
+                onClick={event => { if (event.detail === 0 || !window.matchMedia('(pointer: coarse)').matches) onSelectGame(game); else { selectPoint(game.id); requestAnimationFrame(() => document.querySelector('.match-brief')?.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })) } }}>
+                <span className="constellation-identity"><MatchSprite name={game.userMainAttacker} /><span className="outcome-dot" data-outcome={outcome.code}>{outcome.code}</span></span>
+              </button>
+              <span className="constellation-date">{game.date}</span>
+            </div>
+          })}
+        </div> : <div className="match-empty"><h3>{hasHistory ? 'No matching games' : 'Import a game to begin.'}</h3><p>{hasHistory ? 'Try a different opponent, Pokémon, result, date, tag, or note.' : ''}</p></div>}
+      </div>
+      <aside className="match-brief-space" aria-label="Match brief" hidden={!active}>
+        {active ? <div key={active.id} className="match-brief">
+          <div className="brief-eyebrow"><span className="outcome-label" data-outcome={matchOutcome(active).code}>{matchOutcome(active).label}</span><span>{active.date}</span></div>
+          <h3>{active.opponent}</h3><p className="brief-matchup">{matchupName(active)} <span>vs</span> {matchupName(active, true)}</p>
+          <dl><div><dt>Turn order</dt><dd>{active.wentFirst ? 'Went first' : 'Went second'}</dd></div><div><dt>Rounds</dt><dd>{active.turns}</dd></div><div><dt>Prizes taken</dt><dd>{active.userPrizeCardsTaken} – {active.opponentPrizeCardsTaken}</dd></div><div><dt>Private notes</dt><dd>{active.noteCount ?? Object.values((active as ReviewGame).notes ?? {}).filter(note => note.trim()).length}</dd></div></dl>
+          <div className="brief-tags">{active.tags?.map(tag => <span key={tag.text}>{tag.text}</span>)}</div>
+          <Button onClick={() => onSelectGame(active)} className="brief-open">Open match review →</Button>
+          <Button variant="ghost" onClick={() => remove(active.id)}>{pendingDeleteId === active.id ? 'Confirm delete' : 'Delete match'}</Button>
+          <span className="sr-only" role="status">{pendingDeleteId === active.id ? 'Activate Confirm delete within three seconds to delete this match.' : ''}</span>
+        </div> : null}
+      </aside>
+    </div>
+  </section>
 }

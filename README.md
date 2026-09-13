@@ -83,19 +83,17 @@ As the project grows, the goal is to:
 ### Prerequisites
 
 - Node.js (v18+ recommended)
-- npm or yarn
+- pnpm 10 (the repository's pinned package manager)
 
 ### Clone and install
 
     git clone <YOUR_REPO_URL_HERE>
     cd dragapultist
-    npm install
-    # or: yarn
+    corepack pnpm install
 
 ### Run the dev server
 
-    npm run dev
-    # or: yarn dev
+    corepack pnpm dev
 
 Then open:
 
@@ -169,15 +167,15 @@ From the project root, you can typically run:
 
 - **Start dev server**
 
-      npm run dev
+      corepack pnpm dev
 
 - **Production build**
 
-      npm run build
+      corepack pnpm build
 
 - **Start production server (after build)**
 
-      npm start
+      corepack pnpm start
 
 (If your package.json uses different scripts, update this section accordingly.)
 

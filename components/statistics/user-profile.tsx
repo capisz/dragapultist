@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Camera, ImagePlus, Loader2, Trash2 } from "lucide-react"
 import type { OverallStatsModel } from "./types"
+import { secureJsonFetch } from "@/lib/secure-fetch"
 
 interface UserProfileProps {
   user: User
@@ -90,7 +91,7 @@ export function UserProfile({ user, stats, deckCount, lastPlayedLabel }: UserPro
 
   async function persistProfileImages(updates: { avatarImage?: string | null; bannerImage?: string | null }) {
     setError("")
-    const response = await fetch("/api/account/profile", {
+    const response = await secureJsonFetch("/api/account/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),

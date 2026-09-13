@@ -1,38 +1,25 @@
 import { ObjectId } from "mongodb"
 import { cookies } from "next/headers"
-import { auth } from "@/auth"
+import { verifiedSession } from "@/lib/session"
+import { SESSION_COOKIE } from "@/lib/session"
 
-type UnknownSession = {
-  user?: {
-    id?: unknown
-  } | null
-} | null
+export type RequestIdentity =
+  | { status: "authenticated"; userId: string }
+  | { status: "missing" | "invalid"; userId: null }
 
-function readSessionUserId(session: UnknownSession): string | null {
-  const id = session?.user?.id
-  return typeof id === "string" && id.trim() ? id : null
+export async function getRequestIdentity(): Promise<RequestIdentity> {
+  const jar = await cookies()
+  const hasCookie = Boolean(jar.get(SESSION_COOKIE)?.value)
+  const session = await verifiedSession()
+  if (session?.uid) return { status: "authenticated", userId: session.uid }
+  return { status: hasCookie ? "invalid" : "missing", userId: null }
 }
 
 export async function getRequestUserId(): Promise<string | null> {
-  // Primary auth source for this app: cookie written by app/actions.ts
-  const jar = await cookies()
-  const cookieUserId = jar.get("userId")?.value
-  if (cookieUserId && cookieUserId !== "guest") return cookieUserId
-
-  // Fallback for any existing next-auth sessions.
-  const session = (await auth()) as UnknownSession
-  return readSessionUserId(session)
-}
-
-export async function getRequestUserObjectId(): Promise<ObjectId | null> {
-  const userId = await getRequestUserId()
-  if (!userId || !ObjectId.isValid(userId)) return null
-  return new ObjectId(userId)
+  return (await getRequestIdentity()).userId
 }
 
 export function userIdQueryValue(userId: string): string | { $in: Array<string | ObjectId> } {
-  if (ObjectId.isValid(userId)) {
-    return { $in: [userId, new ObjectId(userId)] }
-  }
+  if (ObjectId.isValid(userId)) return { $in: [userId, new ObjectId(userId)] }
   return userId
 }

@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  outputFileTracingRoot: import.meta.dirname,
+  outputFileTracingIncludes: { "/api/cards": ["./data/generated/card-index.json"] },
   images: {
     unoptimized: true,
   },

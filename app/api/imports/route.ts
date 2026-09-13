@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
-import { getRequestUserObjectId } from "@/lib/request-user"
+import { getRequestUserId, userIdQueryValue } from "@/lib/request-user"
+import { assertMutationRequest } from "@/lib/session"
+import { APP_DATABASE_NAME } from "@/lib/app-database"
+import { importInputSchema } from "@/lib/import-contract"
+import { createHash } from "node:crypto"
 
 export async function GET() {
-  const userObjectId = await getRequestUserObjectId()
-  if (!userObjectId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const userId = await getRequestUserId()
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const client = await clientPromise
-  const db = client.db(process.env.MONGODB_DB || "dragapultist")
+  const db = client.db(APP_DATABASE_NAME)
 
   const imports = await db
     .collection("imports")
-    .find({ userId: userObjectId })
+    .find({ userId: userIdQueryValue(userId) })
     .sort({ createdAt: -1 })
     .limit(50)
     .toArray()
@@ -20,29 +24,39 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const userObjectId = await getRequestUserObjectId()
-  if (!userObjectId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-  const body = await req.json().catch(() => null)
-  const rawText = body?.rawText
-  const parsed = body?.parsed ?? null
-  const title = body?.title ?? null
-
-  if (typeof rawText !== "string" || rawText.trim().length < 10) {
-    return NextResponse.json({ error: "rawText required" }, { status: 400 })
+  try {
+    await assertMutationRequest(req)
+  } catch {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 })
   }
+  const userId = await getRequestUserId()
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const body = importInputSchema.safeParse(await req.json().catch(() => null))
+  if (!body.success) return NextResponse.json({ error: "Invalid import payload." }, { status: 400 })
+  const { rawText, parsed = null, title = null } = body.data
 
   const client = await clientPromise
-  const db = client.db(process.env.MONGODB_DB || "dragapultist")
+  const db = client.db(APP_DATABASE_NAME)
+  const contentHash = createHash("sha256")
+    .update(`${userId}\0${rawText.replace(/\r\n/g, "\n").trim()}`)
+    .digest("hex")
+
+  const existing = await db.collection("imports").findOne(
+    { userId: userIdQueryValue(userId), contentHash },
+    { projection: { _id: 1 } },
+  )
+  if (existing) return NextResponse.json({ id: existing._id.toString(), duplicate: true })
 
   const doc = {
-    userId: userObjectId,
+    userId,
     title,
     rawText,
     parsed,
+    contentHash,
     createdAt: new Date(),
   }
 
   const res = await db.collection("imports").insertOne(doc)
-  return NextResponse.json({ id: res.insertedId.toString() })
+  return NextResponse.json({ id: res.insertedId.toString(), duplicate: false }, { status: 201 })
 }

@@ -1,5 +1,6 @@
 // components/game-detail.tsx
 "use client"
+import { ArchetypeSelector } from "./archetype-selector"
 
 import { useMemo, useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -14,8 +15,12 @@ import { CheckIcon } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { GameSummary } from "@/types/game"
+import { type ReviewGame, matchupName } from "@/utils/match-presentation"
+import "./game-review.css"
+import { MatchupSpritePair } from "./matchup-sprite-pair"
 import { ARCHETYPE_RULES, formatArchetypeLabel, isCustomArchetypeId } from "@/utils/archetype-mapping"
 import { getPokemonSpriteCandidateSourcesForDisplayName } from "@/utils/pokeapi-sprites"
+import type { PersistenceState } from "@/lib/api-contract"
 
 interface DeckInfo {
   name: string
@@ -23,16 +28,18 @@ interface DeckInfo {
 }
 
 interface GameDetailProps {
-  game: GameSummary
+  game: ReviewGame
   onBack: () => void
   allGames?: GameSummary[]
-  onUpdateGame: (updatedGame: GameSummary) => void
+  onUpdateGame: (updatedGame: ReviewGame) => Promise<boolean>
+  saveState?: PersistenceState
+  onRetrySave?: () => void
 }
 
 const FALLBACK_ICON = "/sprites/substitute.png"
 const UNKNOWN_ARCHETYPE = "__unknown__"
 
-export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailProps) {
+export function GameDetail({ game, onBack, allGames, onUpdateGame: commitGame, saveState = "idle", onRetrySave }: GameDetailProps) {
   const pillBtn = (pressed: boolean, extra?: string) =>
     cn(
       "rounded-full px-5 h-9 text-sm whitespace-nowrap transition-transform duration-150",
@@ -42,6 +49,19 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
       extra,
     )
 
+  const [activeTurnIndex, setActiveTurnIndex] = useState(0)
+  const [pendingUpdate, setPendingUpdate] = useState<ReviewGame | null>(null)
+  async function onUpdateGame(updatedGame: ReviewGame): Promise<boolean> {
+    try {
+      const saved = await commitGame(updatedGame)
+      if (saved) setPendingUpdate(null)
+      else setPendingUpdate(updatedGame)
+      return saved
+    } catch {
+      setPendingUpdate(updatedGame)
+      return false
+    }
+  }
   const [tags, setTags] = useState<{ text: string; color: string }[]>(game.tags || [])
   const [newTag, setNewTag] = useState("")
   const [newTagColor, setNewTagColor] = useState("#FF9999")
@@ -106,6 +126,7 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame }: GameDetailP
 
   // Sync local state when switching games
   useEffect(() => {
+    setActiveTurnIndex(0)
     setTags(game.tags || [])
     setTurnNotes(game.notes || {})
     setDeckList(game.deckList || "")
@@ -403,6 +424,8 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
     }
 
     setSelectedPokemon(pokemon)
+    const matchingTurn = turns.findIndex(turn => [...turn.userActions, ...turn.opponentActions].some(action => action.includes(pokemon)))
+    if (matchingTurn >= 0) setActiveTurnIndex(matchingTurn)
 
     const allTurnElements = document.querySelectorAll("[data-pokemon-action]")
     for (const element of allTurnElements) {
@@ -483,10 +506,9 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
 
   const handleBackClick = () => {
     setIsBackButtonPressed(true)
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsBackButtonPressed(false)
-      onUpdateGame({ ...game, tags, notes: turnNotes, deckList, deckName })
-      onBack()
+      if (await onUpdateGame({ ...game, tags, notes: turnNotes, deckList, deckName })) onBack()
     }, 150)
   }
 
@@ -541,16 +563,18 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
     }
   }
 
-  const handleSaveDeckList = () => {
-    if (isNewDeck && newDeckName.trim()) {
-      const newDeck: DeckInfo = { name: newDeckName.trim(), list: deckList }
+  const handleSaveDeckList = async () => {
+    const savedDeckName = isNewDeck ? newDeckName.trim() : deckName
+    const saved = await onUpdateGame({ ...game, deckList, deckName: savedDeckName })
+    if (!saved) return
+
+    if (isNewDeck && savedDeckName) {
+      const newDeck: DeckInfo = { name: savedDeckName, list: deckList }
       const updatedDecks = [...existingDecks, newDeck]
       setExistingDecks(updatedDecks)
       localStorage.setItem("pokemonDecks", JSON.stringify(updatedDecks))
-      setDeckName(newDeckName.trim())
+      setDeckName(savedDeckName)
     }
-
-    onUpdateGame({ ...game, deckList, deckName: isNewDeck ? newDeckName : deckName })
     setShowDeckListDialog(false)
   }
 
@@ -590,7 +614,7 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
     setOpponentArchetypeId(a)
   }
 
-  const applyPlayers = () => {
+  const applyPlayers = async () => {
     const recalculated = analyzeGameLog(
       game.rawLog,
       swapPlayers,
@@ -609,10 +633,10 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
       notes: turnNotes,
       deckList,
       deckName,
+      revision: game.revision,
     }
 
-    onUpdateGame(merged)
-    setShowSetPlayersDialog(false)
+    if (await onUpdateGame(merged)) setShowSetPlayersDialog(false)
 
     
   }
@@ -639,7 +663,7 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
     </span>
 
     <span className="inline-flex items-center rounded-full bg-slate-300 px-3 py-1 font-medium text-slate-700 dark:bg-slate-500/60 dark:text-slate-100">
-      Turns: {game.turns}
+      Rounds: {game.turns}
     </span>
   </div>
 )
@@ -648,7 +672,7 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
 return (
   <div
     className={cn(
-      "max-w-4xl mx-auto px-4 pb-16",
+      "match-review mx-auto px-4 pb-8",
       "text-slate-900 dark:text-slate-50",
 
       // Surface color (slightly different than page bg)
@@ -675,6 +699,193 @@ return (
 
       </div>
 
+      {(pendingUpdate || ["unavailable", "retryable_failure", "conflict", "expired", "unauthorized"].includes(saveState)) && <div className="review-update-error" role="alert">
+        <p>Your changes could not be saved. Your draft is still here.</p>
+        <Button onClick={() => pendingUpdate
+          ? void onUpdateGame({ ...pendingUpdate, tags, notes: turnNotes, deckList, deckName })
+          : onRetrySave?.()}>Retry save</Button>
+      </div>}
+      {saveState === "saving" && <p role="status" className="review-save-status">Saving…</p>}
+
+      <header className="review-summary">
+        <div><h2>{game.opponent}</h2><p>{game.date} · {game.wentFirst ? 'Went first' : 'Went second'}</p><SummaryPills /></div>
+        <MatchupSpritePair user={game.userMainAttacker} opponent={game.opponentMainAttacker} />
+      </header>
+
+      <section className="review-workspace" aria-label="Turn review">
+        <nav className="review-turns" aria-label="Turn navigator">
+          <h3>Rounds</h3>
+          <p>{turns.length} recorded stages</p>
+          <div>{turns.map((turn, index) => <button key={turn.turnNumber} type="button"
+            aria-current={activeTurnIndex === index ? 'step' : undefined}
+            onClick={() => setActiveTurnIndex(index)}>
+            <span>{turn.turnNumber === 0 ? 'Setup' : `Round ${turn.turnNumber}`}</span>
+            <small>{turn.userActions.length + turn.opponentActions.length} events{turnNotes[turn.turnNumber]?.trim() ? ' · Note' : ''}</small>
+          </button>)}</div>
+        </nav>
+        <div className="review-evidence">
+          <div className="review-turn-controls">
+            <Button variant="outline" disabled={activeTurnIndex === 0} onClick={() => setActiveTurnIndex(index => index - 1)}>← Previous round</Button>
+            <Button variant="outline" disabled={activeTurnIndex >= turns.length - 1} onClick={() => setActiveTurnIndex(index => index + 1)}>Next round →</Button>
+          </div>
+          {!turns.length && <p>No turn markers were found in this log.</p>}
+          {turns.slice(activeTurnIndex, activeTurnIndex + 1).map((turn) => {
+            const isFlipped = flippedTurns.has(turn.turnNumber)
+
+            return (
+              <article
+                key={turn.turnNumber}
+
+className={cn(
+  "py-4 px-3 text-sm leading-relaxed",
+  "rounded-2xl transition-colors",
+
+  // match the Game details surface
+  "bg-slate-50/60 dark:bg-slate-900/40",
+  "border border-slate-200/60 dark:border-slate-700/50",
+
+  // optional depth so it doesn’t look flat
+  "shadow-[0_8px_22px_rgba(2,6,23,0.06)] dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]",
+  "ring-1 ring-slate-900/5 dark:ring-white/5",
+
+  // preserve hover effects (overlay)
+  "hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.05]",
+
+  isFlipped && "bg-slate-900/[0.06] dark:bg-white/[0.06]"
+
+)}
+              >
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div className="font-medium text-slate-700 dark:text-slate-100">
+                    {turn.turnNumber === 0 ? "Setup" : `Round ${turn.turnNumber}`}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" aria-pressed={isFlipped} onClick={() => handleTurnClick(turn.turnNumber)}>
+                      {isFlipped ? 'Show events' : 'Show stats'}
+                    </Button>
+                  </div>
+                </div>
+
+                {!isFlipped ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
+                        You ({previewPlayers.you})
+                      </div>
+                      <ul className="space-y-1 text-[13px] text-slate-800 dark:text-slate-100">
+                        {turn.userActions.map((action, index) => (
+                          <li
+                            key={index}
+                            data-pokemon-action
+                            className={cn(
+                              "transition-colors",
+                              selectedPokemon && action.includes(selectedPokemon)
+                                ? "rounded bg-amber-100/80 px-1 dark:bg-amber-200/80 dark:text-slate-900"
+                                : "",
+                            )}
+                            dangerouslySetInnerHTML={{ __html: formatActionHtml(action) }}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="md:border-l md:border-slate-500/70 md:pl-4 dark:md:border-slate-500">
+                      <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
+                        Opponent ({previewPlayers.opp || "unknown"})
+                      </div>
+                      <ul className="space-y-1 text-[13px] text-slate-800 dark:text-slate-100">
+                        {turn.opponentActions.map((action, index) => (
+                          <li
+                            key={index}
+                            data-pokemon-action
+                            className={cn(
+                              "transition-colors",
+                              selectedPokemon && action.includes(selectedPokemon)
+                                ? "rounded bg-amber-100/80 px-1 dark:bg-amber-200/80 dark:text-slate-900"
+                                : "",
+                            )}
+                            dangerouslySetInnerHTML={{ __html: formatActionHtml(action) }}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 text-[13px]">
+                    {turnStats[turn.turnNumber] ? (
+                      <>
+                        <div>
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
+                            You
+                          </div>
+                          <dl className="space-y-1 text-slate-800 dark:text-slate-100">
+                            <div className="flex justify-between">
+                              <dt>Cards remaining</dt>
+                              <dd className="font-medium">{turnStats[turn.turnNumber].userCardsRemaining}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt>Cards drawn</dt>
+                              <dd className="font-medium">{turnStats[turn.turnNumber].userCardsDrawn}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt>Cards discarded</dt>
+                              <dd className="font-medium">{turnStats[turn.turnNumber].userCardsDiscarded}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt>Energy attached</dt>
+                              <dd className="font-medium">{turnStats[turn.turnNumber].userEnergyAttached}</dd>
+                            </div>
+                          </dl>
+                        </div>
+
+                        <div className="md:border-l md:border-slate-500/70 md:pl-4 dark:md:border-slate-500">
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
+                            Opponent
+                          </div>
+                          <dl className="space-y-1 text-slate-800 dark:text-slate-100">
+                            <div className="flex justify-between">
+                              <dt>Cards remaining</dt>
+                              <dd className="font-medium">{turnStats[turn.turnNumber].opponentCardsRemaining}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt>Cards drawn</dt>
+                              <dd className="font-medium">{turnStats[turn.turnNumber].opponentCardsDrawn}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt>Cards discarded</dt>
+                              <dd className="font-medium">{turnStats[turn.turnNumber].opponentCardsDiscarded}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt>Energy attached</dt>
+                              <dd className="font-medium">{turnStats[turn.turnNumber].opponentEnergyAttached}</dd>
+                            </div>
+                          </dl>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-slate-500 dark:text-slate-400">No statistics available for this turn.</p>
+                    )}
+                  </div>
+                )}
+              </article>
+            )
+          })}
+          <details className="review-raw-log"><summary>Raw game log</summary><pre>{game.rawLog}</pre></details>
+        </div>
+        <aside className="review-notes" aria-label="Private turn notes">
+          <h3>Your review notes</h3>
+          {turns[activeTurnIndex] && <>
+            <label htmlFor="active-turn-note">{turns[activeTurnIndex].turnNumber === 0 ? 'Setup' : `Round ${turns[activeTurnIndex].turnNumber}`}</label>
+            <Textarea id="active-turn-note" placeholder="What would you do differently next time?"
+              value={turnNotes[turns[activeTurnIndex].turnNumber] ?? ''}
+              onChange={event => { setTurnNotes(previous => ({ ...previous, [turns[activeTurnIndex].turnNumber]: event.target.value })) }} />
+            <Button onClick={() => onUpdateGame({ ...game, notes: turnNotes })}>Save note</Button>
+            <p>Notes stay with this match. Back to list also applies your edits.</p>
+          </>}
+        </aside>
+      </section>
+
+      <details className="review-secondary"><summary>Teams, tags & match details</summary>
       {/* GAME DETAILS + TAGS */}
      <section
   className={cn(
@@ -686,7 +897,8 @@ return (
 >
 
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-xl font-semibold tracking-tight">Game Details</h2>
+          <div><p className="text-xs mb-1">Match Review</p><h2 className="text-xl font-semibold tracking-tight">{matchupName(game)} vs {matchupName(game, true)}</h2></div>
+
         </div>
 
        <div className="grid gap-6 md:grid-cols-2 items-start">
@@ -696,17 +908,17 @@ return (
 
       <SummaryPills />
       <div className="flex gap-2">
-        <dt className="w-28 text-slate-500 dark:text-slate-200/80">Date</dt>
+        <dt className="w-20 sm:w-28 shrink-0 text-slate-500 dark:text-slate-200/80">Date</dt>
         <dd className="font-medium">{game.date}</dd>
       </div>
 
       <div className="flex gap-2">
-        <dt className="w-28 text-slate-500 dark:text-slate-200/80">Opponent</dt>
-        <dd className="font-medium break-all">{game.opponent}</dd>
+        <dt className="w-20 sm:w-28 shrink-0 text-slate-500 dark:text-slate-200/80">Opponent</dt>
+        <dd className="font-medium min-w-0 break-words">{game.opponent}</dd>
       </div>
 
       <div className="flex gap-2">
-        <dt className="w-28 text-slate-500 dark:text-slate-200/80">Went first</dt>
+        <dt className="w-20 sm:w-28 shrink-0 text-slate-500 dark:text-slate-200/80">Went first</dt>
         <dd className="font-medium">{game.wentFirst ? "Yes" : "No"}</dd>
       </div>
     </dl>
@@ -781,7 +993,7 @@ return (
         <Button
           type="button"
           variant="outline"
-          size="xs"
+          size="sm"
           onClick={() => setIsAddingTag(true)}
           className="h-7 px-2 text-xs border-dashed border-slate-400/70 text-slate-600 dark:text-slate-300 dark:border-slate-600 bg-transparent hover:bg-slate-100/40 dark:hover:bg-slate-800/60"
         >
@@ -883,7 +1095,7 @@ return (
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300 mb-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200 mb-2">
             You ({previewPlayers.you || "unknown"})
           </div>
           {userPrizeMap.length ? (
@@ -912,198 +1124,7 @@ return (
 
       </section>
 
-      {/* TURN LIST */}
-      <section className="mt-8 border-t border-slate-400/80 dark:border-slate-400/80 pt-6">
-        <h3 className="text-lg font-semibold mb-4">Turn log</h3>
-
-        <div className="space-y-3">
-          {turns.map((turn) => {
-            const isFlipped = flippedTurns.has(turn.turnNumber)
-
-            return (
-              <article
-                key={turn.turnNumber}
-                onClick={() => handleTurnClick(turn.turnNumber)}
-className={cn(
-  "py-4 px-3 text-sm leading-relaxed cursor-pointer",
-  "rounded-2xl transition-colors",
-
-  // match the Game details surface
-  "bg-slate-50/60 dark:bg-slate-900/40",
-  "border border-slate-200/60 dark:border-slate-700/50",
-
-  // optional depth so it doesn’t look flat
-  "shadow-[0_8px_22px_rgba(2,6,23,0.06)] dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]",
-  "ring-1 ring-slate-900/5 dark:ring-white/5",
-
-  // preserve hover effects (overlay)
-  "hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.05]",
-
-  isFlipped && "bg-slate-900/[0.06] dark:bg-white/[0.06]"
-
-)}
-              >
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <div className="font-medium text-slate-700 dark:text-slate-100">
-                    {turn.turnNumber === 0 ? "Setup" : `Turn ${turn.turnNumber}`}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      {isFlipped ? "Hide stats" : "Show stats"}
-                    </span>
-
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={(e) => e.stopPropagation()}
-                          className="rounded-full p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
-                        >
-                          {turnNotes[turn.turnNumber] ? (
-                            <Book className="h-4 w-4 text-sky-500" />
-                          ) : (
-                            <Pencil className="h-4 w-4 text-slate-500" />
-                          )}
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-64 p-0 overflow-hidden rounded-lg shadow-lg"
-                        sideOffset={6}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="relative">
-                          <Textarea
-                            placeholder="Add a note for this turn..."
-                            value={turnNotes[turn.turnNumber] || ""}
-                            onChange={(e) => setTurnNotes({ ...turnNotes, [turn.turnNumber]: e.target.value })}
-                            className="min-h-[80px] max-h-[120px] border-none focus:ring-0 rounded-none pr-10 text-sm bg-gray-50 dark:bg-gray-800"
-                          />
-                          <Button
-                            type="button"
-                            className="absolute top-2 right-2 h-6 w-6 p-0 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onUpdateGame({ ...game, notes: turnNotes })
-                              const trigger = document.querySelector(
-                                `[data-state="open"][aria-haspopup="dialog"]`,
-                              ) as HTMLElement | null
-                              trigger?.click()
-                            }}
-                          >
-                            <CheckIcon className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-
-                {!isFlipped ? (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">
-                        You ({previewPlayers.you})
-                      </div>
-                      <ul className="space-y-1 text-[13px] text-slate-800 dark:text-slate-100">
-                        {turn.userActions.map((action, index) => (
-                          <li
-                            key={index}
-                            data-pokemon-action
-                            className={cn(
-                              "transition-colors",
-                              selectedPokemon && action.includes(selectedPokemon)
-                                ? "rounded bg-amber-100/80 px-1 dark:bg-amber-200/80 dark:text-slate-900"
-                                : "",
-                            )}
-                            dangerouslySetInnerHTML={{ __html: formatActionHtml(action) }}
-                          />
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="md:border-l md:border-slate-500/70 md:pl-4 dark:md:border-slate-500">
-                      <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-600 dark:text-sky-300">
-                        Opponent ({previewPlayers.opp || "unknown"})
-                      </div>
-                      <ul className="space-y-1 text-[13px] text-slate-800 dark:text-slate-100">
-                        {turn.opponentActions.map((action, index) => (
-                          <li
-                            key={index}
-                            data-pokemon-action
-                            className={cn(
-                              "transition-colors",
-                              selectedPokemon && action.includes(selectedPokemon)
-                                ? "rounded bg-amber-100/80 px-1 dark:bg-amber-200/80 dark:text-slate-900"
-                                : "",
-                            )}
-                            dangerouslySetInnerHTML={{ __html: formatActionHtml(action) }}
-                          />
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid gap-4 md:grid-cols-2 text-[13px]">
-                    {turnStats[turn.turnNumber] ? (
-                      <>
-                        <div>
-                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">
-                            You
-                          </div>
-                          <dl className="space-y-1 text-slate-800 dark:text-slate-100">
-                            <div className="flex justify-between">
-                              <dt>Cards remaining</dt>
-                              <dd className="font-medium">{turnStats[turn.turnNumber].userCardsRemaining}</dd>
-                            </div>
-                            <div className="flex justify-between">
-                              <dt>Cards drawn</dt>
-                              <dd className="font-medium">{turnStats[turn.turnNumber].userCardsDrawn}</dd>
-                            </div>
-                            <div className="flex justify-between">
-                              <dt>Cards discarded</dt>
-                              <dd className="font-medium">{turnStats[turn.turnNumber].userCardsDiscarded}</dd>
-                            </div>
-                            <div className="flex justify-between">
-                              <dt>Energy attached</dt>
-                              <dd className="font-medium">{turnStats[turn.turnNumber].userEnergyAttached}</dd>
-                            </div>
-                          </dl>
-                        </div>
-
-                        <div className="md:border-l md:border-slate-500/70 md:pl-4 dark:md:border-slate-500">
-                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-600 dark:text-sky-300">
-                            Opponent
-                          </div>
-                          <dl className="space-y-1 text-slate-800 dark:text-slate-100">
-                            <div className="flex justify-between">
-                              <dt>Cards remaining</dt>
-                              <dd className="font-medium">{turnStats[turn.turnNumber].opponentCardsRemaining}</dd>
-                            </div>
-                            <div className="flex justify-between">
-                              <dt>Cards drawn</dt>
-                              <dd className="font-medium">{turnStats[turn.turnNumber].opponentCardsDrawn}</dd>
-                            </div>
-                            <div className="flex justify-between">
-                              <dt>Cards discarded</dt>
-                              <dd className="font-medium">{turnStats[turn.turnNumber].opponentCardsDiscarded}</dd>
-                            </div>
-                            <div className="flex justify-between">
-                              <dt>Energy attached</dt>
-                              <dd className="font-medium">{turnStats[turn.turnNumber].opponentEnergyAttached}</dd>
-                            </div>
-                          </dl>
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-slate-500 dark:text-slate-400">No statistics available for this turn.</p>
-                    )}
-                  </div>
-                )}
-              </article>
-            )
-          })}
-        </div>
-      </section>
+      </details>
 
       {/* SET PLAYERS DIALOG (Import-style) */}
       <Dialog
@@ -1164,80 +1185,14 @@ className={cn(
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Your deck archetype
                   </div>
-                  <Select value={userArchetypeId} onValueChange={(v) => setUserArchetypeId(v)}>
-                    <SelectTrigger className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 border-slate-300 dark:border-slate-600">
-                      <SelectValue placeholder="Select your archetype" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-700">
-                      <SelectItem
-                        value={UNKNOWN_ARCHETYPE}
-                        className="bg-slate-100/45 text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900 dark:bg-white/[0.04] dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]"
-                      >
-                        Not set / Unknown
-                      </SelectItem>
-                      {ARCHETYPE_RULES.map((rule, index) => (
-                        <SelectItem
-                          key={rule.id}
-                          value={rule.id}
-                          className={cn(
-                            index % 2 === 0 ? "bg-transparent" : "bg-slate-100/35 dark:bg-white/[0.03]",
-                            "text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900",
-                            "dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]",
-                          )}
-                        >
-                          {rule.label}
-                        </SelectItem>
-                      ))}
-                      {isCustomArchetypeId(userArchetypeId) ? (
-                        <SelectItem
-                          value={userArchetypeId}
-                          className="bg-slate-100/35 text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900 dark:bg-white/[0.03] dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]"
-                        >
-                          Custom: {formatArchetypeLabel(userArchetypeId)}
-                        </SelectItem>
-                      ) : null}
-                    </SelectContent>
-                  </Select>
+                  <ArchetypeSelector value={userArchetypeId} onValueChange={setUserArchetypeId} label="Your deck archetype" emptyValue={UNKNOWN_ARCHETYPE} emptyLabel="Not set / Unknown" />
                 </div>
 
                 <div className="space-y-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Opponent&apos;s archetype
                   </div>
-                  <Select value={opponentArchetypeId} onValueChange={(v) => setOpponentArchetypeId(v)}>
-                    <SelectTrigger className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 border-slate-300 dark:border-slate-600">
-                      <SelectValue placeholder="Select opponent archetype" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-700">
-                      <SelectItem
-                        value={UNKNOWN_ARCHETYPE}
-                        className="bg-slate-100/45 text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900 dark:bg-white/[0.04] dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]"
-                      >
-                        Not set / Unknown
-                      </SelectItem>
-                      {ARCHETYPE_RULES.map((rule, index) => (
-                        <SelectItem
-                          key={rule.id}
-                          value={rule.id}
-                          className={cn(
-                            index % 2 === 0 ? "bg-transparent" : "bg-slate-100/35 dark:bg-white/[0.03]",
-                            "text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900",
-                            "dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]",
-                          )}
-                        >
-                          {rule.label}
-                        </SelectItem>
-                      ))}
-                      {isCustomArchetypeId(opponentArchetypeId) ? (
-                        <SelectItem
-                          value={opponentArchetypeId}
-                          className="bg-slate-100/35 text-slate-900 data-[highlighted]:bg-slate-200/65 data-[highlighted]:text-slate-900 dark:bg-white/[0.03] dark:text-slate-50 dark:data-[highlighted]:bg-white/[0.12]"
-                        >
-                          Custom: {formatArchetypeLabel(opponentArchetypeId)}
-                        </SelectItem>
-                      ) : null}
-                    </SelectContent>
-                  </Select>
+                  <ArchetypeSelector value={opponentArchetypeId} onValueChange={setOpponentArchetypeId} label="Opponent archetype" emptyValue={UNKNOWN_ARCHETYPE} emptyLabel="Not set / Unknown" />
                 </div>
               </div>
             </div>
