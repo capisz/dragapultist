@@ -38,4 +38,3 @@ try {
 } finally {
   await client.close()
 }
-

@@ -36,4 +36,3 @@ describe("statistics contract", () => {
     expect(model.decks[0]).toMatchObject({ games: 2, wins: 1, losses: 1 })
   })
 })
-

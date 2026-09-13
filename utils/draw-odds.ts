@@ -20,4 +20,3 @@ export function probNoHit(N: number, K: number, n: number) {
 export function probAtLeastOne(N: number, K: number, n: number) {
   return 1 - probNoHit(N, K, n)
 }
-

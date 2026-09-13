@@ -44,4 +44,3 @@ export type PersistenceState = z.infer<typeof persistenceStateSchema>
 export function errorEnvelope(code: ApiErrorCode, message: string, retryable = false, requestId?: string): ApiErrorEnvelope {
   return { error: { code, message, retryable, ...(requestId ? { requestId } : {}) } }
 }
-

@@ -28,4 +28,3 @@ export const publicDeckBreakdownResponseSchema = z.object({ breakdown: publicDec
 
 export type PublicPlayerSummary = z.infer<typeof publicPlayerSummarySchema>
 export type PublicDeckBreakdown = z.infer<typeof publicDeckBreakdownSchema>
-

@@ -36,4 +36,3 @@ describe("verifiedSession", () => {
     expect(await verifiedSession()).toBeNull()
   })
 })
-
