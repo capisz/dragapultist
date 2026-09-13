@@ -68,7 +68,6 @@
 .header-identity {min-width:0;}.header-identity>img {width:44px;height:52px;}
 .header-identity h1 {font-size:22px;line-height:1.25;}.header-identity p {font-size:11px;white-space:nowrap;}
 .header-utilities {flex-shrink:0;}.header-utilities>button,.header-utilities>button[aria-haspopup] {min-height:44px;}
-.header-utilities>button:last-child {width:44px;height:44px;padding:5px;}
 .auth-segments button[data-state=active] {background:#cadff4!important;font-weight:650;}
 .dark .auth-segments button[data-state=active] {background:#47698e!important;}
 .guest-action {background:var(--dialog-field);text-decoration:underline;text-underline-offset:3px;min-height:44px;}

@@ -76,6 +76,8 @@ export const gameInputSchema = gameDraftSchema
 
 export const gameMetadataSchema = z.object({
   favorite: z.boolean().optional(),
+  userMainAttacker: boundedName.optional(),
+  opponentMainAttacker: boundedName.optional(),
   notes: gameNotesSchema.optional(),
   deckList: z.string().max(50_000).optional(),
   deckName: z.string().trim().max(80).optional(),
@@ -100,6 +102,8 @@ export const gameDetailSchema = gameDraftSchema.extend({
 
 export const gameMutationSchema = z.object({
   favorite: z.boolean().optional(),
+  userMainAttacker: boundedName.optional(),
+  opponentMainAttacker: boundedName.optional(),
   notes: gameNotesSchema.optional(),
   deckList: z.string().max(50_000).optional(),
   deckName: z.string().trim().max(80).optional(),

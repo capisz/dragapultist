@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { ChevronsUpDown, Check } from 'lucide-react'
-import { ARCHETYPE_RULES, formatArchetypeLabel } from '@/utils/archetype-mapping'
+import { ARCHETYPE_RULES, AVAILABLE_ARCHETYPE_IDS, formatArchetypeLabel } from '@/utils/archetype-mapping'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from './ui/command'
 import { ArchetypeIconPair } from './archetype-icon-pair'
@@ -15,7 +15,7 @@ export function ArchetypeSelector({ value, onValueChange, label = 'Archetype', e
   const [query, setQuery] = useState('')
   const trigger = useRef<HTMLButtonElement>(null)
   const [listId, setListId] = useState<string>()
-  const ids = [...new Set([...availableIds, ...ARCHETYPE_RULES.map(rule => rule.id), ...(value && value !== emptyValue ? [value] : [])])]
+  const ids = [...new Set([...availableIds, ...AVAILABLE_ARCHETYPE_IDS, ...(value && value !== emptyValue ? [value] : [])])]
   function choose(id: string) { onValueChange(id); setOpen(false); setQuery('') }
   return <Popover open={open} onOpenChange={next => { setOpen(next); if (!next) setQuery('') }}>
     <PopoverTrigger asChild><button ref={trigger} type="button" role="combobox" aria-label={label} aria-expanded={open} aria-controls={open ? listId : undefined} aria-haspopup="listbox"

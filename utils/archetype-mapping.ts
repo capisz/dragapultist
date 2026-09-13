@@ -30,6 +30,7 @@ interface CustomArchetypeSpec {
 
 // Sprite IDs resolve through PokeAPI first, then local /public/sprites fallbacks.
 export const ARCHETYPE_RULES: ArchetypeRule[] = [
+  { id: "basic-box", label: "Basic Box", mustInclude: ["mew"], iconSpecs: ["mew.png", "latias.png"], sprite: "mew.png", aliases: ["Basic Box"] },
   {
     id: "dragapult-ex",
     label: "Dragapult ex",
@@ -40,11 +41,11 @@ export const ARCHETYPE_RULES: ArchetypeRule[] = [
   },
   {
     id: "raging-bolt-ex",
-    label: "Raging Bolt ex",
+    label: "Raging Boltex",
     mustInclude: ["raging bolt"],
     iconSpecs: ["raging-bolt.png"],
     sprite: "raging-bolt.png",
-    aliases: ["Raging Bolt ex", "Raging Bolt"],
+    aliases: ["Raging Boltex", "Raging Bolt ex", "Raging Bolt"],
   },
   {
     id: "alakazam-powerful-hand",
@@ -78,6 +79,10 @@ export const ARCHETYPE_RULES: ArchetypeRule[] = [
     sprite: "lopunny-mega.png",
     aliases: ["Mega Lopunny ex"],
   },
+  { id: "mega-excadrill-ex", label: "Mega Excadrill ex", mustInclude: ["excadrill", "mega"], iconSpecs: ["excadrill.png"], sprite: "excadrill.png", aliases: ["Mega Excadrill ex"] },
+  { id: "dhelmise-hide-n-sneak", label: "Dhelmise Hide n' Sneak", mustInclude: ["dhelmise"], iconSpecs: ["dhelmise.png"], sprite: "dhelmise.png", aliases: ["Dhelmise", "Dhelmise Hide n' Sneak"] },
+  { id: "mega-greninja-ex", label: "Mega Greninja ex", mustInclude: ["greninja", "mega"], iconSpecs: ["greninja.png"], sprite: "greninja.png", aliases: ["Mega Greninja ex"] },
+  { id: "mega-chandelure-ex", label: "Mega Chandelure ex", mustInclude: ["chandelure", "mega"], iconSpecs: ["chandelure.png"], sprite: "chandelure.png", aliases: ["Mega Chandelure ex"] },
   {
     id: "ogerpon-meganium",
     label: "Ogerpon / Meganium",
@@ -349,6 +354,10 @@ export const ARCHETYPE_RULES: ArchetypeRule[] = [
     aliases: ["Mega Gardevoir ex"],
   },
 ]
+
+export const AVAILABLE_ARCHETYPE_IDS = [
+  "dragapult-ex", "basic-box", "alakazam-powerful-hand", "n-zoroark-ex", "slowking-seek-inspiration", "mega-excadrill-ex", "festival-lead", "lillies-clefairy-ex", "crustle-mysterious-rock-inn", "raging-bolt-ex", "marnies-grimmsnarl-ex", "mega-lopunny-ex", "mega-lucario-ex", "dhelmise-hide-n-sneak", "hydrapple-ex", "toxtricity-sinister-surge", "mega-absol-box", "greninja-ex", "cynthias-garchomp-ex", "mega-sharpedo-ex", "mega-greninja-ex", "rockets-mewtwo-ex", "mega-venusaur-ex", "mega-kangaskhan-ex", "mega-chandelure-ex",
+] as const
 
 function normalizeText(input: string): string {
   return input

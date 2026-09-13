@@ -3,7 +3,6 @@ import "@/components/option-a.css"
 import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { Analytics } from "@vercel/analytics/next"
-import { ThemeProvider } from "@/components/theme-provider"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
 import "./globals.css"
@@ -21,12 +20,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={cn(
           GeistSans.className,
           "min-h-dvh antialiased",
-          "bg-[#d9ebff] text-slate-900",
-          "dark:bg-[#345275] dark:text-slate-50"
+          "bg-[#d9ebff] text-slate-900"
         )}
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <div className="min-h-dvh flex flex-col">
+        <div className="min-h-dvh flex flex-col">
             {/* If you have a header/nav, render it here */}
 
             {/* Main grows to fill remaining space */}
@@ -36,10 +33,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Footer is outside any max-width page container */}
             <SiteFooter />
-          </div>
-
-          <Analytics />
-        </ThemeProvider>
+        </div>
+        <Analytics />
       </body>
     </html>
   )

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Montserrat } from "next/font/google"
 import { HelpCircle, UserRound } from "lucide-react"
-import { useTheme } from "next-themes"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -47,18 +46,13 @@ const BRAND_BTN =
 export function AuthHeader() {
   const router = useRouter()
 
-  const { resolvedTheme, theme, setTheme } = useTheme()
-  const [themeMounted, setThemeMounted] = useState(false)
-  useEffect(() => setThemeMounted(true), [])
-  const isDarkMode = themeMounted && (resolvedTheme ?? theme) === "dark"
-  const toggleDarkMode = () => setTheme(isDarkMode ? "light" : "dark")
-
   const [user, setUser] = useState<HeaderUser>(null)
   const [authOpen, setAuthOpen] = useState(false)
+  const [authChecked, setAuthChecked] = useState(false)
   const [authTab, setAuthTab] = useState<"login" | "signup">("login")
 
   useEffect(() => {
-    const refresh = () => getUser().then((u: any) => setUser(u ?? null)).catch(() => setUser(null))
+    const refresh = () => getUser().then((u: any) => { setUser(u ?? null); setAuthChecked(true) }).catch(() => { setUser(null); setAuthChecked(true) })
     void refresh()
     window.addEventListener("dragapultist-auth-changed", refresh)
     return () => window.removeEventListener("dragapultist-auth-changed", refresh)
@@ -68,6 +62,12 @@ export function AuthHeader() {
     const u = user as any
     return !u || u?.username === "Guest" || u?.id === "guest"
   }, [user])
+
+  useEffect(() => {
+    if (!authChecked || !isGuest || window.localStorage.getItem("dragapultist-login-prompt-seen")) return
+    window.localStorage.setItem("dragapultist-login-prompt-seen", "true")
+    setAuthOpen(true)
+  }, [authChecked, isGuest])
 
   const displayName = useMemo(() => {
     const u = user as any
@@ -241,7 +241,7 @@ export function AuthHeader() {
             {isGuest ? (
               <Dialog open={authOpen} onOpenChange={setAuthOpen}>
                 <DialogTrigger asChild>
-                  <Button type="button" className={cn("h-9 rounded-full px-3", BRAND_BTN)}>
+                  <Button type="button" className={cn("h-9 rounded-md px-3", BRAND_BTN)}>
                     <UserRound className="mr-2 h-4 w-4 opacity-90" />
                     Sign in
                   </Button>
@@ -252,7 +252,7 @@ export function AuthHeader() {
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" className={cn("h-9 rounded-full px-3 max-w-[220px]", BRAND_BTN)}>
+                  <Button type="button" className={cn("h-9 rounded-md px-3 max-w-[220px]", BRAND_BTN)}>
                     <UserRound className="mr-2 h-4 w-4 opacity-90" />
                     <span className="truncate">{displayName}</span>
                   </Button>
@@ -275,19 +275,6 @@ export function AuthHeader() {
               </DropdownMenu>
             )}
 
-            {/* Theme toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleDarkMode}
-              className="relative w-9 h-9 rounded-none transition-transform duration-200 hover:scale-105 hover:bg-transparent border-none shadow-none"
-            >
-              <img
-                src={!isDarkMode ? "/Solrock.png" : "/Lunatone.png"}
-                alt={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-                className="w-full h-full object-contain bg-transparent hover:opacity-70 opacity-60 mascot-bob"
-              />
-            </Button>
           </div>
         </div>
       </header>

@@ -179,8 +179,8 @@ export async function PATCH(req: Request, { params }: RouteContext) {
     privateSearchText: [
       perspective?.username ?? currentForSearch.username,
       currentForSearch.opponent,
-      currentForSearch.userMainAttacker,
-      currentForSearch.opponentMainAttacker,
+      changes.data.userMainAttacker ?? currentForSearch.userMainAttacker,
+      changes.data.opponentMainAttacker ?? currentForSearch.opponentMainAttacker,
       ...(Array.isArray(currentForSearch.userOtherPokemon) ? currentForSearch.userOtherPokemon : []),
       ...(Array.isArray(currentForSearch.opponentOtherPokemon) ? currentForSearch.opponentOtherPokemon : []),
       ...((changes.data.tags ?? currentForSearch.tags ?? []) as Array<{ text?: unknown }>).map(tag => String(tag.text ?? "")),

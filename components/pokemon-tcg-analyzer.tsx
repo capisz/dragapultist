@@ -15,7 +15,6 @@ import { getUser } from "@/app/actions"
 import { PlayerDatabasePanel } from "@/components/player-database"
 import { cn } from "@/lib/utils"
 import { PrizeMapperPanel } from "@/components/prize-mapper-panel"
-import { useTheme } from "next-themes"
 import { DeckLab } from "@/components/deck-lab"
 import "./tool-workspace.css"
 import {
@@ -50,6 +49,7 @@ export function PokemonTCGAnalyzer() {
   const [selectedGame, setSelectedGame] = useState<GameSummary | null>(null)
   const returnState = useRef<{ id: string | null; scrollY: number }>({ id: null, scrollY: 0 })
   const [manualInput, setManualInput] = useState<string>("")
+  const [importOpen, setImportOpen] = useState(true)
   const [searchTerm, setSearchTerm] = useState<string>("")
   const [sortConfig, setSortConfig] = useState<{
     key: keyof GameSummary
@@ -68,9 +68,6 @@ export function PokemonTCGAnalyzer() {
   const buttonTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const [ptcglUsername, setPtcglUsername] = useState<string>("")
-
-  const { theme, resolvedTheme } = useTheme()
-  const isDarkMode = (resolvedTheme ?? theme) === "dark"
 
   const tabsBarRef = useRef<HTMLDivElement | null>(null)
   const tabRefs = useRef<
@@ -425,6 +422,8 @@ export function PokemonTCGAnalyzer() {
       try {
         const saved = await persistence.update(updatedGame.id, {
           favorite: updatedGame.favorite,
+          userMainAttacker: updatedGame.userMainAttacker,
+          opponentMainAttacker: updatedGame.opponentMainAttacker,
           notes: updatedGame.notes ?? {},
           tags: updatedGame.tags,
           deckList: updatedGame.deckList ?? "",
@@ -641,7 +640,7 @@ export function PokemonTCGAnalyzer() {
                     />
                   </div><div className="games-intro">
 
-                  <details className="capture-tray"><summary>Import a game</summary>
+                  <details className="capture-tray" open={importOpen} onToggle={event => setImportOpen(event.currentTarget.open)}><summary>{importOpen ? "Minimize import" : "Import a game"}</summary>
                     <label htmlFor="match-log" className="sr-only">Game log</label>
                     <div className="capture-composer">
 
@@ -671,7 +670,7 @@ export function PokemonTCGAnalyzer() {
                       <Button
                         onClick={handleManualSubmit}
                         className={cn(
-                          "rounded-full px-5 h-9 text-sm",
+                          "rounded-md px-5 h-9 text-sm",
                           "bg-[#5e82ab] text-slate-50 hover:bg-sky-800/50",
                           "dark:bg-[#b1cce8] dark:text-[#121212] dark:hover:bg-[#a1c2e4]",
                           isButtonPressed ? "scale-95" : "scale-100",
@@ -718,7 +717,6 @@ export function PokemonTCGAnalyzer() {
                       sortConfig={sortConfig}
                       onSort={handleSort}
                       showTags={false}
-                      isDarkMode={isDarkMode}
                     />
                   )}
                 </div>

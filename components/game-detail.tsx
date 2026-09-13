@@ -123,6 +123,8 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame: commitGame, s
   const [opponentArchetypeId, setOpponentArchetypeId] = useState<string>(
     (game as any).opponentArchetype ?? UNKNOWN_ARCHETYPE,
   )
+  const [userMainAttacker, setUserMainAttacker] = useState(game.userMainAttacker ?? "")
+  const [opponentMainAttacker, setOpponentMainAttacker] = useState(game.opponentMainAttacker ?? "")
 
   // Sync local state when switching games
   useEffect(() => {
@@ -136,6 +138,8 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame: commitGame, s
     setSwapPlayers(false)
     setUserArchetypeId((game as any).userArchetype ?? UNKNOWN_ARCHETYPE)
     setOpponentArchetypeId((game as any).opponentArchetype ?? UNKNOWN_ARCHETYPE)
+    setUserMainAttacker(game.userMainAttacker ?? "")
+    setOpponentMainAttacker(game.opponentMainAttacker ?? "")
   }, [game.id])
 
   // Reset Set Players dialog state when opened
@@ -144,6 +148,8 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame: commitGame, s
     setSwapPlayers(false)
     setUserArchetypeId((game as any).userArchetype ?? UNKNOWN_ARCHETYPE)
     setOpponentArchetypeId((game as any).opponentArchetype ?? UNKNOWN_ARCHETYPE)
+    setUserMainAttacker(game.userMainAttacker ?? "")
+    setOpponentMainAttacker(game.opponentMainAttacker ?? "")
   }, [showSetPlayersDialog, game.id])
 
   // Load existing decks from localStorage
@@ -612,6 +618,9 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
     const b = opponentArchetypeId
     setUserArchetypeId(b)
     setOpponentArchetypeId(a)
+    const userPokemon = userMainAttacker
+    setUserMainAttacker(opponentMainAttacker)
+    setOpponentMainAttacker(userPokemon)
   }
 
   const applyPlayers = async () => {
@@ -634,6 +643,8 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
       deckList,
       deckName,
       revision: game.revision,
+      userMainAttacker: userMainAttacker.trim() || game.userMainAttacker,
+      opponentMainAttacker: opponentMainAttacker.trim() || game.opponentMainAttacker,
     }
 
     if (await onUpdateGame(merged)) setShowSetPlayersDialog(false)
@@ -709,7 +720,7 @@ return (
 
       <header className="review-summary">
         <div><h2>{game.opponent}</h2><p>{game.date} · {game.wentFirst ? 'Went first' : 'Went second'}</p><SummaryPills /></div>
-        <MatchupSpritePair user={game.userMainAttacker} opponent={game.opponentMainAttacker} />
+        <div className="review-matchup-actions"><MatchupSpritePair user={game.userMainAttacker} opponent={game.opponentMainAttacker} /><Button type="button" variant="ghost" className="review-edit-matchup" onClick={() => setShowSetPlayersDialog(true)}>Edit matchup</Button></div>
       </header>
 
       <section className="review-workspace" aria-label="Turn review">
@@ -946,7 +957,7 @@ className={cn(
         className={pillBtn(isSetPlayersButtonPressed, "inline-flex items-center gap-2")}
       >
         <Pencil className="h-4 w-4" />
-        Set Players
+        Edit matchup
       </Button>
     </div>
   </div>
@@ -1136,15 +1147,15 @@ className={cn(
         <DialogContent className="sm:max-w-[520px] bg-white dark:bg-slate-900 rounded-2xl">
           <DialogHeader>
   <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-50">
-    Confirm Players & Deck Archetypes
+    Edit matchup
   </DialogTitle>
   <DialogDescription className="text-sm text-slate-700 dark:text-slate-300">
-    If needed, you can swap players and assign deck archetypes for this game.
+    Correct the player side, deck archetype, or the main Pokémon shown for this match.
   </DialogDescription>
 </DialogHeader>
           <div className="space-y-6">
             <p className="text-sm text-slate-700 dark:text-slate-300">
-              If needed, you can swap players and assign deck archetypes for this game.
+              These changes only update this match&apos;s display metadata; the raw game log stays unchanged.
             </p>
 
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/60 p-4 space-y-4">
@@ -1181,6 +1192,14 @@ className={cn(
 
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-200 dark:border-slate-700 mt-3">
+                <div className="space-y-2">
+                  <label htmlFor="review-user-main-pokemon" className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Your main Pokémon</label>
+                  <Input id="review-user-main-pokemon" value={userMainAttacker} onChange={event => setUserMainAttacker(event.target.value)} placeholder="e.g. Mega Kangaskhan ex" />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="review-opponent-main-pokemon" className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Opponent main Pokémon</label>
+                  <Input id="review-opponent-main-pokemon" value={opponentMainAttacker} onChange={event => setOpponentMainAttacker(event.target.value)} placeholder="e.g. Dhelmise" />
+                </div>
                 <div className="space-y-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Your deck archetype
@@ -1378,6 +1397,7 @@ function parseTurnsWithPerspective(rawLog: string, youName: string, oppName: str
 
   const turns: { turnNumber: number; userActions: string[]; opponentActions: string[] }[] = []
   let currentTurn = 0
+  let inferredHalfTurn = 0
   let current = { turnNumber: 0, userActions: [] as string[], opponentActions: [] as string[] }
 
   const you = youName?.trim()
@@ -1405,14 +1425,17 @@ function parseTurnsWithPerspective(rawLog: string, youName: string, oppName: str
     const line = raw.trim()
     if (!line) continue
 
-    if (/^Turn\s*#\s*\d+/i.test(line)) {
-      const n = Number.parseInt(line.split("#")[1], 10)
-      const gameTurn = Number.isFinite(n) ? Math.ceil(n / 2) : currentTurn + 1
+    const numberedTurn = line.match(/^Turn\s*#\s*(\d+)/i)
+    const possessiveTurn = line.match(/^(.+?)['’]s\s+Turn$/i)
+    if (numberedTurn || possessiveTurn) {
+      const n = numberedTurn ? Number.parseInt(numberedTurn[1], 10) : null
+      const halfTurn = n !== null && Number.isFinite(n) ? n : ++inferredHalfTurn
+      const gameTurn = Math.ceil(halfTurn / 2)
 
       if (gameTurn !== currentTurn) {
         pushCurrent()
         currentTurn = gameTurn
-        current = { turnNumber: currentTurn, userActions: [], opponentActions: [] }
+        current = { turnNumber: gameTurn, userActions: [], opponentActions: [] }
       }
       continue
     }
