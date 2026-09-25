@@ -29,14 +29,6 @@ import { gameDraftSchema } from "@/lib/game-contract"
 import type { PersistenceState } from "@/lib/api-contract"
 import { mergeAcknowledgedGame } from "@/lib/game-list-state"
 
-declare global {
-  interface Window {
-    dragapultist?: {
-      onLogDetected?: (cb: (logText: string) => void) => () => void
-    }
-  }
-}
-
 export function PokemonTCGAnalyzer() {
   const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" | "topDeckCalc">(
     "games",
@@ -46,6 +38,7 @@ export function PokemonTCGAnalyzer() {
   const [gamesError, setGamesError] = useState<string | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [loadRevision, setLoadRevision] = useState(0)
+  const pendingHistoryRefresh = useRef(false)
   const [games, setGames] = useState<GameSummary[]>([])
   const [searchResultIds, setSearchResultIds] = useState<Set<string> | null>(null)
   const [selectedGame, setSelectedGame] = useState<GameSummary | null>(null)
@@ -188,6 +181,26 @@ export function PokemonTCGAnalyzer() {
       .finally(() => { if (!controller.signal.aborted) setGamesLoading(false) })
     return () => controller.abort()
   }, [user, loadRevision])
+
+  useEffect(() => {
+    // Never replace the open review or its unsaved notes during background refresh.
+    if (!user || user.username === "Guest") { pendingHistoryRefresh.current = false; return }
+    const refresh = () => {
+      if (selectedGame || saveState === "saving" || saveState === "loading" || document.visibilityState !== "visible") {
+        pendingHistoryRefresh.current = true
+        return
+      }
+      pendingHistoryRefresh.current = false
+      setLoadRevision(value => value + 1)
+    }
+    if (pendingHistoryRefresh.current && !selectedGame && saveState !== "saving" && saveState !== "loading") refresh()
+    document.addEventListener("visibilitychange", refresh)
+    window.addEventListener("focus", refresh)
+    window.addEventListener("online", refresh)
+    window.addEventListener("dragapultist-games-changed", refresh)
+    const timer = window.setInterval(refresh, 60000)
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", refresh); window.removeEventListener("focus", refresh); window.removeEventListener("online", refresh); window.removeEventListener("dragapultist-games-changed", refresh) }
+  }, [selectedGame, user, saveState])
 
   useEffect(() => {
     const query = searchTerm.trim()
@@ -393,35 +406,6 @@ export function PokemonTCGAnalyzer() {
     buttonTimerRef.current = setTimeout(() => setIsButtonPressed(false), 300)
     processLogForManualImport(manualInput)
   }, [manualInput, processLogForManualImport])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-
-    const api = window.dragapultist
-    if (!api || !api.onLogDetected) return
-
-    const unsubscribe = api.onLogDetected((logText: string) => {
-      setManualInput(logText)
-
-      if (fadeTimerRef.current) {
-        clearTimeout(fadeTimerRef.current)
-        fadeTimerRef.current = null
-      }
-
-      const isValid = validateGameLog(logText)
-      if (!isValid) {
-        setValidationStatus("invalid")
-        fadeTimerRef.current = setTimeout(() => setValidationStatus("none"), 5000)
-        return
-      }
-
-      addGame(logText)
-    })
-
-    return () => {
-      if (unsubscribe) unsubscribe()
-    }
-  }, [addGame, validateGameLog])
 
   const handleConfirmImport = useCallback(
     (swapPlayers: boolean, userArchetypeId?: string | null, opponentArchetypeId?: string | null) => {

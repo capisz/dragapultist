@@ -1,0 +1,55 @@
+Setup
+PracticePlayer drew 7 cards for the opening hand.
+PracticeOpponent drew 7 cards for the opening hand.
+PracticeOpponent decided to go second.
+Turn # 1 - PracticePlayer's Turn
+PracticePlayer played Dreepy to the Active Spot.
+PracticePlayer played Drakloak to the Bench.
+PracticePlayer attached Psychic Energy to Dreepy.
+PracticePlayer ended their turn.
+Turn # 2 - PracticeOpponent's Turn
+PracticeOpponent played Charmander to the Active Spot.
+PracticeOpponent played Pidgey to the Bench.
+PracticeOpponent attached Fire Energy to Charmander.
+PracticeOpponent ended their turn.
+Turn # 3 - PracticePlayer's Turn
+PracticePlayer evolved Dreepy into Dragapult ex.
+PracticePlayer's Dragapult ex used Phantom Dive for 200 damage.
+PracticeOpponent's Charmander was Knocked Out!
+PracticePlayer took a Prize card.
+PracticePlayer ended their turn.
+Turn # 4 - PracticeOpponent's Turn
+PracticeOpponent evolved Pidgey into Pidgeot ex.
+PracticeOpponent played Charizard ex to the Bench.
+PracticeOpponent's Pidgeot ex is now in the Active Spot.
+PracticeOpponent's Pidgeot ex used Blustery Wind for 120 damage.
+PracticeOpponent ended their turn.
+Turn # 5 - PracticePlayer's Turn
+PracticePlayer played Dusknoir to the Bench.
+PracticePlayer's Dragapult ex used Phantom Dive for 200 damage.
+PracticeOpponent's Pidgeot ex was Knocked Out!
+PracticePlayer took 2 Prize cards.
+PracticePlayer ended their turn.
+Turn # 6 - PracticeOpponent's Turn
+PracticeOpponent's Charizard ex is now in the Active Spot.
+PracticeOpponent attached Fire Energy to Charizard ex.
+PracticeOpponent's Charizard ex used Burning Darkness for 270 damage.
+PracticePlayer's Dragapult ex was Knocked Out!
+PracticeOpponent took 2 Prize cards.
+PracticeOpponent ended their turn.
+Turn # 7 - PracticePlayer's Turn
+PracticePlayer's Drakloak is now in the Active Spot.
+PracticePlayer played Dragapult ex to the Bench.
+PracticePlayer's Dragapult ex is now in the Active Spot.
+PracticePlayer's Dragapult ex used Phantom Dive for 200 damage.
+PracticeOpponent's Charizard ex was Knocked Out!
+PracticePlayer took 2 Prize cards.
+PracticePlayer ended their turn.
+Turn # 8 - PracticeOpponent's Turn
+PracticeOpponent played Rotom V to the Active Spot.
+PracticeOpponent ended their turn.
+Turn # 9 - PracticePlayer's Turn
+PracticePlayer's Dragapult ex used Phantom Dive for 200 damage.
+PracticeOpponent's Rotom V was Knocked Out!
+PracticePlayer took a Prize card.
+PracticePlayer wins.

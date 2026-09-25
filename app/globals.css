@@ -194,3 +194,10 @@ body {
 input,textarea {caret-color:var(--ui-link);}
 
 :root {--ui-fresh:#8fb2d4;--status-warn-bg:#fdf0d8;--status-warn-ink:#8a5a12;}
+
+.desktop-companion {max-width:1280px;margin:12px auto;padding:0 16px;color:var(--ui-ink);font-size:13px;}
+.desktop-companion>details {border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-panel);}
+.desktop-companion summary {cursor:pointer;padding:12px;background:var(--ui-panel-header);border-radius:12px;}
+.desktop-settings {display:grid;gap:12px;padding:16px;max-width:720px;}
+.desktop-actions {display:flex;gap:8px;flex-wrap:wrap;}
+.desktop-settings textarea {width:100%;resize:vertical;padding:10px;background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:8px;}

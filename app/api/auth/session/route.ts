@@ -63,7 +63,9 @@ async function ensureMongoProfile(token: Awaited<ReturnType<typeof firebaseAdmin
 
 export async function GET() {
   const csrfToken = newCsrfToken()
-  const response = NextResponse.json({ csrfToken })
+  const user = await verifiedSession()
+  const response = NextResponse.json({ csrfToken, user: user ? { uid: user.uid, expiresAt: typeof user.exp === "number" ? user.exp * 1000 : null } : null })
+  response.headers.set("Cache-Control", "no-store")
   response.cookies.set(CSRF_COOKIE, csrfToken, {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",

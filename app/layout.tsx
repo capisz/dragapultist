@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
 import "./globals.css"
+import { DesktopCompanion } from "@/components/desktop-companion"
 
 export const metadata: Metadata = {
   title: "Dragapultist Pokémon TCG Analyzer",
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Main grows to fill remaining space */}
             <main className="flex-1">
+              <DesktopCompanion />
               {children}
             </main>
 

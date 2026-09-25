@@ -48,7 +48,7 @@ vi.mock("@/lib/mongodb", () => ({
   }),
 }))
 
-import { DELETE, POST } from "@/app/api/auth/session/route"
+import { DELETE, POST, GET } from "@/app/api/auth/session/route"
 
 function request(overrides: { origin?: string; csrf?: string } = {}) {
   const csrf = overrides.csrf ?? state.csrf
@@ -76,6 +76,14 @@ beforeEach(() => {
 })
 
 describe("session route", () => {
+  it("adds verified desktop identity without removing CSRF and disables caching", async () => {
+    const response = await GET()
+    const body = await response.json()
+    expect(body.csrfToken).toBeTypeOf("string")
+    expect(body.user.uid).toBe("uid-alice")
+    expect(response.headers.get("cache-control")).toBe("no-store")
+  })
+
   it("rejects missing origins and CSRF mismatches", async () => {
     expect((await POST(request({ origin: "" }))).status).toBe(403)
     expect((await POST(request({ csrf: "wrong-token-value-that-is-long" }))).status).toBe(403)
