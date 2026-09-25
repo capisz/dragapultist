@@ -80,7 +80,9 @@ async function submit(value) {
 function createWindow(){
   window=new BrowserWindow({width:1280,height:800,show:false,webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true,partition:'persist:dragapultist',backgroundThrottling:false}})
   window.webContents.setWindowOpenHandler(({url})=>{if(/^https?:/.test(url))void shell.openExternal(url);return {action:'deny'}})
-  window.webContents.on('will-navigate',(event,url)=>{if(new URL(url).origin!==base){event.preventDefault();if(/^https?:/.test(url))void shell.openExternal(url)}})
+  const restrictNavigation=(event,url)=>{if(new URL(url).origin!==base){event.preventDefault();if(/^https?:/.test(url))void shell.openExternal(url)}}
+  window.webContents.on('will-navigate',restrictNavigation)
+  window.webContents.on('will-redirect',restrictNavigation)
   window.webContents.on('will-attach-webview',event=>event.preventDefault())
   window.webContents.on('did-fail-load',(_e,code,_desc,_url,main)=>{if(main&&code!==-3&&_url!==offlineURL)void window.loadFile(path.join(__dirname,'offline.html'))})
   window.webContents.on('did-finish-load',()=>{void refreshIdentity();emit()})
