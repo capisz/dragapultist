@@ -29,3 +29,12 @@ Status: implementation candidate; **not released and not ready for user acceptan
 5. Record OS/CPU, candidate checksum and observed results before any private distribution. Keep pending encrypted queues across installer replacement.
 
 The source branch is `codex/desktop-beta`. Main and production were not changed by this implementation.
+
+## Production repair and private CI update — 2026-09-24
+
+- Vercel runtime logs identified `ERR_REQUIRE_ESM`: `jwks-rsa@4.1.0` requires `jose@6.2.12`, while the deployed runtime disabled synchronous ESM loading.
+- Reproduced the crash with `node --no-experimental-require-module`; importing Firebase Admin succeeds with `--experimental-require-module`.
+- Added non-secret Production setting `NODE_OPTIONS=--experimental-require-module`, following https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration . Existing source `c5f22d8` was redeployed as `dpl_8RFi48KdpSh9aA6LfWDFay9Bob28`.
+- Live signed-out checks now return session HTTP 200 and games HTTP 401. This fixes the module-loading crash; authenticated account/backend acceptance is still pending.
+- GitHub sign-in verified. Private repository: https://github.com/capisz/dragapultist-desktop-beta-builds . Only tracked Electron files, the workflow and desktop documentation were exported; no original Git history, environment files, database data or credentials were uploaded.
+- Initial CI run 36083322009 failed at clean dependency installation. Local npm had `legacy-peer-deps=true`, so the lockfile omitted optional peer dependencies required by CI. Regenerated with peer resolution enabled and added a project `.npmrc` setting to keep local and CI resolution consistent.
