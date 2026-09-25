@@ -2,11 +2,12 @@
 "use client"
 import { ArchetypeSelector } from "./archetype-selector"
 
-import { useMemo, useState, useCallback, useEffect } from "react"
+import { useMemo, useState, useCallback, useEffect, useRef } from "react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Pencil, Book, FileText, ArrowLeftRight } from "lucide-react"
+import { Plus, Pencil, Book, FileText, ArrowLeftRight, ChevronLeft, ChevronRight } from "lucide-react"
 import { highlightAceSpecCards, analyzeGameLog } from "@/utils/game-analyzer"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -30,6 +31,7 @@ interface DeckInfo {
 interface GameDetailProps {
   game: ReviewGame
   onBack: () => void
+  onDelete?: () => void
   allGames?: GameSummary[]
   onUpdateGame: (updatedGame: ReviewGame) => Promise<boolean>
   saveState?: PersistenceState
@@ -39,7 +41,7 @@ interface GameDetailProps {
 const FALLBACK_ICON = "/sprites/substitute.png"
 const UNKNOWN_ARCHETYPE = "__unknown__"
 
-export function GameDetail({ game, onBack, allGames, onUpdateGame: commitGame, saveState = "idle", onRetrySave }: GameDetailProps) {
+export function GameDetail({ game, onBack, onDelete, allGames, onUpdateGame: commitGame, saveState = "idle", onRetrySave }: GameDetailProps) {
   const pillBtn = (pressed: boolean, extra?: string) =>
     cn(
       "rounded-full px-5 h-9 text-sm whitespace-nowrap transition-transform duration-150",
@@ -50,6 +52,7 @@ export function GameDetail({ game, onBack, allGames, onUpdateGame: commitGame, s
     )
 
   const [activeTurnIndex, setActiveTurnIndex] = useState(0)
+  const roundList = useRef<HTMLDivElement>(null)
   const [pendingUpdate, setPendingUpdate] = useState<ReviewGame | null>(null)
   async function onUpdateGame(updatedGame: ReviewGame): Promise<boolean> {
     try {
@@ -353,19 +356,12 @@ const oppPrizeMap = useMemo(() => {
   }, [game.rawLog])
 
   const addTag = (tagText: string, tagColor: string) => {
-    if (tagText && !tags.some((tag) => tag.text === tagText)) {
-      setIsAddButtonPressed(true)
-      setTimeout(() => {
-        setIsAddButtonPressed(false)
-        setTags((prev) => [...prev, { text: tagText, color: tagColor }])
-        setNewTag("")
-        setNewTagColor("#FF9999")
-        setIsAddingTag(false)
-      }, 150)
-    }
+    const text = tagText.trim().toLowerCase()
+    if (text && !tags.some(tag => tag.text.toLowerCase() === text)) setTags(previous => [...previous, { text, color: tagColor }])
+    setNewTag("")
+    setIsAddingTag(false)
   }
-
-  const removeTag = (tagText: string) => setTags((prev) => prev.filter((tag) => tag.text !== tagText))
+  const removeTag = (tagText: string) => setTags(previous => previous.filter(tag => tag.text !== tagText))
 
   const cleanName = useCallback((name: string) => name.replace(/^.*'s\s/, ""), [])
 
@@ -469,7 +465,7 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
         {name}
       </span>
 
-      
+
     </div>
   </button>
 )
@@ -517,6 +513,30 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
       if (await onUpdateGame({ ...game, tags, notes: turnNotes, deckList, deckName })) onBack()
     }, 150)
   }
+
+  const keyboardBack = useRef(handleBackClick)
+  keyboardBack.current = handleBackClick
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement
+      if (target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="dialog"],[role="combobox"]') || document.querySelector('[role="dialog"]') || event.altKey || event.ctrlKey || event.metaKey) return
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault()
+        setActiveTurnIndex(index => Math.max(0, Math.min(turns.length - 1, index + (event.key === 'ArrowRight' ? 1 : -1))))
+      } else if (event.key === 'Escape') { event.preventDefault(); keyboardBack.current() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [turns.length])
+  useEffect(() => {
+    const list = roundList.current, active = list?.querySelector<HTMLElement>('[aria-current="step"]')
+    if (!list || !active) return
+    const l = list.getBoundingClientRect(), a = active.getBoundingClientRect()
+    if (a.left < l.left) list.scrollLeft -= l.left - a.left
+    if (a.right > l.right) list.scrollLeft += a.right - l.right
+    if (a.top < l.top) list.scrollTop -= l.top - a.top
+    if (a.bottom > l.bottom) list.scrollTop += a.bottom - l.bottom
+  }, [activeTurnIndex])
 
   const validateDeckList = (list: string) => {
     setDeckListError(null)
@@ -649,9 +669,10 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
 
     if (await onUpdateGame(merged)) setShowSetPlayersDialog(false)
 
-    
+
   }
 
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const SummaryPills = () => (
   <div className="flex flex-wrap gap-2 text-xs">
     <span
@@ -678,6 +699,179 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
     </span>
   </div>
 )
+
+const matchDetails = (<>
+      <Collapsible className="review-secondary"><CollapsibleTrigger aria-label="Teams, tags & match details" className="review-disclosure-trigger">Teams, tags & match details</CollapsibleTrigger><CollapsibleContent>
+<div className="review-facts"><div><dt>Date</dt><dd>{game.date}</dd></div><div><dt>Turn order</dt><dd>{game.wentFirst ? "Went first" : "Went second"}</dd></div><div><dt>Your deck</dt><dd>{matchupName(game)}</dd></div><div><dt>Opponent deck</dt><dd>{matchupName(game, true)}</dd></div></div>
+      {onDelete && <div className="review-delete"><Button variant="outline" onClick={() => { if (confirmDelete) onDelete(); else setConfirmDelete(true) }}>{confirmDelete ? "Confirm delete match" : "Delete match"}</Button>{confirmDelete && <Button variant="ghost" onClick={() => setConfirmDelete(false)}>Cancel</Button>}</div>}
+<div className="review-tags-editor"><h3>Tags</h3><div>      {tags.map(tag => <span className="review-tag" key={tag.text}>{tag.text}<button type="button" aria-label={`Remove tag ${tag.text}`} onClick={() => removeTag(tag.text)}>×</button></span>)}
+      <Input className="review-tag-input" aria-label="Add tag" placeholder="Add tag…" value={newTag} onChange={event => setNewTag(event.target.value)} onKeyDown={event => {
+        if (event.key === 'Enter') { event.preventDefault(); addTag(newTag, '#e3eefb') }
+        if (event.key === 'Backspace' && !newTag && tags.length) removeTag(tags[tags.length - 1].text)
+      }} />
+</div></div>
+<Collapsible className="review-extra"><CollapsibleTrigger className="review-disclosure-trigger" aria-label="Teams and deck tools">Teams and deck tools</CollapsibleTrigger><CollapsibleContent>
+      {/* GAME DETAILS + TAGS */}
+     <section
+  className={cn(
+    "mt-4 space-y-4",
+    "rounded-2xl p-4",
+    "bg-slate-50/60 dark:bg-slate-900/40",
+    "border border-slate-200/60 dark:border-slate-700/50",
+  )}
+>
+
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div><p className="text-xs mb-1">Match Review</p><h2 className="text-xl font-semibold tracking-tight">{matchupName(game)} vs {matchupName(game, true)}</h2></div>
+
+        </div>
+
+       <div className="grid gap-6 md:grid-cols-2 items-start">
+  {/* LEFT COLUMN */}
+  <div className="space-y-4">
+    <dl className="space-y-2 text-sm">
+
+      <SummaryPills />
+      <div className="flex gap-2">
+        <dt className="w-20 sm:w-28 shrink-0 text-slate-500 dark:text-slate-200/80">Date</dt>
+        <dd className="font-medium">{game.date}</dd>
+      </div>
+
+      <div className="flex gap-2">
+        <dt className="w-20 sm:w-28 shrink-0 text-slate-500 dark:text-slate-200/80">Opponent</dt>
+        <dd className="font-medium min-w-0 break-words">{game.opponent}</dd>
+      </div>
+
+      <div className="flex gap-2">
+        <dt className="w-20 sm:w-28 shrink-0 text-slate-500 dark:text-slate-200/80">Went first</dt>
+        <dd className="font-medium">{game.wentFirst ? "Yes" : "No"}</dd>
+      </div>
+    </dl>
+
+    {/* Add deck + Set Players moved to the left column */}
+    <div className="flex flex-wrap gap-2">
+      <Button
+        onClick={() => {
+          setIsDeckButtonPressed(true)
+          setTimeout(() => setIsDeckButtonPressed(false), 150)
+          setShowDeckListDialog(true)
+        }}
+        className={pillBtn(isDeckButtonPressed, "inline-flex items-center gap-2")}
+      >
+        <FileText className="h-4 w-4" />
+        {game.deckList || deckList ? "Deck list" : "Add deck"}
+      </Button>
+
+      <Button
+        onClick={() => {
+          setIsSetPlayersButtonPressed(true)
+          setTimeout(() => setIsSetPlayersButtonPressed(false), 150)
+          setShowSetPlayersDialog(true)
+        }}
+        className={pillBtn(isSetPlayersButtonPressed, "inline-flex items-center gap-2")}
+      >
+        <Pencil className="h-4 w-4" />
+        Edit matchup
+      </Button>
+    </div>
+  </div>
+{/* RIGHT COLUMN */}
+<div className="space-y-3">
+  {/* Match turn log sizing */}
+  <div className="grid gap-3 sm:grid-cols-2 text-sm">
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200/70">
+        Your team
+      </p>
+      {formatPokemonList(game.userMainAttacker, game.userOtherPokemon, true)}
+    </div>
+
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200/70">
+        Opponent&apos;s team
+      </p>
+      {formatPokemonList(game.opponentMainAttacker, game.opponentOtherPokemon, false)}
+    </div>
+  </div>
+</div>
+  </div>
+        {/* TAGS */}
+       <div className="pt-3 border-t border-slate-600/80 dark:border-slate-300">
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    {/* LEFT: tags */}
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tags</span>
+
+    </div>
+
+   {/* RIGHT: prize map button (bottom-right) */}
+<div className="flex justify-end shrink-0">
+  <Popover open={prizePopoverOpen} onOpenChange={setPrizePopoverOpen}>
+    <PopoverTrigger asChild>
+      <button
+        type="button"
+        onMouseEnter={() => setPrizePopoverOpen(true)}
+        onMouseLeave={() => setPrizePopoverOpen(false)}
+        className={cn(
+          "inline-flex items-center gap-2 text-xs font-medium",
+          "text-slate-600 hover:text-slate-900 dark:text-slate-200/90 dark:hover:text-slate-50",
+          "rounded-full px-3 py-1 border border-slate-300/70 dark:border-white/15",
+          "bg-white/60 dark:bg-slate-950/20 hover:bg-white/80 dark:hover:bg-slate-950/30",
+          "transition-colors",
+        )}
+        aria-label="View prize map"
+      >
+            View prize map
+          </button>
+    </PopoverTrigger>
+
+    <PopoverContent
+      side="top"
+      align="end"
+      sideOffset={10}
+      collisionPadding={20}
+      onMouseEnter={() => setPrizePopoverOpen(true)}
+      onMouseLeave={() => setPrizePopoverOpen(false)}
+      className="w-[520px] max-w-[90vw] z-[70] p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-700/80 backdrop-blur shadow-xl"
+    >
+      <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Prize Map</div>
+      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+        Here is the order in which prize cards were taken.
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200 mb-2">
+            You ({previewPlayers.you || "unknown"})
+          </div>
+          {userPrizeMap.length ? (
+            <PrizeMapStrip sequence={userPrizeMap} />
+          ) : (
+            <div className="text-xs text-slate-500 dark:text-slate-400">No prize KOs detected.</div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300 mb-2">
+            Opponent ({previewPlayers.opp || "unknown"})
+          </div>
+          {oppPrizeMap.length ? (
+            <PrizeMapStrip sequence={oppPrizeMap} />
+          ) : (
+            <div className="text-xs text-slate-500 dark:text-slate-400">No prize KOs detected.</div>
+          )}
+        </div>
+      </div>
+    </PopoverContent>
+  </Popover>
+    </div>
+  </div>
+</div>
+
+      </section>
+</CollapsibleContent></Collapsible>
+      </CollapsibleContent></Collapsible>
+</>)
 
   // ---------- RENDER ----------
 return (
@@ -719,15 +913,14 @@ return (
       {saveState === "saving" && <p role="status" className="review-save-status">Saving…</p>}
 
       <header className="review-summary">
-        <div><h2>{game.opponent}</h2><p>{game.date} · {game.wentFirst ? 'Went first' : 'Went second'}</p><SummaryPills /></div>
+        <div><p>{game.date} · {game.wentFirst ? 'Went first' : 'Went second'}</p><h2>{game.opponent}</h2><SummaryPills /></div>
         <div className="review-matchup-actions"><MatchupSpritePair user={game.userMainAttacker} opponent={game.opponentMainAttacker} /><Button type="button" variant="ghost" className="review-edit-matchup" onClick={() => setShowSetPlayersDialog(true)}>Edit matchup</Button></div>
       </header>
 
       <section className="review-workspace" aria-label="Turn review">
         <nav className="review-turns" aria-label="Turn navigator">
-          <h3>Rounds</h3>
-          <p>{turns.length} recorded stages</p>
-          <div>{turns.map((turn, index) => <button key={turn.turnNumber} type="button"
+          <header className="review-panel-heading"><h3>Rounds</h3><span>{turns.length} stages</span></header>
+          <div ref={roundList}>{turns.map((turn, index) => <button key={turn.turnNumber} type="button"
             aria-current={activeTurnIndex === index ? 'step' : undefined}
             onClick={() => setActiveTurnIndex(index)}>
             <span>{turn.turnNumber === 0 ? 'Setup' : `Round ${turn.turnNumber}`}</span>
@@ -736,14 +929,18 @@ return (
         </nav>
         <div className="review-evidence">
           <div className="review-turn-controls">
-            <Button variant="outline" disabled={activeTurnIndex === 0} onClick={() => setActiveTurnIndex(index => index - 1)}>← Previous round</Button>
-            <Button variant="outline" disabled={activeTurnIndex >= turns.length - 1} onClick={() => setActiveTurnIndex(index => index + 1)}>Next round →</Button>
+            <Button variant="outline" aria-label="Previous round" disabled={activeTurnIndex === 0} onClick={() => setActiveTurnIndex(index => index - 1)}><ChevronLeft size={16} /></Button>
+            <Button variant="outline" aria-label="Next round" disabled={activeTurnIndex >= turns.length - 1} onClick={() => setActiveTurnIndex(index => index + 1)}><ChevronRight size={16} /></Button>
+            <strong>{turns[activeTurnIndex]?.turnNumber === 0 ? "Setup" : `Round ${turns[activeTurnIndex]?.turnNumber ?? 0}`}</strong>
+            {turns[activeTurnIndex] && <Button className="round-stats-toggle" variant="ghost" aria-pressed={flippedTurns.has(turns[activeTurnIndex].turnNumber)} onClick={() => handleTurnClick(turns[activeTurnIndex].turnNumber)}>{flippedTurns.has(turns[activeTurnIndex].turnNumber) ? 'Show events' : 'Show stats'}</Button>}
           </div>
           {!turns.length && <p>No turn markers were found in this log.</p>}
           {turns.slice(activeTurnIndex, activeTurnIndex + 1).map((turn) => {
             const isFlipped = flippedTurns.has(turn.turnNumber)
 
-            return (
+
+
+  return (
               <article
                 key={turn.turnNumber}
 
@@ -766,17 +963,6 @@ className={cn(
 
 )}
               >
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <div className="font-medium text-slate-700 dark:text-slate-100">
-                    {turn.turnNumber === 0 ? "Setup" : `Round ${turn.turnNumber}`}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button variant="ghost" aria-pressed={isFlipped} onClick={() => handleTurnClick(turn.turnNumber)}>
-                      {isFlipped ? 'Show events' : 'Show stats'}
-                    </Button>
-                  </div>
-                </div>
-
                 {!isFlipped ? (
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -881,10 +1067,11 @@ className={cn(
               </article>
             )
           })}
-          <details className="review-raw-log"><summary>Raw game log</summary><pre>{game.rawLog}</pre></details>
+          <Collapsible className="review-raw-log"><CollapsibleTrigger aria-label="Raw game log" className="review-disclosure-trigger">Raw game log</CollapsibleTrigger><CollapsibleContent><pre>{game.rawLog}</pre></CollapsibleContent></Collapsible>
+          {matchDetails}
         </div>
         <aside className="review-notes" aria-label="Private turn notes">
-          <h3>Your review notes</h3>
+          <header className="review-panel-heading"><h3>Your review notes</h3></header>
           {turns[activeTurnIndex] && <>
             <label htmlFor="active-turn-note">{turns[activeTurnIndex].turnNumber === 0 ? 'Setup' : `Round ${turns[activeTurnIndex].turnNumber}`}</label>
             <Textarea id="active-turn-note" placeholder="What would you do differently next time?"
@@ -896,246 +1083,7 @@ className={cn(
         </aside>
       </section>
 
-      <details className="review-secondary"><summary>Teams, tags & match details</summary>
-      {/* GAME DETAILS + TAGS */}
-     <section
-  className={cn(
-    "mt-4 space-y-4",
-    "rounded-2xl p-4",
-    "bg-slate-50/60 dark:bg-slate-900/40",
-    "border border-slate-200/60 dark:border-slate-700/50",
-  )}
->
 
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div><p className="text-xs mb-1">Match Review</p><h2 className="text-xl font-semibold tracking-tight">{matchupName(game)} vs {matchupName(game, true)}</h2></div>
-
-        </div>
-
-       <div className="grid gap-6 md:grid-cols-2 items-start">
-  {/* LEFT COLUMN */}
-  <div className="space-y-4">
-    <dl className="space-y-2 text-sm">
-
-      <SummaryPills />
-      <div className="flex gap-2">
-        <dt className="w-20 sm:w-28 shrink-0 text-slate-500 dark:text-slate-200/80">Date</dt>
-        <dd className="font-medium">{game.date}</dd>
-      </div>
-
-      <div className="flex gap-2">
-        <dt className="w-20 sm:w-28 shrink-0 text-slate-500 dark:text-slate-200/80">Opponent</dt>
-        <dd className="font-medium min-w-0 break-words">{game.opponent}</dd>
-      </div>
-
-      <div className="flex gap-2">
-        <dt className="w-20 sm:w-28 shrink-0 text-slate-500 dark:text-slate-200/80">Went first</dt>
-        <dd className="font-medium">{game.wentFirst ? "Yes" : "No"}</dd>
-      </div>
-    </dl>
-
-    {/* Add deck + Set Players moved to the left column */}
-    <div className="flex flex-wrap gap-2">
-      <Button
-        onClick={() => {
-          setIsDeckButtonPressed(true)
-          setTimeout(() => setIsDeckButtonPressed(false), 150)
-          setShowDeckListDialog(true)
-        }}
-        className={pillBtn(isDeckButtonPressed, "inline-flex items-center gap-2")}
-      >
-        <FileText className="h-4 w-4" />
-        {game.deckList || deckList ? "Deck list" : "Add deck"}
-      </Button>
-
-      <Button
-        onClick={() => {
-          setIsSetPlayersButtonPressed(true)
-          setTimeout(() => setIsSetPlayersButtonPressed(false), 150)
-          setShowSetPlayersDialog(true)
-        }}
-        className={pillBtn(isSetPlayersButtonPressed, "inline-flex items-center gap-2")}
-      >
-        <Pencil className="h-4 w-4" />
-        Edit matchup
-      </Button>
-    </div>
-  </div>
-{/* RIGHT COLUMN */}
-<div className="space-y-3">
-  {/* Match turn log sizing */}
-  <div className="grid gap-3 sm:grid-cols-2 text-sm">
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200/70">
-        Your team
-      </p>
-      {formatPokemonList(game.userMainAttacker, game.userOtherPokemon, true)}
-    </div>
-
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200/70">
-        Opponent&apos;s team
-      </p>
-      {formatPokemonList(game.opponentMainAttacker, game.opponentOtherPokemon, false)}
-    </div>
-  </div>
-</div>
-  </div>
-        {/* TAGS */}
-       <div className="pt-3 border-t border-slate-600/80 dark:border-slate-300">
-  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-    {/* LEFT: tags */}
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tags</span>
-
-      {tags.map((tag) => (
-        <button key={tag.text} type="button" onClick={() => removeTag(tag.text)} className="group">
-          <Badge
-            className="text-[11px] font-medium rounded-full px-3 py-1 border-0 shadow-sm group-hover:opacity-80 group-active:scale-95 transition"
-            style={{ backgroundColor: tag.color, color: getContrastColor(tag.color) }}
-          >
-            {tag.text}
-            <span className="ml-1 text-[10px] opacity-80 group-hover:opacity-100">×</span>
-          </Badge>
-        </button>
-      ))}
-
-      {!isAddingTag ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setIsAddingTag(true)}
-          className="h-7 px-2 text-xs border-dashed border-slate-400/70 text-slate-600 dark:text-slate-300 dark:border-slate-600 bg-transparent hover:bg-slate-100/40 dark:hover:bg-slate-800/60"
-        >
-          <Plus className="mr-1 h-3 w-3" />
-          Add tag
-        </Button>
-      ) : (
-  <div className="flex flex-wrap items-center gap-2">
-    <Input
-      value={newTag}
-      onChange={(e) => setNewTag(e.target.value)}
-      placeholder="Tag name"
-      className="h-7 w-36 text-xs bg-white/60 dark:bg-slate-950/20"
-      onKeyDown={(e) => {
-        if (e.key === "Enter") addTag(newTag.trim(), newTagColor)
-        if (e.key === "Escape") {
-          setIsAddingTag(false)
-          setNewTag("")
-          setNewTagColor("#FF9999")
-        }
-      }}
-    />
-
-    <input
-      type="color"
-      value={newTagColor}
-      onChange={(e) => setNewTagColor(e.target.value)}
-      className="h-7 w-10 rounded-md border border-slate-300/70 dark:border-white/15 bg-transparent"
-      aria-label="Tag color"
-    />
-
-    <Button
-      type="button"
-      size="sm"
-      onClick={() => addTag(newTag.trim(), newTagColor)}
-      disabled={!newTag.trim()}
-      className={cn(
-        "h-7 px-3 text-xs",
-        "bg-slate-800 text-white hover:bg-slate-700 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-100",
-        isAddButtonPressed && "scale-95",
-      )}
-    >
-      Add
-    </Button>
-
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={() => {
-        setIsCancelTagButtonPressed(true)
-        setTimeout(() => setIsCancelTagButtonPressed(false), 120)
-        setIsAddingTag(false)
-        setNewTag("")
-        setNewTagColor("#FF9999")
-      }}
-      className={cn("h-7 px-3 text-xs", isCancelTagButtonPressed && "scale-95")}
-    >
-      Cancel
-    </Button>
-  </div>
-)}
-    </div>
-
-   {/* RIGHT: prize map button (bottom-right) */}
-<div className="flex justify-end shrink-0">
-  <Popover open={prizePopoverOpen} onOpenChange={setPrizePopoverOpen}>
-    <PopoverTrigger asChild>
-      <button
-        type="button"
-        onMouseEnter={() => setPrizePopoverOpen(true)}
-        onMouseLeave={() => setPrizePopoverOpen(false)}
-        className={cn(
-          "inline-flex items-center gap-2 text-xs font-medium",
-          "text-slate-600 hover:text-slate-900 dark:text-slate-200/90 dark:hover:text-slate-50",
-          "rounded-full px-3 py-1 border border-slate-300/70 dark:border-white/15",
-          "bg-white/60 dark:bg-slate-950/20 hover:bg-white/80 dark:hover:bg-slate-950/30",
-          "transition-colors",
-        )}
-        aria-label="View prize map"
-      >
-            View prize map
-          </button>
-    </PopoverTrigger>
-
-    <PopoverContent
-      side="top"
-      align="end"
-      sideOffset={10}
-      collisionPadding={20}
-      onMouseEnter={() => setPrizePopoverOpen(true)}
-      onMouseLeave={() => setPrizePopoverOpen(false)}
-      className="w-[520px] max-w-[90vw] z-[70] p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-700/80 backdrop-blur shadow-xl"
-    >
-      <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Prize Map</div>
-      <div className="text-[11px] text-slate-500 dark:text-slate-400">
-        Here is the order in which prize cards were taken.
-      </div>
-
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200 mb-2">
-            You ({previewPlayers.you || "unknown"})
-          </div>
-          {userPrizeMap.length ? (
-            <PrizeMapStrip sequence={userPrizeMap} />
-          ) : (
-            <div className="text-xs text-slate-500 dark:text-slate-400">No prize KOs detected.</div>
-          )}
-        </div>
-
-        <div className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300 mb-2">
-            Opponent ({previewPlayers.opp || "unknown"})
-          </div>
-          {oppPrizeMap.length ? (
-            <PrizeMapStrip sequence={oppPrizeMap} />
-          ) : (
-            <div className="text-xs text-slate-500 dark:text-slate-400">No prize KOs detected.</div>
-          )}
-        </div>
-      </div>
-    </PopoverContent>
-  </Popover>
-    </div>
-  </div>
-</div>
-
-      </section>
-
-      </details>
 
       {/* SET PLAYERS DIALOG (Import-style) */}
       <Dialog

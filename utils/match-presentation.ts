@@ -14,7 +14,7 @@ export function matchupName(game: GameSummary, opponent = false) {
 export function matchesSearch(game: ReviewGame, query: string) {
   const text = [game.opponent, game.username, game.date, matchupName(game), matchupName(game, true),
     game.userMainAttacker, game.opponentMainAttacker, ...game.userOtherPokemon, ...game.opponentOtherPokemon,
-    matchOutcome(game).label, matchOutcome(game).code, ...(game.tags?.map(tag => tag.text) ?? []),
+    game.wentFirst ? "first" : "second", matchOutcome(game).label, matchOutcome(game).code, ...(game.tags?.map(tag => tag.text) ?? []),
     ...Object.values(game.notes ?? {}), game.rawLog].join(' ').toLocaleLowerCase()
   return text.includes(query.trim().toLocaleLowerCase())
 }

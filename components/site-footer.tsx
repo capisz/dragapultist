@@ -1,26 +1,16 @@
 // components/site-footer.tsx
 import Link from "next/link"
-import { cn } from "@/lib/utils"
+import "./site-footer.css"
+import { Montserrat } from "next/font/google"
+const montserrat = Montserrat({ subsets: ["latin"] })
 
 export function SiteFooter() {
   return (
-    <footer
-      className={cn(
-        "w-full border-t border-sky-200 bg-[rgba(255,255,255,0.9)] shadow-inner backdrop-blur-sm",
-    "dark:border-slate-800 dark:bg-slate-800/80"
-      )}
-    >
-      <div
-        className={cn(
-          "mx-auto flex w-full max-w-6xl flex-col gap-6",
-          "px-4 py-6 text-xs leading-relaxed text-slate-800",
-          "md:flex-row md:items-start md:justify-between md:px-6 md:py-8",
-          "dark:text-slate-300",
-        )}
-      >
+    <footer className="site-footer">
+      <div className="site-footer-inner">
         {/* Left: title + nav */}
         <div className="space-y-2 md:w-1/2">
-          <div className="tracking-[0.28em] text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-200">
+          <div className={`footer-wordmark ${montserrat.className}`}>
             DRAGAPULTIST
           </div>
 
@@ -59,7 +49,7 @@ export function SiteFooter() {
 
         {/* Right: disclaimer */}
         <div className="md:w-1/2 md:text-right">
-          <p className="text-[12px] text-slate-600 dark:text-slate-400">
+          <p className="footer-disclaimer">
             This website presents fan-made tools for the Pokémon Trading Card Game.
             Pokémon and all related names, images, and trademarks are property of
             Nintendo, Creatures, and Game Freak. Dragapultist is not produced by,

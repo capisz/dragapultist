@@ -1,6 +1,7 @@
 // components/prize-mapper-panel.tsx
 "use client"
 
+import { GhostScaffold } from "./ghost-scaffold"
 import { useEffect, useMemo, useState } from "react"
 import { ArchetypeSelector } from "./archetype-selector"
 import { ArchetypeIconPair as SharedArchetypeIconPair } from "./archetype-icon-pair"
@@ -413,11 +414,12 @@ export function PrizeMapperPanel({ ptcglUsername, games, loading = false, error 
 
   return <section className="prize-workspace" aria-label="Prize Mapper">
     <div className="prize-picker">
+      <p className="prize-picker-label">Prize archetype</p>
       <ArchetypeSelector value={selectedDeckId} onValueChange={setSelectedDeckId} label="Prize archetype" availableIds={usedDecks} counts={Object.fromEntries(usedDecks.map(id => [id, games.filter(game => resolveSideArchetypeId(game,"user") === id || resolveSideArchetypeId(game,"opponent") === id).length]))} />
       <div className="available-decks" aria-label="Available archetypes">{usedDecks.map(id => <button className="archetype-choice" key={id} aria-pressed={selectedDeckId === id} onClick={() => setSelectedDeckId(id)}><ArchetypeIconPair archetypeId={id} /><span>{formatArchetypeLabel(id)}</span></button>)}</div>
       {archetypeQuery && !filteredDecks.length && <p role="status">No archetypes match this search.</p>}
     </div>
-    {loading && <p role="status">Loading your match collection…</p>}
+    {loading && <><p role="status" className="sr-only">Loading your match collection…</p><GhostScaffold kind="prizes" /></>}
     {error && <div className="tool-status" role="alert"><p>Match history is unavailable.</p><button className="action" onClick={onRetry}>Retry loading games</button></div>}
     {!loading && !error && !games.length && <div className="tool-status"><p>No imported games.</p>{onImport && <button className="secondary" onClick={onImport}>Import a game</button>}</div>}
     {!loading && !error && !!games.length && !!selectedDeckId && <>

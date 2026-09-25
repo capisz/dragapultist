@@ -1,5 +1,6 @@
 "use client"
 
+import { GhostScaffold } from "./ghost-scaffold"
 import { useEffect, useRef, useState } from 'react'
 import { canonicalizeArchetypeId, formatArchetypeLabel } from '@/utils/archetype-mapping'
 import { playerResults, playerBreakdown, type PublicPlayer, type PublicBreakdown } from '@/utils/public-player-view'
@@ -87,7 +88,7 @@ export function PlayerDatabasePanel() {
       <input id="player-query" value={query} maxLength={100} onChange={event => setQuery(event.target.value)} placeholder="Search a PTCGL username" />
       <button className="action">{status === 'loading' ? 'Searching…' : 'Search players'}</button>
     </form>
-    {status === 'loading' && <p role="status">Searching recorded players…</p>}
+    {status === 'loading' && <><p role="status" className="sr-only">Searching recorded players…</p><GhostScaffold kind="players" /></>}
     {(status === 'unavailable' || status === 'error') && <div className="tool-status" role="alert">
       <p>{status === 'unavailable' ? 'Player data is unavailable.' : 'This search could not be completed.'}</p>
       <button className="secondary" onClick={() => search(submitted)}>Retry search</button>

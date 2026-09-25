@@ -3,6 +3,7 @@ import clientPromise from "@/lib/mongodb"
 import { getRequestIdentity, userIdQueryValue } from "@/lib/request-user"
 import type { ObjectId } from "mongodb"
 import { assertMutationRequest } from "@/lib/session"
+import { normalizeImportLog } from "@/lib/import-identity"
 import { createHash } from "node:crypto"
 import { createGameRequestSchema, gameInputSchema, GAME_PARSER_VERSION, GAME_SCHEMA_VERSION } from "@/lib/game-contract"
 import { errorEnvelope } from "@/lib/api-contract"
@@ -132,6 +133,7 @@ export async function POST(req: NextRequest) {
     )
     const normalizedLog = gameSummary.rawLog.replace(/\r\n/g, "\n").trim()
     const contentHash = createHash("sha256").update(`${userId}\0${normalizedLog}`).digest("hex")
+    const importFingerprint = createHash("sha256").update(normalizeImportLog(gameSummary.rawLog)).digest("hex")
     const finalDoc: AnyGame = {
       ...authoritative,
       id: gameSummary.id,
@@ -151,6 +153,7 @@ export async function POST(req: NextRequest) {
       ].join("\n").slice(0, 24_000),
       userId,
       contentHash,
+      importFingerprint,
       idempotencyKey,
       schemaVersion: GAME_SCHEMA_VERSION,
       parserVersion: GAME_PARSER_VERSION,
@@ -165,21 +168,33 @@ export async function POST(req: NextRequest) {
 
     const duplicate = await collection.findOne({
       userId: userIdQueryValue(userId),
-      $or: [{ contentHash }, ...(idempotencyKey ? [{ idempotencyKey }] : [])],
+      $or: [{ importFingerprint }, { contentHash }, ...(idempotencyKey ? [{ idempotencyKey }] : [])],
     })
     if (duplicate) {
       const game = gameDocumentToDetail(duplicate)
       return NextResponse.json({ game, revision: game.revision, saveState: "saved", duplicate: true })
     }
 
-    await collection.updateOne(
-      { id: finalDoc.id, userId: userIdQueryValue(userId) },
-      { $set: finalDoc },
-      { upsert: true },
-    )
+    // New fingerprint field avoids rewriting legacy hashes or migrating existing games.
+    // The partial unique index protects concurrent imports and imports from other devices.
+    await collection.createIndex({ userId: 1, importFingerprint: 1 }, {
+      name: "games_owner_import_fingerprint", unique: true,
+      partialFilterExpression: { importFingerprint: { $type: "string" } },
+    })
+    let created = false
+    try {
+      const result = await collection.updateOne(
+        { userId, importFingerprint }, { $setOnInsert: finalDoc }, { upsert: true },
+      )
+      created = result.upsertedCount === 1
+    } catch (error) {
+      if (!(error && typeof error === "object" && "code" in error && error.code === 11000)) throw error
+    }
+    const stored = await collection.findOne({ userId, importFingerprint })
+    if (!stored) throw new Error("Imported game could not be read back.")
+    const game = gameDocumentToDetail(stored)
+    return NextResponse.json({ game, revision: game.revision, saveState: "saved", duplicate: !created }, { status: created ? 201 : 200 })
 
-    const game = gameDocumentToDetail(finalDoc)
-    return NextResponse.json({ game, revision: game.revision, saveState: "saved", duplicate: false }, { status: 201 })
   } catch (err) {
     console.error("POST /api/games error:", err)
     return NextResponse.json(errorEnvelope("UNAVAILABLE", "The game could not be saved. Your local draft is unchanged.", true), { status: 503 })

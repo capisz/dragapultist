@@ -43,18 +43,21 @@ vi.mock("@/lib/mongodb", () => ({
   default: Promise.resolve({
     db: () => ({
       collection: (name: string) => ({
+        createIndex: async () => "games_owner_import_fingerprint",
         findOne: async (filter: Doc) => state.docs.find((document) => matches(document, filter)) ?? null,
         updateOne: async (filter: Doc, update: Doc, options?: { upsert?: boolean }) => {
           let document = state.docs.find((candidate) => matches(candidate, filter))
-          if (!document && options?.upsert) {
+          const inserted = !document && options?.upsert
+          if (inserted) {
             document = {}
             state.docs.push(document)
           }
           if (!document) return { matchedCount: 0 }
+          if (inserted) Object.assign(document, update.$setOnInsert ?? {})
           Object.assign(document, update.$set ?? {})
           for (const [key, amount] of Object.entries(update.$inc ?? {})) document[key] = (document[key] ?? 0) + amount
           for (const key of Object.keys(update.$unset ?? {})) delete document[key]
-          return { matchedCount: 1, upsertedCount: options?.upsert ? 1 : 0 }
+          return { matchedCount: 1, upsertedCount: inserted ? 1 : 0 }
         },
         deleteOne: async (filter: Doc) => {
           const index = state.docs.findIndex((document) => matches(document, filter))
@@ -129,6 +132,14 @@ describe("game routes", () => {
     const otherUser = await POST(mutation("/api/games", "POST", { gameSummary: validGame }) as any)
     expect((await otherUser.json()).duplicate).toBe(false)
     expect(state.docs.map((doc) => doc.userId).sort()).toEqual(["user-a", "user-b"])
+  })
+
+  it("deduplicates concurrent whitespace-equivalent imports without replacing private notes", async () => {
+    const requests = [validGame, { ...validGame, id: "other-id", rawLog: validGame.rawLog.replace(/ /g, "  ").replace(/\n/g, "\r\n") }]
+    const responses = await Promise.all(requests.map(game => POST(mutation("/api/games", "POST", { gameSummary: game }) as any)))
+    expect(responses.map(response => response.status).sort()).toEqual([200, 201])
+    expect(state.docs).toHaveLength(1)
+    expect(state.docs[0].importFingerprint).toMatch(/^[a-f0-9]{64}$/)
   })
 
   it("returns 409 for a stale revision and preserves the stored game", async () => {

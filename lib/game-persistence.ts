@@ -11,6 +11,7 @@ import {
   type GameSummaryContract,
   type GameDetailContract,
 } from "@/lib/game-contract"
+import { normalizeImportLog } from "@/lib/import-identity"
 import { analyzeGameLog } from "@/utils/game-analyzer"
 
 export type GamePage = { games: GameSummaryContract[]; nextCursor: string | null }
@@ -153,7 +154,7 @@ export const guestGamePersistence: GamePersistence = {
   },
   async create(game) {
     const games = guestGames()
-    const duplicate = games.find(value => value.id === game.id || value.rawLog.replace(/\r\n/g, "\n").trim() === game.rawLog.replace(/\r\n/g, "\n").trim())
+    const duplicate = games.find(value => value.id === game.id || normalizeImportLog(value.rawLog) === normalizeImportLog(game.rawLog))
     if (duplicate) return { game: duplicate, revision: duplicate.revision, saveState: "saved", duplicate: true }
     const saved = gameDetailSchema.parse({ ...game, revision: 1, schemaVersion: 2, parserVersion: 1 })
     saveGuestGames([...games, saved])

@@ -8,6 +8,6 @@ export function MatchSprite({ name }: { name: string }) {
   const source = sources.find(src => !failed.includes(src))
   const isMega = /\bmega\b/i.test(name)
   const isMegaKangaskhan = isMega && /kangaskhan/i.test(name)
-  return <span className={`match-sprite${isMega ? ' match-sprite--mega' : ''}${isMegaKangaskhan ? ' match-sprite--mega-kangaskhan' : ''}`}>{source ? <img src={source} alt="" width={48} height={48}
-    onError={() => setFailed(previous => [...previous, source])} /> : <span aria-hidden="true">?</span>}</span>
+  return <span className={`match-sprite${isMega ? ' match-sprite--mega' : ''}${isMegaKangaskhan ? ' match-sprite--mega-kangaskhan' : ''}`}>{source ? <img src={source} alt="" loading="lazy" width={50} height={50}
+    onError={() => setFailed(previous => [...previous, source])} /> : <span aria-hidden="true" style={{ visibility: "hidden" }} />}</span>
 }

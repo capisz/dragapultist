@@ -8,8 +8,8 @@ const FALLBACK_ICON = '/sprites/substitute.png'
 export function CandidateSprite({ candidates, size = 30 }: { candidates: string[]; size?: number }) {
   const sources = [...new Set([...candidates, FALLBACK_ICON])]
   const [index, setIndex] = useState(0)
-  return <img src={sources[Math.min(index, sources.length - 1)]} alt="" width={size} height={size}
-    className="archetype-sprite" onError={() => setIndex(value => Math.min(value + 1, sources.length - 1))} />
+  return <img src={sources[Math.min(index, sources.length - 1)]} alt="" loading="lazy" width={size} height={size}
+    className="archetype-sprite" onError={event => { if (index >= sources.length - 1) event.currentTarget.style.visibility = "hidden"; else setIndex(value => value + 1) }} />
 }
 
 export function ArchetypeIconPair({ archetypeId, size = 30 }: { archetypeId: string | null; size?: number }) {

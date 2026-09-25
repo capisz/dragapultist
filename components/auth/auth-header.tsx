@@ -46,6 +46,7 @@ const BRAND_BTN =
 export function AuthHeader() {
   const router = useRouter()
 
+
   const [user, setUser] = useState<HeaderUser>(null)
   const [authOpen, setAuthOpen] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
@@ -101,7 +102,7 @@ export function AuthHeader() {
 
   return (
     <div className={cn("text-foreground transition-colors h-auto bg-transparent", montserrat.className)}>
-      <header className="container mx-auto px-0">
+      <header className="w-full px-0">
         <div className="header-row flex items-center justify-between gap-2 py-1">
           {/* Left */}
           <div className="header-identity flex items-center gap-2">
@@ -127,6 +128,7 @@ export function AuthHeader() {
               <DialogTrigger asChild>
                 <Button
                   type="button"
+                  aria-label="Help"
                   variant="ghost"
                   className="
                     group flex items-center justify-center

@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-25T00:34:23.895086+00:00",
+  "title": "Design System: Dragapultist",
+  "extensions": {
+    "shadows": [
+      {
+        "name": "ui-shadow",
+        "value": "0 1px 2px rgba(23,54,80,.05)"
+      },
+      {
+        "name": "ui-lift",
+        "value": "var(--ui-shadow),0 10px 24px -18px rgba(23,54,80,.4)"
+      },
+      {
+        "name": "ui-brief-shadow",
+        "value": "0 1px 2px rgba(23,54,80,.06),0 6px 14px -8px rgba(23,54,80,.35)"
+      }
+    ],
+    "motion": [
+      {
+        "name": "match-emphasis",
+        "value": "box-shadow 160ms ease",
+        "purpose": "Hover shadow on the visible 64px circular identity; newly saved match emphasis on the matching button. No scaling; briefs appear instantly."
+      },
+      {
+        "name": "fresh-match",
+        "value": "1800ms",
+        "purpose": "Acknowledged import highlight duration."
+      },
+      {
+        "name": "ghost-pulse",
+        "value": "3.4s ease-in-out infinite; 50% opacity .55",
+        "purpose": "Dashed loading/empty scaffold; disabled with reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile-viewport",
+        "value": "720px",
+        "purpose": "Below: compact field, stacked chrome/tools, horizontal review rounds."
+      },
+      {
+        "name": "desktop-review-viewport",
+        "value": "1024px",
+        "purpose": "Review switches from two columns to three; Sample Lab restores its larger-screen layout."
+      }
+    ],
+    "sources": [
+      "docs/design/claude-handoff.md",
+      "app/globals.css",
+      "components/design-handoff.css",
+      "components/game-list.css",
+      "components/game-review.css",
+      "components/site-footer.css",
+      "components/game-list.tsx",
+      "components/game-detail.tsx",
+      "components/pokemon-tcg-analyzer.tsx",
+      "components/top-deck-calc-panel.tsx",
+      "components/sample-hand-lab.tsx"
+    ],
+    "assetProvenance": "Existing public raster assets reused unchanged; no new or replaced rasters.",
+    "notes": "No synthesized color ramps or new visual concepts; fixed user-supplied reference. CSS custom properties inherit from the project root.",
+    "releaseBoundary": "September 24 revision: localhost review only; production push requires later user approval. No live migration or deployment."
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "html": "<button class=\"ds-action\">Save notes</button>",
+      "css": ".ds-action{font-family:Geist Sans,sans-serif;font-size:13px;min-height:36px;padding:0 12px;border:1px solid var(--ui-action-hover);border-radius:8px;background:var(--ui-action);color:var(--ui-action-label);}.ds-action:hover{background:var(--ui-action-hover);}.ds-action:focus-visible{outline:2px solid var(--ui-link);outline-offset:3px;}",
+      "refersTo": "button-primary"
+    },
+    {
+      "name": "Search",
+      "kind": "input",
+      "html": "<input class=\"ds-search\" aria-label=\"Search history\" placeholder=\"Search history\">",
+      "css": ".ds-search{font-family:Geist Sans,sans-serif;font-size:13px;height:36px;padding:0 12px;border:1px solid var(--ui-border);border-radius:8px;background:var(--ui-raised);color:var(--ui-ink);}.ds-search::placeholder{color:var(--ui-ink-3);}.ds-search:focus-visible{outline:2px solid var(--ui-link);outline-offset:3px;}",
+      "refersTo": "input-search"
+    },
+    {
+      "name": "Round navigation",
+      "kind": "nav",
+      "html": "<nav aria-label=\"Rounds\"><button class=\"ds-round\" aria-current=\"step\">Round 1</button><button class=\"ds-round\">Round 2</button></nav>",
+      "css": ".ds-round{font-family:Geist Sans,sans-serif;font-size:12px;min-height:48px;padding:8px;border:0;border-left:2px solid transparent;border-radius:0;background:var(--ui-panel);color:var(--ui-ink);}.ds-round[aria-current=step]{background:var(--ui-panel-header);font-weight:600;border-left-color:var(--ui-link);}.ds-round:focus-visible{outline:2px solid var(--ui-link);outline-offset:3px;}@media(max-width:719px){.ds-round{min-width:72px;border-left:0;border-bottom:2px solid transparent;}.ds-round[aria-current=step]{border-bottom-color:var(--ui-link);}}"
+    },
+    {
+      "name": "Match brief",
+      "kind": "chip",
+      "html": "<span class=\"ds-brief\"><span class=\"ds-dot\"></span><strong>Opponent</strong> \u00b7 Win</span>",
+      "css": ".ds-brief{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border:1px solid var(--ui-border);border-radius:999px;background:var(--ui-raised);color:var(--ui-ink-3);font:11px Geist Sans,sans-serif;box-shadow:var(--ui-brief-shadow);}.ds-brief strong{color:var(--ui-ink);font-weight:600;}.ds-dot{width:7px;height:7px;border-radius:50%;background:var(--result-win-dot);}",
+      "refersTo": "match-brief",
+      "description": "Static appearance sample; production behavior is controlled by pointer type, keyboard focus and collision boundaries."
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "html": "<section class=\"ds-panel\"><h3>Round notes</h3></section>",
+      "css": ".ds-panel{font-family:Geist Sans,sans-serif;font-size:13px;padding:12px;background:var(--ui-panel);color:var(--ui-ink);border:1px solid var(--ui-border);border-radius:14px;box-shadow:var(--ui-lift);}.ds-panel h3{margin:0;font-size:12px;font-weight:600;}",
+      "refersTo": "panel"
+    },
+    {
+      "name": "Import feedback",
+      "kind": "chip",
+      "html": "<span class=\"ds-status\" role=\"status\">Clipboard blocked. Paste below instead.</span>",
+      "css": ".ds-status{display:inline-flex;align-items:center;min-height:26px;padding:4px 10px;border-radius:999px;background:var(--status-warn-bg);color:var(--status-warn-ink);font:500 11.5px Geist Sans,sans-serif;overflow-wrap:anywhere;}"
+    }
+  ],
+  "narrative": {
+    "overview": "The supplied Claude HTML and September 24 UI frontend redesign revision are the visual authority: a compact Pok\u00e9mon match field followed by practical round review. Cool-blue surfaces, blue ink, pixelated sprites, and restrained outcome colors retain the existing import, history, and tool navigation model. This document records implementation; it introduces no new product claims or visual concept.",
+    "dos": [
+      "Do use semantic theme tokens and preserve the supplied composition.",
+      "Do retain real data, save states, tool navigation, and existing raster artwork.",
+      "Do preserve responsive reflow and keyboard access to every match."
+    ],
+    "donts": [
+      "Don't substitute illustrative prototype records for persisted history.",
+      "Don't claim deployment, account persistence, or native desktop verification from local frontend checks.",
+      "Don't add a new visual concept, dashboard rail, or invented product positioning."
+    ]
+  }
+}

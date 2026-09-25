@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={cn(
           GeistSans.className,
           "min-h-dvh antialiased",
-          "bg-[#d9ebff] text-slate-900"
+          "app-body"
         )}
       >
         <div className="min-h-dvh flex flex-col">

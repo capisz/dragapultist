@@ -1,7 +1,6 @@
 "use server"
 
 import { cookies } from "next/headers"
-import clientPromise from "@/lib/mongodb"
 import { verifiedSession } from "@/lib/session"
 import { APP_DATABASE_NAME } from "@/lib/app-database"
 import type { User } from "@/types/auth"
@@ -47,6 +46,7 @@ export async function getUser(): Promise<User | null> {
   }
 
   try {
+    const { default: clientPromise } = await import("@/lib/mongodb")
     const client = await clientPromise
     const db = client.db(APP_DATABASE_NAME)
     const doc = await db.collection("users").findOne({ firebaseUid: session.uid })

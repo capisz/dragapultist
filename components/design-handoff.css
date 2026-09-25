@@ -1,0 +1,101 @@
+/* Claude handoff: shared chrome and compact blue surfaces. */
+.app-body {background:var(--ui-page);color:var(--ui-ink);}
+.app-home {min-height:calc(100dvh - 115px);}
+.option-a-header {--header-surface:var(--ui-chrome);--header-ink:var(--ui-ink);background:var(--ui-chrome);}
+.header-inner {padding:10px 16px 0;}
+.header-row {min-height:52px;}
+.header-identity>img {width:40px;height:44px;filter:none;opacity:1;}
+.header-identity h1 {font-size:20px;line-height:1.2;letter-spacing:-.02em;color:var(--ui-ink);}
+.header-identity p {font-size:11px;color:var(--ui-ink-3);}
+.header-utilities {gap:8px;}
+.header-utilities>button:first-child {width:36px;min-width:36px;height:36px;min-height:36px;padding:8px;border:1px solid var(--ui-border-chrome);border-radius:8px;background:var(--ui-chrome);color:var(--ui-ink);transform:none;}
+.header-utilities>button:first-child svg {width:18px;height:18px;}
+.header-utilities>button {min-height:36px;border-radius:8px;font-size:13px;}
+.studio>main {padding:0 16px 40px;}
+.studio .studio-nav {padding:6px 12px 0;gap:2px;margin-bottom:16px!important;min-height:44px;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;}
+.studio-nav::before {background:var(--ui-chrome);box-shadow:0 0 0 100vmax var(--ui-chrome);}
+.studio .studio-nav button {height:38px;min-height:38px;font-size:13px;letter-spacing:0;color:var(--ui-ink-3)!important;}
+.studio .studio-nav button[aria-current=page] {color:var(--ui-ink)!important;font-weight:600;}
+.studio-nav::after {content:'';position:absolute;bottom:0;left:0;width:100%;height:1px;background:var(--ui-border-chrome);pointer-events:none;}
+.studio .action,.studio .review-notes button,.capture-composer button {background:var(--ui-action);border:1px solid var(--ui-action-hover);color:var(--ui-action-label);border-radius:8px;min-height:36px;font-size:13px;}
+.studio .action:hover,.studio .review-notes button:hover,.capture-composer button:hover {background:var(--ui-action-hover);}
+.games-working-band {display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--ui-panel);border:1px solid var(--ui-border);padding:12px;border-radius:14px;margin-bottom:12px;box-shadow:var(--ui-lift);}
+.games-search {flex:1 1 240px;min-width:0;order:0;margin:0;}
+.studio .games-search input {height:36px;min-height:36px;background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:8px;padding:0 12px;box-shadow:none;font-size:13px;}
+.studio .match-metrics {order:1;display:flex;flex:0 1 auto;align-items:stretch;border:1px solid var(--ui-border-soft);border-radius:10px;overflow:hidden;background:var(--ui-panel-header);font-variant-numeric:tabular-nums;}
+.match-metrics>div {display:flex;flex-direction:column;gap:5px;padding:8px 14px;}
+.match-metrics>div+div {border-left:1px solid var(--ui-border-soft);}
+.match-metrics strong {font-size:15px;font-weight:600;line-height:1.1;}
+.match-metrics span {font-size:10px;color:var(--ui-ink-3);white-space:nowrap;}
+.match-sort {order:2;display:flex;gap:2px;padding:2px;background:var(--ui-panel-header);border:1px solid var(--ui-border-soft);border-radius:9px;}
+.studio .match-sort button {height:30px;min-height:30px;padding:0 10px;font-size:11px;font-weight:400;color:var(--ui-ink-2);border-radius:7px;}
+.studio .match-sort button[data-state=on] {background:var(--ui-raised);color:var(--ui-ink);font-weight:600;box-shadow:var(--ui-shadow);}
+.games-intro {order:4;flex:1 1 100%;}
+.games-intro[hidden] {display:none;}
+.capture-tray {margin:0;border:0;}
+.capture-tray summary {display:flex;align-items:center;width:fit-content;min-height:36px;padding:0 12px;background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:8px;font-size:13px;color:var(--ui-ink);list-style:none;}
+.capture-tray summary::-webkit-details-marker {display:none;}
+.capture-composer {display:flex;align-items:flex-end;gap:10px;padding-top:10px;}
+.capture-composer textarea {flex:1;min-width:0;height:88px;padding:10px 12px;font:13px/1.5 ui-monospace,Menlo,monospace;border-radius:10px;box-shadow:none;}
+.capture-composer>div {flex-wrap:wrap;max-width:35%;}
+.studio .player-search {max-width:720px;padding:12px;background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:14px;box-shadow:var(--ui-lift);}
+.studio .player-search input {height:36px;padding:0 12px;}
+.studio :is(.prize-picker,.prize-summary,.prize-matchups,.player-roster,.player-profile,.deck-library,.deck-workbench,.sample-hand) {border:1px solid var(--ui-border);border-radius:14px;box-shadow:var(--ui-lift);}
+.studio .archetype-combobox {min-height:40px;background:var(--ui-raised);border-color:var(--ui-border)!important;border-radius:8px;color:var(--ui-ink);}
+.archetype-icons img {image-rendering:pixelated!important;}
+.studio :is(input,textarea)::placeholder {color:var(--ui-ink-3);}
+@media(max-width:719px) {
+  .studio .studio-nav {padding-inline:0;}.studio-nav::after {left:0;}
+  .games-search {flex-basis:100%;}.studio .match-metrics {flex:1 1 100%;min-width:0;}.match-metrics>div {flex:1;padding:8px 10px;}
+  .match-sort {flex-wrap:wrap;}.capture-composer {flex-wrap:wrap;}.capture-composer textarea {flex-basis:100%;}.capture-composer>div {max-width:100%;}
+}
+@media(prefers-reduced-motion:reduce) {.studio *, .mascot-bob {animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+.studio .prize-picker {padding:14px;background:var(--ui-panel);}
+.prize-picker-label {margin-bottom:8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;}
+.studio .match-review {color:var(--ui-ink);}
+.studio .review-panel-heading h3, .review-turn-controls {color:var(--ui-ink);}
+.review-matchup>button {font-size:11px;color:var(--ui-link);}
+.review-evidence article>div.grid>div {border:0;}
+
+.games-actions {order:3;display:flex;align-items:center;justify-content:flex-end;flex:1 1 auto;flex-wrap:wrap;gap:8px;}
+.studio .games-actions button {height:36px;min-height:36px;font-size:13px;padding:0 12px;white-space:nowrap;}
+.quick-add {gap:7px;}.import-toggle {color:var(--ui-ink);background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:8px;}
+.import-status {display:inline-flex;align-items:center;min-height:26px;padding:4px 10px;border-radius:999px;background:var(--ui-panel-header);color:var(--ui-ink-2);font-size:11.5px;font-weight:500;overflow-wrap:anywhere;}
+.import-status[data-tone=ok] {background:var(--result-win-bg);color:var(--result-win-fg);}.import-status[data-tone=warn] {background:var(--status-warn-bg);color:var(--status-warn-ink);}
+.ghost-scaffold {border:1px solid var(--ui-border);border-radius:14px;overflow:hidden;background:var(--ui-panel);animation:ghost-pulse 3.4s ease-in-out infinite;}
+.ghost-scaffold [data-slot=skeleton],.ghost-scaffold .animate-pulse {animation:none;background:transparent;border:1px dashed var(--ui-border);}
+.ghost-filter {display:flex;gap:14px;padding:9px 16px;background:var(--ui-panel-header);border-bottom:1px solid var(--ui-border-soft);}.ghost-filter>div {width:24px;height:24px;border-radius:50%;}
+.ghost-tile {display:flex;flex-direction:column;align-items:center;gap:10px;}.ghost-tile>div:first-child {width:58px;height:64px;border-radius:50%;}.ghost-tile>div:last-child {width:40px;height:5px;border-radius:3px;}
+.ghost-panels {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px;}.ghost-panel {padding:18px;border:1px dashed var(--ui-border);border-radius:10px;}.ghost-panel>div {height:12px;margin-bottom:16px;}.ghost-panel>div:first-child {width:50%;}
+@keyframes ghost-pulse {50% {opacity:.55;}}
+@media(min-width:720px) {
+ .studio .odds-lab {grid-template-columns:260px minmax(0,1fr);}.studio .player-workspace {grid-template-columns:210px minmax(0,1fr);}.studio .prize-lanes {grid-template-columns:repeat(2,minmax(0,1fr));}
+ .studio .sample-hand {grid-template-columns:repeat(7,minmax(0,1fr));}
+}
+@media(min-width:720px) and (max-width:1023px) {.studio .sample-lab {grid-template-columns:minmax(0,1fr);}}
+@media(max-width:719px) {
+ .games-actions {flex-basis:100%;}.studio .match-metrics {flex:0 1 auto;width:100%;}.match-metrics>div {padding:8px 10px;}.match-metrics strong {white-space:nowrap;font-size:14px;}
+ .studio .player-workspace,.studio .odds-lab,.studio .sample-lab,.studio .prize-lanes {grid-template-columns:minmax(0,1fr);}
+ .studio .odds-settings {grid-column:1;grid-row:1;}.studio .odds-canvas {grid-column:1;grid-row:2;}.studio .sample-hand {grid-template-columns:repeat(4,minmax(0,1fr));}
+}
+@media(prefers-reduced-motion:reduce) {.ghost-scaffold {animation:none;}}
+
+@media(max-width:1312px) {.studio .studio-nav {padding-inline:0;}}
+
+/* Deck Lab panels follow the same handoff shell as match review. */
+.studio :is(.odds-settings,.odds-canvas,.sample-deck-panel,.hand-tabletop,.hand-statistics) {border:1px solid var(--ui-border);border-radius:14px;box-shadow:var(--ui-lift);}
+.studio .odds-settings {display:block;padding:14px;}
+.studio .tool-panel-heading {margin:-14px -14px 14px;padding:10px 12px;background:var(--ui-panel-header);border-bottom:1px solid var(--ui-border-soft);border-radius:13px 13px 0 0;font-size:12px;font-weight:600;}
+.studio .odds-settings>input {width:100%;height:36px;}
+.studio .odds-settings>label {display:block;margin-bottom:6px;}
+.studio .odds-settings fieldset {margin:14px 0 0;}
+.studio .copy-choices {gap:3px;padding:3px;border:1px solid var(--ui-border-soft);border-radius:9px;background:var(--ui-panel-header);}
+.studio .copy-choices button {flex:1;width:auto;min-height:30px;height:30px;background:transparent;}
+.studio .copy-choices button[aria-pressed=true] {background:var(--ui-chrome);color:var(--ui-ink);}
+.studio .odds-settings>button {width:100%;height:36px;min-height:36px;margin-top:10px;}
+.studio .odds-settings .second-card-action {border-style:dashed;}
+.studio .odds-settings>p {padding:10px;margin:12px 0 0;background:var(--ui-panel-header);border-radius:8px;font-size:11px;}
+.studio .sample-deck-panel>summary {display:flex;justify-content:space-between;gap:12px;margin:0 -14px;padding:10px 12px;background:var(--ui-panel-header);border-bottom:1px solid var(--ui-border-soft);border-radius:13px 13px 0 0;font-size:12px;}
+.studio .sample-deck-panel[open]>.deck-composer {padding-top:12px;}
+.studio .sample-deck-panel .deck-composer p {display:block;margin-top:6px;line-height:1.5;}
+.studio .sample-hand {border:0;box-shadow:none;}

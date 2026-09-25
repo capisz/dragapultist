@@ -42,6 +42,15 @@ beforeEach(() => {
 })
 
 describe("guest game persistence", () => {
+  it("deduplicates whitespace-equivalent imports after reading persisted storage", async () => {
+    const first = await guestGamePersistence.create(game, "first-import-key")
+    const repeated = await guestGamePersistence.create({ ...game, id: "different-id", rawLog: rawLog.replace(/ /g, "  ").replace(/\n/g, "\r\n\n") }, "second-import-key")
+    expect(repeated.duplicate).toBe(true)
+    expect(repeated.game.id).toBe(first.game.id)
+    expect((await guestGamePersistence.list()).games).toHaveLength(1)
+    expect(repeated.game.notes).toEqual(game.notes)
+  })
+
   it("applies a perspective update without losing private review data", async () => {
     const created = await guestGamePersistence.create(game, "0123456789abcdef")
     const updated = await guestGamePersistence.update(game.id, {

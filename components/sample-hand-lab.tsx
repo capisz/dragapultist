@@ -57,8 +57,8 @@ export function SampleHandLab({ games, currentGameId }: { games: ReviewGame[]; c
 
   return <div className="sample-lab"><div className="sample-main">
     <CardSearch onAdd={addCard} />
-    <details className="sample-deck-panel" open={editorOpen} onToggle={event => setEditorOpen(event.currentTarget.open)}><summary>Deck list · {parsed.total}/60 cards</summary>
-      <div className="deck-composer"><div><label htmlFor="sample-deck">Your 60-card list</label><p>Use “4 Charmander PAF 7” for exact cards, or count and name for text-only cards.</p></div><strong className="deck-total" aria-live="polite">{parsed.total}<small>/60 cards</small></strong></div>
+    <details className="sample-deck-panel" open={editorOpen} onToggle={event => setEditorOpen(event.currentTarget.open)}><summary><span>Deck list</span><span>{parsed.total}/60 cards</span></summary>
+      <div className="deck-composer"><div><label htmlFor="sample-deck">Your 60-card list</label><p>Use “4 Charmander PAF 7” for exact cards, or count and name for text-only cards.</p></div></div>
       {!!saved.length && <div className="saved-deck-picker"><label htmlFor="saved-sample-deck">Reuse a saved match deck</label><select id="saved-sample-deck" value="" onChange={event => { const game = saved.find(game => game.id === event.target.value); if (game?.deckList) updateDeck(game.deckList) }}><option value="">Choose a saved deck…</option>{saved.map(game => <option key={game.id} value={game.id}>{game.id === currentGameId ? 'Current match · ' : ''}{game.deckName || game.userMainAttacker} · {game.date}</option>)}</select></div>}
       <textarea id="sample-deck" className="sample-deck-input" value={text} onChange={event => updateDeck(event.target.value)} placeholder="Paste a 60-card deck list…" maxLength={36001} spellCheck={false} />
       {!text && <button type="button" className="secondary" onClick={() => updateDeck(EXAMPLE_DECK)}>Load example deck</button>}

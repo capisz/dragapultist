@@ -2,6 +2,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react"
+import { ClipboardPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils"
 import { PrizeMapperPanel } from "@/components/prize-mapper-panel"
 import { DeckLab } from "@/components/deck-lab"
 import "./tool-workspace.css"
+import "./design-handoff.css"
 import {
   guestGamePersistence,
   PersistenceError,
@@ -40,7 +42,7 @@ export function PokemonTCGAnalyzer() {
     "games",
   )
 
-  const [gamesLoading, setGamesLoading] = useState(false)
+  const [gamesLoading, setGamesLoading] = useState(true)
   const [gamesError, setGamesError] = useState<string | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [loadRevision, setLoadRevision] = useState(0)
@@ -49,7 +51,20 @@ export function PokemonTCGAnalyzer() {
   const [selectedGame, setSelectedGame] = useState<GameSummary | null>(null)
   const returnState = useRef<{ id: string | null; scrollY: number }>({ id: null, scrollY: 0 })
   const [manualInput, setManualInput] = useState<string>("")
-  const [importOpen, setImportOpen] = useState(true)
+  const [quickStatus, setQuickStatus] = useState<{ text: string; tone: 'ok' | 'warn' | 'neutral' } | null>(null)
+  const [quickBusy, setQuickBusy] = useState(false)
+  const [freshId, setFreshId] = useState<string | null>(null)
+  const [filterRevision, setFilterRevision] = useState(0)
+  const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const freshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const importLock = useRef(false)
+  const showImportStatus = useCallback((text: string, tone: 'ok' | 'warn' | 'neutral') => {
+    if (statusTimer.current) clearTimeout(statusTimer.current)
+    setQuickStatus({ text, tone })
+    statusTimer.current = setTimeout(() => setQuickStatus(null), 2800)
+  }, [])
+  useEffect(() => () => { if (statusTimer.current) clearTimeout(statusTimer.current); if (freshTimer.current) clearTimeout(freshTimer.current) }, [])
+  const [importOpen, setImportOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState<string>("")
   const [sortConfig, setSortConfig] = useState<{
     key: keyof GameSummary
@@ -68,6 +83,7 @@ export function PokemonTCGAnalyzer() {
   const buttonTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const [ptcglUsername, setPtcglUsername] = useState<string>("")
+
 
   const tabsBarRef = useRef<HTMLDivElement | null>(null)
   const tabRefs = useRef<
@@ -119,7 +135,6 @@ export function PokemonTCGAnalyzer() {
 
   useEffect(() => {
     const refreshUser = () => {
-      setGames([])
       setSearchResultIds(null)
       setSelectedGame(null)
       setRetrySave(null)
@@ -266,22 +281,38 @@ export function PokemonTCGAnalyzer() {
       const draft = gameDraftSchema.parse(game)
       const saved = await persistence.create(draft, idempotencyKey)
       const canonical = saved.game as unknown as GameSummary
+      if (saved.duplicate) {
+        showImportStatus(`Already added: vs ${canonical.opponent}`, 'neutral')
+        setSaveState('saved'); setRetrySave(null)
+        return
+      }
       setGames(current => mergeAcknowledgedGame(current, game.id, canonical))
       setSelectedGame(current => current?.id === game.id ? canonical : current)
       setRetrySave(null)
       setSaveState("saved")
-      setValidationStatus("valid")
+      {
+        showImportStatus(`Added: ${canonical.userWon ? 'Win' : 'Loss'} vs ${canonical.opponent}`, 'ok')
+        setSearchTerm("")
+        setSortConfig({ key: "date", direction: "desc" })
+        setFilterRevision(value => value + 1)
+        setFreshId(canonical.id)
+        if (freshTimer.current) clearTimeout(freshTimer.current)
+        freshTimer.current = setTimeout(() => setFreshId(null), 1800)
+      }
+      setValidationStatus("none")
       if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
       fadeTimerRef.current = setTimeout(() => setValidationStatus("none"), 5000)
       setManualInput("")
       setPendingGameData(null)
       setPendingGameLog("")
     } catch (error) {
+      showImportStatus("Could not save. Your draft is retained; retry below.", "warn")
+      setImportOpen(true)
       setRetrySave({ game, idempotencyKey })
       setSaveState(error instanceof PersistenceError ? error.status : "retryable_failure")
       throw error
     }
-  }, [user])
+  }, [user, showImportStatus])
 
   const addGame = useCallback(
     (
@@ -292,21 +323,36 @@ export function PokemonTCGAnalyzer() {
         opponentArchetypeId?: string | null
       },
     ) => {
-      const gameSummary = analyzeGameLog(
-           log,
-           options?.swapPlayers ?? false,
-           undefined,
-           undefined,
-           options?.userArchetypeId ?? null,
-           options?.opponentArchetypeId ?? null,
-           ptcglUsername || undefined,
-        )
-      const idempotencyKey = crypto.randomUUID()
-      void saveImportedGame(gameSummary, idempotencyKey).catch(() => undefined)
+      if (importLock.current) return
+      importLock.current = true
+      setQuickBusy(true)
+      const run = async () => {
+        const gameSummary = analyzeGameLog(log, options?.swapPlayers ?? false, undefined, undefined,
+          options?.userArchetypeId ?? null, options?.opponentArchetypeId ?? null, ptcglUsername || undefined)
+        await saveImportedGame(gameSummary, crypto.randomUUID())
+      }
+      void run().catch(() => undefined).finally(() => { importLock.current = false; setQuickBusy(false) })
 
     },
-    [ptcglUsername, saveImportedGame],
+    [ptcglUsername, saveImportedGame, games, user, showImportStatus],
   )
+
+  const handleQuickAdd = async () => {
+    if (quickBusy || importLock.current) return
+    let text: string
+    try {
+      if (!navigator.clipboard?.readText) throw new Error('Clipboard unavailable')
+      text = await navigator.clipboard.readText()
+    } catch {
+      setImportOpen(true)
+      showImportStatus('Clipboard blocked. Paste below instead.', 'warn')
+      requestAnimationFrame(() => document.getElementById('match-log')?.focus())
+      return
+    }
+    if (!validateGameLog(text)) { showImportStatus('No game log found on clipboard', 'warn'); return }
+    setManualInput(text)
+    addGame(text)
+  }
 
   const processLogForManualImport = useCallback(
     (log: string) => {
@@ -435,6 +481,7 @@ export function PokemonTCGAnalyzer() {
           },
         }, updatedGame.revision ?? 1)
         const canonical = saved.game as unknown as GameSummary
+
         setGames(current => current.map(game => game.id === canonical.id ? canonical : game))
         setSelectedGame(current => current?.id === canonical.id ? canonical : current)
         setRetryUpdate(null)
@@ -471,6 +518,7 @@ export function PokemonTCGAnalyzer() {
   const filteredGames = normalizedSearch
     ? sortedGames.filter(game => searchResultIds?.has(game.id) || matchesSearch(game, normalizedSearch))
     : sortedGames
+  const presentedGames = freshId ? [...filteredGames].sort((a, b) => Number(b.id === freshId) - Number(a.id === freshId)) : filteredGames
 
   const setSelectedGameSafely = useCallback(
     async (game: GameSummary | null) => {
@@ -499,7 +547,7 @@ export function PokemonTCGAnalyzer() {
   }
 
   return (
-    <div className="studio flex min-h-screen flex-col">
+    <div className="studio flex flex-col">
       <main className="flex-1 w-full px-4 pb-10 pt-4 md:px-6 md:pt-6">
         <div className="studio-inner mx-auto w-full max-w-6xl">
           {/* Tabs bar */}
@@ -612,6 +660,7 @@ export function PokemonTCGAnalyzer() {
                   onUpdateGame={handleUpdateGame}
                   saveState={saveState}
                   onRetrySave={() => { if (retryUpdate) void handleUpdateGame(retryUpdate) }}
+                  onDelete={() => { void handleDeleteGame(selectedGame.id) }}
                 />
               ) : (
                 <div>
@@ -633,14 +682,19 @@ export function PokemonTCGAnalyzer() {
                         "border border-slate-300 shadow-[0_0_22px_rgba(42,81,128,0.15)]",
                         "focus-visible:outline-none",
                         "focus-visible:ring-2 focus-visible:ring-slate-400/70 focus-visible:ring-offset-0",
-                        "dark:bg-slate-500/70 dark:text-slate-100 dark:placeholder:text-slate-300/90",
-                        "dark:border-slate-600 dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
+                        "dark:bg-[#355a7c] dark:text-white dark:placeholder:text-slate-200/90",
+                        "dark:border-slate-600 dark:shadow-none",
                         "dark:focus-visible:ring-slate-300",
                       )}
                     />
-                  </div><div className="games-intro">
+                  </div><div className="games-actions">
+                    {quickStatus && <span role="status" className="import-status" data-tone={quickStatus.tone}>{quickStatus.text}</span>}
+                    <Button className="action quick-add" onClick={handleQuickAdd} disabled={quickBusy || saveState === "saving"}><ClipboardPlus size={14} />{quickBusy ? "Adding…" : "Quick add"}</Button>
+                    <Button className="import-toggle" variant="outline" aria-expanded={importOpen} aria-controls="import-composer" onClick={() => setImportOpen(value => !value)}>{importOpen ? "Hide import" : "Import a game"}</Button>
+                  </div></>}
+                  importComposer={<div className="games-intro" id="import-composer" hidden={!importOpen}>
 
-                  <details className="capture-tray" open={importOpen} onToggle={event => setImportOpen(event.currentTarget.open)}><summary>{importOpen ? "Minimize import" : "Import a game"}</summary>
+
                     <label htmlFor="match-log" className="sr-only">Game log</label>
                     <div className="capture-composer">
 
@@ -658,8 +712,8 @@ export function PokemonTCGAnalyzer() {
                       "border border-slate-300 shadow-[0_0_22px_rgba(42,81,128,0.1)]",
                       "ring-offset-0 focus:ring-offset-0 focus-visible:ring-offset-0",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300",
-                      "dark:bg-slate-500/50 dark:text-white dark:placeholder:text-slate-200/90",
-                      "dark:border-[rgba(78,70,74,0.8)] dark:shadow-[0_0_32px_rgba(56,189,248,0.1)]",
+                      "dark:bg-[#355a7c] dark:text-white dark:placeholder:text-slate-200/90",
+                      "dark:border-slate-600 dark:shadow-none",
                       "dark:focus-visible:ring-slate-300/70",
                       "px-5 py-4",
                     )}
@@ -669,6 +723,7 @@ export function PokemonTCGAnalyzer() {
                     <div className="custom-button-container">
                       <Button
                         onClick={handleManualSubmit}
+                        disabled={quickBusy || saveState === "saving"}
                         className={cn(
                           "rounded-md px-5 h-9 text-sm",
                           "bg-[#5e82ab] text-slate-50 hover:bg-sky-800/50",
@@ -707,9 +762,14 @@ export function PokemonTCGAnalyzer() {
                     )}
                   </div>
                     </div>
-                  </details>
-                </div></>}
-                      games={filteredGames}
+                </div>}
+                      games={presentedGames}
+                      loading={gamesLoading}
+                      freshId={freshId}
+                      filterRevision={filterRevision}
+                      searchQuery={searchTerm}
+                      onClearSearch={() => setSearchTerm("")}
+                      onImport={() => { setImportOpen(true); requestAnimationFrame(() => document.getElementById("match-log")?.focus()) }}
                       restoreMatchId={returnState.current.id}
                       hasHistory={games.length > 0}
                       onSelectGame={setSelectedGameSafely}
@@ -739,7 +799,7 @@ export function PokemonTCGAnalyzer() {
           ) : activeTab === "players" ? (
             <PlayerDatabasePanel />
           ) : activeTab === "prizeMapper" ? (
-            <PrizeMapperPanel ptcglUsername={ptcglUsername} games={games} loading={gamesLoading} error={gamesError} onRetry={() => setLoadRevision(value => value + 1)} onImport={() => { setActiveTab("games"); requestAnimationFrame(() => { const tray = document.querySelector<HTMLDetailsElement>(".capture-tray"); if (tray) tray.open = true; document.getElementById("match-log")?.focus() }) }} isGuest={!user || user.username === "Guest"} />
+            <PrizeMapperPanel ptcglUsername={ptcglUsername} games={games} loading={gamesLoading} error={gamesError} onRetry={() => setLoadRevision(value => value + 1)} onImport={() => { setActiveTab("games"); setImportOpen(true); requestAnimationFrame(() => document.getElementById("match-log")?.focus()) }} isGuest={!user || user.username === "Guest"} />
           ) : (
             <DeckLab games={games} currentGameId={selectedGame?.id} />
           )}
