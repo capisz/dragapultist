@@ -32,7 +32,12 @@
 .review-raw-log,.review-secondary {margin-top:12px;padding:0 14px;background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:14px;}
 .review-raw-log summary,.review-secondary>summary {cursor:pointer;min-height:40px;padding:11px 0;font-size:12px;font-weight:500;color:var(--ui-ink-2);}
 .review-raw-log pre {margin-bottom:14px;white-space:pre-wrap;overflow-wrap:anywhere;font:11.5px/1.6 ui-monospace,Menlo,monospace;background:var(--ui-raised);border:1px solid var(--ui-border-soft);border-radius:10px;padding:12px;}
-.review-secondary>section {background:transparent;border:0;padding:4px 0 12px;margin:0;}.review-delete {display:flex;gap:8px;margin:8px 0;}
+.review-secondary>section {background:transparent;border:0;padding:4px 0 12px;margin:0;}
+.review-header-actions {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-top:16px;}
+.review-delete {display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-left:auto;}
+.review-delete button {height:32px;min-height:32px;padding:0 12px;border-radius:8px;font-size:12px;}
+.review-delete .review-delete-action {background:var(--ui-raised);border-color:var(--ui-border);color:var(--result-loss-fg);}
+.review-delete .review-delete-action:hover {background:var(--result-loss-bg);}
 .review-update-error {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px;background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:12px;}
 .review-disclosure-trigger {display:flex;align-items:center;min-height:40px;width:100%;text-align:left;font-size:12px;font-weight:500;color:var(--ui-ink-2);}
 .review-disclosure-trigger::before {content:'›';margin-right:8px;font-size:16px;}

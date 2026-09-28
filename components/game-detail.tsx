@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Pencil, Book, FileText, ArrowLeftRight, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Pencil, Book, FileText, ArrowLeftRight, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { highlightAceSpecCards, analyzeGameLog } from "@/utils/game-analyzer"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -52,6 +52,7 @@ export function GameDetail({ game, onBack, onDelete, allGames, onUpdateGame: com
     )
 
   const [activeTurnIndex, setActiveTurnIndex] = useState(0)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const roundList = useRef<HTMLDivElement>(null)
   const [pendingUpdate, setPendingUpdate] = useState<ReviewGame | null>(null)
   async function onUpdateGame(updatedGame: ReviewGame): Promise<boolean> {
@@ -132,6 +133,7 @@ export function GameDetail({ game, onBack, onDelete, allGames, onUpdateGame: com
   // Sync local state when switching games
   useEffect(() => {
     setActiveTurnIndex(0)
+    setConfirmDelete(false)
     setTags(game.tags || [])
     setTurnNotes(game.notes || {})
     setDeckList(game.deckList || "")
@@ -672,7 +674,6 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
 
   }
 
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const SummaryPills = () => (
   <div className="flex flex-wrap gap-2 text-xs">
     <span
@@ -703,7 +704,6 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
 const matchDetails = (<>
       <Collapsible className="review-secondary"><CollapsibleTrigger aria-label="Teams, tags & match details" className="review-disclosure-trigger">Teams, tags & match details</CollapsibleTrigger><CollapsibleContent>
 <div className="review-facts"><div><dt>Date</dt><dd>{game.date}</dd></div><div><dt>Turn order</dt><dd>{game.wentFirst ? "Went first" : "Went second"}</dd></div><div><dt>Your deck</dt><dd>{matchupName(game)}</dd></div><div><dt>Opponent deck</dt><dd>{matchupName(game, true)}</dd></div></div>
-      {onDelete && <div className="review-delete"><Button variant="outline" onClick={() => { if (confirmDelete) onDelete(); else setConfirmDelete(true) }}>{confirmDelete ? "Confirm delete match" : "Delete match"}</Button>{confirmDelete && <Button variant="ghost" onClick={() => setConfirmDelete(false)}>Cancel</Button>}</div>}
 <div className="review-tags-editor"><h3>Tags</h3><div>      {tags.map(tag => <span className="review-tag" key={tag.text}>{tag.text}<button type="button" aria-label={`Remove tag ${tag.text}`} onClick={() => removeTag(tag.text)}>×</button></span>)}
       <Input className="review-tag-input" aria-label="Add tag" placeholder="Add tag…" value={newTag} onChange={event => setNewTag(event.target.value)} onKeyDown={event => {
         if (event.key === 'Enter') { event.preventDefault(); addTag(newTag, '#e3eefb') }
@@ -896,12 +896,33 @@ return (
     )}
   >
 
-      {/* Back + summary row */}
-      <div className="flex items-center justify-between gap-4 pt-4">
+      {/* Review actions */}
+      <div className="review-header-actions">
         <Button onClick={handleBackClick} className={pillBtn(isBackButtonPressed)}>
           &larr; Back to list
         </Button>
-
+        {onDelete && (
+          <div className="review-delete">
+            <Button
+              type="button"
+              variant="outline"
+              className="review-delete-action"
+              disabled={saveState === "saving"}
+              onClick={() => {
+                if (confirmDelete) onDelete()
+                else setConfirmDelete(true)
+              }}
+            >
+              <Trash2 aria-hidden="true" />
+              {confirmDelete ? "Confirm delete match" : "Delete match"}
+            </Button>
+            {confirmDelete && (
+              <Button type="button" variant="ghost" disabled={saveState === "saving"} onClick={() => setConfirmDelete(false)}>
+                Cancel
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {(pendingUpdate || ["unavailable", "retryable_failure", "conflict", "expired", "unauthorized"].includes(saveState)) && <div className="review-update-error" role="alert">
@@ -916,6 +937,12 @@ return (
         <div><p>{game.date} · {game.wentFirst ? 'Went first' : 'Went second'}</p><h2>{game.opponent}</h2><SummaryPills /></div>
         <div className="review-matchup-actions"><MatchupSpritePair user={game.userMainAttacker} opponent={game.opponentMainAttacker} /><Button type="button" variant="ghost" className="review-edit-matchup" onClick={() => setShowSetPlayersDialog(true)}>Edit matchup</Button></div>
       </header>
+
+      <section aria-label="Engine score" className="mt-3 rounded-xl border border-[var(--ui-border)] bg-[var(--ui-panel)] px-3 py-2">
+        <h3 className="text-xs font-semibold text-[var(--ui-ink-2)]">Engine score</h3>
+        <p className="text-sm font-medium text-[var(--ui-ink)]">Not available yet</p>
+        <p className="text-xs text-[var(--ui-ink-2)]">Move-by-move analysis is planned for a future Pokémon TCG Stockfish integration.</p>
+      </section>
 
       <section className="review-workspace" aria-label="Turn review">
         <nav className="review-turns" aria-label="Turn navigator">
