@@ -11,7 +11,17 @@ const requested = process.env.DRAGAPULTIST_URL
 const base = !app.isPackaged && requested && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(requested) ? requested.replace(/\/$/,'') : PRODUCTION
 const offlineURL = pathToFileURL(path.join(__dirname, 'offline.html')).href
 let window, tray, queue, webSession, quitting = false, initializing = true, fatal = '', online = false, identity = null, lastClipboardHash = '', polling = false, submitting = false, syncingIdentity = null
+let configuring = false, captureGeneration = 0
 let timers = []
+async function readClipboardText() {
+  try {
+    const text = await clipboard.readText()
+    if (typeof text !== 'string') throw Error('Unexpected clipboard response')
+    return text
+  } catch {
+    throw Error('Could not read the clipboard. Check clipboard access for Dragapultist, then try again.')
+  }
+}
 function trusted(event) { return window && event.sender === window.webContents && event.senderFrame === event.sender.mainFrame && new URL(event.senderFrame.url).origin === base }
 function snapshot() {
   const settings = queue?.data.settings || {}
@@ -41,8 +51,8 @@ async function refreshIdentity() {
       const data = await responseJSON(response)
       if (!Object.hasOwn(data,'user')) throw Error('The website needs the desktop sync update.')
       online = true; identity = data.user && typeof data.user.uid === 'string' ? data.user : null
-      if (queue && identity && queue.data.settings.owner !== identity.uid) { await queue.configure({owner:identity.uid,username:'',enabled:false}); lastClipboardHash=clipboardHash(clipboard.readText()) }
-      if (!identity && queue?.data.settings.enabled) await queue.configure({enabled:false})
+      if (queue && identity && queue.data.settings.owner !== identity.uid) { captureGeneration++; await queue.configure({owner:identity.uid,username:'',enabled:false}); lastClipboardHash='' }
+      if (!identity && queue?.data.settings.enabled) { captureGeneration++; await queue.configure({enabled:false}) }
       return data
     } catch { online=false; identity=null; return null } finally { syncingIdentity=null; emit() }
   })()
@@ -51,19 +61,36 @@ async function refreshIdentity() {
 async function configure(value) {
   if (initializing) throw Error('Secure storage is still starting. Please try again shortly.')
   if (!queue || fatal) throw Error(fatal || 'Queue unavailable')
-  const patch = {}
-  if (typeof value?.username === 'string') { const name=value.username.trim();if(!name||name.length>80)throw Error('Enter your PTCGL username (1–80 characters).');patch.username=name }
-  for(const k of ['enabled','notifications','launchAtLogin']) if(typeof value?.[k]==='boolean')patch[k]=value[k]
-  if(patch.enabled===true){await refreshIdentity();if(!identity)throw Error('Sign in before enabling capture.');if(!(patch.username||queue.data.settings.username))throw Error('Enter your PTCGL username first.');patch.owner=identity.uid;lastClipboardHash=clipboardHash(clipboard.readText())}
-  if (Object.hasOwn(patch,'launchAtLogin')) app.setLoginItemSettings({openAtLogin:patch.launchAtLogin})
-  await queue.configure(patch);emit();return snapshot()
+  if (configuring) throw Error('Capture settings are being saved. Please try again shortly.')
+  configuring=true;captureGeneration++
+  try {
+    const patch = {}
+    if (typeof value?.username === 'string') { const name=value.username.trim();if(!name||name.length>80)throw Error('Enter your PTCGL username (1–80 characters).');patch.username=name }
+    for(const k of ['enabled','notifications','launchAtLogin']) if(typeof value?.[k]==='boolean')patch[k]=value[k]
+    if(patch.enabled===true){
+      await refreshIdentity()
+      const owner=identity?.uid
+      if(!owner)throw Error('Sign in before enabling capture.')
+      if(!(patch.username||queue.data.settings.username))throw Error('Enter your PTCGL username first.')
+      const text=await readClipboardText()
+      if(identity?.uid!==owner||quitting)throw Error('Your session changed. Sign in and try enabling capture again.')
+      patch.owner=owner;lastClipboardHash=clipboardHash(text)
+    }
+    if (Object.hasOwn(patch,'launchAtLogin')) app.setLoginItemSettings({openAtLogin:patch.launchAtLogin})
+    await queue.configure(patch);emit();return snapshot()
+  } finally { configuring=false }
 }
 async function capture() {
-  if(initializing||polling||fatal||!queue?.data.settings.enabled||!queue.data.settings.owner)return
+  if(initializing||configuring||quitting||polling||fatal||!queue?.data.settings.enabled||!queue.data.settings.owner)return
   polling=true
-  try{const text=clipboard.readText();const hash=clipboardHash(text);if(hash===lastClipboardHash)return;lastClipboardHash=hash;if(!looksLikeLog(text))return
-    const s=queue.data.settings;if(await queue.add(text,s.owner,s.username)){notify(online?'Game log queued.':'Offline: game log saved to the queue.');emit()}
-  }catch{fatal='Could not save the clipboard log. Capture paused. Your existing queue is preserved; restart and copy this log again.';notify(fatal);emit()}finally{polling=false}
+  const generation=captureGeneration, s={...queue.data.settings}
+  try{
+    const text=await readClipboardText()
+    // A clipboard read can finish after capture is paused or the account changes.
+    if(quitting||configuring||fatal||generation!==captureGeneration||!queue.data.settings.enabled||queue.data.settings.owner!==s.owner||queue.data.settings.username!==s.username||(online&&identity?.uid!==s.owner))return
+    const hash=clipboardHash(text);if(hash===lastClipboardHash)return;lastClipboardHash=hash;if(!looksLikeLog(text))return
+    if(await queue.add(text,s.owner,s.username)){notify(online?'Game log queued.':'Offline: game log saved to the queue.');emit()}
+  }catch{if(quitting||generation!==captureGeneration)return;fatal='Could not read or save the clipboard log. Capture paused. Your existing queue is preserved; restart and copy this log again.';notify(fatal);emit()}finally{polling=false}
 }
 async function submit(value) {
   if(submitting)return {saved:false}
@@ -106,7 +133,12 @@ async function initializeCapture(){
     queue=await openSecureQueue(path.join(app.getPath('userData'),'capture-queue.enc'),safeStorage)
     if(quitting)return
     await refreshIdentity()
-    lastClipboardHash=clipboardHash(clipboard.readText())
+    // Clipboard access is only needed when capture was already enabled.
+    if(queue.data.settings.enabled){
+      const generation=captureGeneration
+      const text=await readClipboardText()
+      if(generation===captureGeneration)lastClipboardHash=clipboardHash(text)
+    }
   }catch(e){fatal=e.message}
   finally{initializing=false;if(!quitting)emit()}
 }
