@@ -1,7 +1,7 @@
 {
   "name": "dragapultist-desktop",
   "productName": "Dragapultist Beta",
-  "version": "0.2.0-beta.1",
+  "version": "0.2.0-beta.2",
   "private": true,
   "description": "Dragapultist desktop clipboard companion",
   "author": "Dragapultist",
@@ -17,7 +17,7 @@
   "build": {
     "appId": "com.dragapultist.desktop.beta",
     "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "queue.cjs", "transport.cjs", "assets/**/*", "offline.html", "package.json"],
+    "files": ["main.js", "preload.js", "queue.cjs", "transport.cjs", "startup.cjs", "assets/**/*", "offline.html", "package.json"],
     "asar": true,
     "artifactName": "Dragapultist-${version}-${os}-${arch}.${ext}",
     "mac": { "target": "dmg", "category": "public.app-category.games", "identity": null, "icon": "assets/icon.png" },
