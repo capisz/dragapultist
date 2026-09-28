@@ -46,6 +46,7 @@ export function PokemonTCGAnalyzer() {
   const [gamesError, setGamesError] = useState<string | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [loadRevision, setLoadRevision] = useState(0)
+  const pendingHistoryRefresh = useRef(false)
   const [games, setGames] = useState<GameSummary[]>([])
   const [searchResultIds, setSearchResultIds] = useState<Set<string> | null>(null)
   const [selectedGame, setSelectedGame] = useState<GameSummary | null>(null)
@@ -188,6 +189,37 @@ export function PokemonTCGAnalyzer() {
       .finally(() => { if (!controller.signal.aborted) setGamesLoading(false) })
     return () => controller.abort()
   }, [user, loadRevision])
+
+  useEffect(() => {
+    if (!user || user.username === "Guest") {
+      pendingHistoryRefresh.current = false
+      return
+    }
+
+    const refresh = () => {
+      // Keep an open review and its unsaved notes in place during desktop sync.
+      if (selectedGame || saveState === "saving" || saveState === "loading" || document.visibilityState !== "visible") {
+        pendingHistoryRefresh.current = true
+        return
+      }
+      pendingHistoryRefresh.current = false
+      setLoadRevision(value => value + 1)
+    }
+
+    if (pendingHistoryRefresh.current && !selectedGame && saveState !== "saving" && saveState !== "loading") refresh()
+    document.addEventListener("visibilitychange", refresh)
+    window.addEventListener("focus", refresh)
+    window.addEventListener("online", refresh)
+    window.addEventListener("dragapultist-games-changed", refresh)
+    const timer = window.setInterval(refresh, 60000)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener("visibilitychange", refresh)
+      window.removeEventListener("focus", refresh)
+      window.removeEventListener("online", refresh)
+      window.removeEventListener("dragapultist-games-changed", refresh)
+    }
+  }, [selectedGame, user, saveState])
 
   useEffect(() => {
     const query = searchTerm.trim()

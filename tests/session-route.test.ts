@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const state = vi.hoisted(() => ({
-  csrf: "c".repeat(32),
+  csrf: "c".repeat(43),
+  sessionCookie: "active-session" as string | null,
   verifyResult: null as Record<string, unknown> | null,
   verifyError: null as Error | null,
   users: [] as Array<Record<string, unknown>>,
@@ -10,13 +11,13 @@ const state = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => {
     if (name === "dragapultist_csrf") return { value: state.csrf }
-    if (name === "dragapultist_session") return { value: "active-session" }
+    if (name === "dragapultist_session" && state.sessionCookie) return { value: state.sessionCookie }
     return undefined
   } }),
 }))
 
 const revokeRefreshTokens = vi.hoisted(() => vi.fn(async () => undefined))
-const verifySessionCookie = vi.hoisted(() => vi.fn(async () => ({ uid: "uid-alice" })))
+const verifySessionCookie = vi.hoisted(() => vi.fn(async () => ({ uid: "uid-alice", exp: 2_000_000_000 })))
 
 vi.mock("@/lib/firebase-admin", () => ({
   firebaseAdminAuth: {
@@ -48,7 +49,7 @@ vi.mock("@/lib/mongodb", () => ({
   }),
 }))
 
-import { DELETE, POST } from "@/app/api/auth/session/route"
+import { DELETE, POST, GET } from "@/app/api/auth/session/route"
 
 function request(overrides: { origin?: string; csrf?: string } = {}) {
   const csrf = overrides.csrf ?? state.csrf
@@ -62,6 +63,8 @@ function request(overrides: { origin?: string; csrf?: string } = {}) {
 }
 
 beforeEach(() => {
+  state.csrf = "c".repeat(43)
+  state.sessionCookie = "active-session"
   state.users = []
   state.verifyError = null
   state.verifyResult = {
@@ -72,10 +75,53 @@ beforeEach(() => {
     name: "alice",
   }
   revokeRefreshTokens.mockClear()
-  verifySessionCookie.mockClear()
+  verifySessionCookie.mockReset()
+  verifySessionCookie.mockResolvedValue({ uid: "uid-alice", exp: 2_000_000_000 })
 })
 
 describe("session route", () => {
+  it("adds verified desktop identity without removing CSRF and disables caching", async () => {
+    const response = await GET()
+    const body = await response.json()
+    expect(body.csrfToken).toBeTypeOf("string")
+    expect(body.user).toEqual({ uid: "uid-alice", expiresAt: 2_000_000_000_000 })
+    expect(response.headers.get("cache-control")).toBe("no-store")
+  })
+
+  it("keeps background status polls from replacing an in-flight request's CSRF token", async () => {
+    const initial = await (await GET()).json()
+    const background = await (await GET()).json()
+    expect(initial.csrfToken).toBe(state.csrf)
+    expect(background.csrfToken).toBe(initial.csrfToken)
+    expect((await POST(request({ csrf: initial.csrfToken }))).status).toBe(200)
+  })
+
+  it("returns explicit signed-out identity while still providing a CSRF token", async () => {
+    state.sessionCookie = null
+    const response = await GET()
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ csrfToken: state.csrf, user: null })
+    expect(verifySessionCookie).not.toHaveBeenCalled()
+  })
+
+  it("does not expose desktop identity for a revoked or expired session", async () => {
+    verifySessionCookie.mockRejectedValueOnce(new Error("expired session"))
+    const response = await GET()
+    expect((await response.json()).user).toBeNull()
+    expect(verifySessionCookie).toHaveBeenCalledWith("active-session", true)
+  })
+
+  it("replaces missing or malformed CSRF cookies with a fresh token", async () => {
+    for (const invalidToken of ["", "invalid-cookie"]) {
+      state.csrf = invalidToken
+      const response = await GET()
+      const body = await response.json()
+      expect(body.csrfToken).toMatch(/^[A-Za-z0-9_-]{43}$/)
+      expect(body.csrfToken).not.toBe(invalidToken)
+      expect(response.headers.get("set-cookie")).toContain(`dragapultist_csrf=${body.csrfToken}`)
+    }
+  })
+
   it("rejects missing origins and CSRF mismatches", async () => {
     expect((await POST(request({ origin: "" }))).status).toBe(403)
     expect((await POST(request({ csrf: "wrong-token-value-that-is-long" }))).status).toBe(403)

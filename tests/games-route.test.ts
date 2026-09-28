@@ -120,6 +120,13 @@ beforeEach(() => {
 })
 
 describe("game routes", () => {
+  it("rejects a desktop queue bound to another authenticated account", async () => {
+    const req = mutation("/api/games", "POST", { gameSummary: validGame })
+    req.headers.set("x-desktop-owner", "other-owner")
+    expect((await POST(req as any)).status).toBe(401)
+    expect(state.docs).toHaveLength(0)
+  })
+
   it("derives ownership from each verified user and deduplicates only within that owner", async () => {
     expect((await POST(mutation("/api/games", "POST", { gameSummary: { ...validGame, userId: "forged" } }) as any)).status).toBe(201)
     expect(state.docs[0].userId).toBe("user-a")

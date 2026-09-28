@@ -108,6 +108,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(errorEnvelope(identity.status === "invalid" ? "SESSION_EXPIRED" : "UNAUTHORIZED", "Sign in to save this game."), { status: 401 })
     }
 
+    const desktopOwner = req.headers.get("x-desktop-owner")
+    if (desktopOwner && desktopOwner !== userId) {
+      return NextResponse.json(errorEnvelope("SESSION_EXPIRED", "The desktop queue belongs to a different account."), { status: 401 })
+    }
+
     const body = await req.json().catch(() => null)
     const requestPayload = createGameRequestSchema.safeParse(body)
     const legacyPayload = gameInputSchema.safeParse(body?.gameSummary)
