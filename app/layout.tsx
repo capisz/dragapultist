@@ -29,8 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Main grows to fill remaining space */}
             <main className="flex-1">
-              <DesktopCompanion />
-              {children}
+              <DesktopCompanion>{children}</DesktopCompanion>
             </main>
 
             {/* Footer is outside any max-width page container */}

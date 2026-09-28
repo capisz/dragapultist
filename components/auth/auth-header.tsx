@@ -28,6 +28,7 @@ import { firebaseLogout } from "@/lib/firebase-session-client"
 import { AuthPanel } from "./auth-panel"
 import { LoginForm } from "@/components/auth/login-form"
 import { SignUpForm } from "@/components/auth/signup-form"
+import { useDesktopSettings } from "@/components/desktop-companion"
 
 const montserrat = Montserrat({ subsets: ["latin"] })
 
@@ -45,12 +46,18 @@ const BRAND_BTN =
 
 export function AuthHeader() {
   const router = useRouter()
-
+  const desktop = useDesktopSettings()
+  const { setAuthDialogOpen } = desktop
 
   const [user, setUser] = useState<HeaderUser>(null)
   const [authOpen, setAuthOpen] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
   const [authTab, setAuthTab] = useState<"login" | "signup">("login")
+
+  useEffect(() => {
+    setAuthDialogOpen(authOpen)
+    return () => setAuthDialogOpen(false)
+  }, [authOpen, setAuthDialogOpen])
 
   useEffect(() => {
     const refresh = () => getUser().then((u: any) => { setUser(u ?? null); setAuthChecked(true) }).catch(() => { setUser(null); setAuthChecked(true) })
@@ -254,7 +261,7 @@ export function AuthHeader() {
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" className={cn("h-9 rounded-md px-3 max-w-[220px]", BRAND_BTN)}>
+                  <Button id="account-menu-trigger" type="button" className={cn("h-9 rounded-md px-3 max-w-[220px]", BRAND_BTN)}>
                     <UserRound className="mr-2 h-4 w-4 opacity-90" />
                     <span className="truncate">{displayName}</span>
                   </Button>
@@ -269,6 +276,9 @@ export function AuthHeader() {
                   )}
                 >
                   <DropdownMenuItem onClick={() => router.push("/account")}>Account</DropdownMenuItem>
+                  {desktop.available && <DropdownMenuItem onSelect={desktop.openSettings}>
+                    Desktop settings{desktop.needsAttention && <span className="sr-only"> — Needs attention</span>}
+                  </DropdownMenuItem>}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="text-red-600 dark:text-red-400">
                     Sign out
