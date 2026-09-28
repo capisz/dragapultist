@@ -39,7 +39,12 @@ export function MatchupSpritePair({ user, opponent }: { user: string; opponent: 
   }, [])
   const animate = motionAllowed && !paused
   return <div className="review-matchup">
-    <div><AnimatedPokemon key={`${user}-${animate}`} name={user} animate={animate} /><span aria-hidden="true">vs</span><AnimatedPokemon key={`${opponent}-${animate}`} name={opponent} animate={animate} /></div>
+    <div>
+      {/* Mirror matches need a distinct identity for each side when animation resets. */}
+      <AnimatedPokemon key={`user-${user}-${animate}`} name={user} animate={animate} />
+      <span aria-hidden="true">vs</span>
+      <AnimatedPokemon key={`opponent-${opponent}-${animate}`} name={opponent} animate={animate} />
+    </div>
     {motionAllowed && (verifiedAnimation(user) || verifiedAnimation(opponent)) && <button type="button" onClick={() => setPaused(value => !value)}>{paused ? 'Animate sprites' : 'Pause sprites'}</button>}
   </div>
 }
