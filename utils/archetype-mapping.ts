@@ -16,6 +16,8 @@ export interface ArchetypeRule {
   id: string
   label: string
   mustInclude: string[]
+  variantOf?: string
+  autoDetect?: boolean
   sprite?: string
   aliases?: string[]
   iconSpecs?: IconSpec[] // enables 2-icon (or 3-icon) archetypes
@@ -29,7 +31,7 @@ interface CustomArchetypeSpec {
 }
 
 // Sprite IDs resolve through PokeAPI first, then local /public/sprites fallbacks.
-export const ARCHETYPE_RULES: ArchetypeRule[] = [
+const BASE_ARCHETYPE_RULES: ArchetypeRule[] = [
   { id: "basic-box", label: "Basic Box", mustInclude: ["mew"], iconSpecs: ["mew.png", "latias.png"], sprite: "mew.png", aliases: ["Basic Box"] },
   {
     id: "dragapult-ex",
@@ -41,7 +43,7 @@ export const ARCHETYPE_RULES: ArchetypeRule[] = [
   },
   {
     id: "raging-bolt-ex",
-    label: "Raging Boltex",
+    label: "Raging Bolt ex",
     mustInclude: ["raging bolt"],
     iconSpecs: ["raging-bolt.png"],
     sprite: "raging-bolt.png",
@@ -353,19 +355,229 @@ export const ARCHETYPE_RULES: ArchetypeRule[] = [
     sprite: "gardevoir-mega.png",
     aliases: ["Mega Gardevoir ex"],
   },
+  {
+    id: "metagross-metal-maker",
+    label: "Metagross Metal Maker",
+    mustInclude: ["metagross"],
+    // The summary does not retain card numbers/abilities to distinguish this printing.
+    autoDetect: false,
+    iconSpecs: ["metagross.png"],
+    sprite: "metagross.png",
+    aliases: ["Metal Maker Metagross"],
+  },
+  {
+    id: "mega-manectric-ex",
+    label: "Mega Manectric ex",
+    mustInclude: ["mega manectric"],
+    iconSpecs: ["manectric-mega.png"],
+    sprite: "manectric-mega.png",
+  },
+  {
+    id: "beedrill-ex",
+    label: "Beedrill ex",
+    mustInclude: ["beedrill ex"],
+    iconSpecs: ["beedrill.png"],
+    sprite: "beedrill.png",
+  },
 ]
 
-export const AVAILABLE_ARCHETYPE_IDS = [
+// Limitless's split-variant index, reviewed 2026-09-28. Keep the broad family
+// selectable when a log does not reveal enough to identify a particular build.
+// Sources and the intentionally manual-only entries: docs/archetype-catalog.md.
+const ARCHETYPE_VARIANT_RULES: ArchetypeRule[] = [
+  {
+    id: "dragapult-dusknoir", label: "Dragapult Dusknoir", variantOf: "dragapult-ex",
+    mustInclude: ["dragapult", "dusknoir"],
+    iconSpecs: ["dragapult.png", "dusknoir.png"], sprite: "dragapult.png",
+    aliases: ["Dragapult ex / Dusknoir", "PultNoir"],
+  },
+  {
+    id: "dragapult-blaziken", label: "Dragapult Blaziken", variantOf: "dragapult-ex",
+    mustInclude: ["dragapult", "blaziken"],
+    iconSpecs: ["dragapult.png", "blaziken.png"], sprite: "dragapult.png",
+    aliases: ["Dragapult ex / Blaziken"],
+  },
+  {
+    id: "dragapult-dudunsparce", label: "Dragapult Dudunsparce", variantOf: "dragapult-ex",
+    mustInclude: ["dragapult", "dudunsparce"],
+    iconSpecs: ["dragapult.png", "dudunsparce.png"], sprite: "dragapult.png",
+    aliases: ["Dragapult ex / Dudunsparce", "Pult Dudun"],
+  },
+  {
+    id: "dragapult-pidgeot", label: "Dragapult Pidgeot", variantOf: "dragapult-ex",
+    mustInclude: ["dragapult", "pidgeot"],
+    iconSpecs: ["dragapult.png", "pidgeot.png"], sprite: "dragapult.png",
+    aliases: ["Dragapult ex / Pidgeot ex", "Pidge Pult"],
+  },
+  {
+    id: "dragapult-charizard", label: "Dragapult Charizard", variantOf: "dragapult-ex",
+    mustInclude: ["dragapult", "charizard"],
+    iconSpecs: ["dragapult.png", "charizard.png"], sprite: "dragapult.png",
+    aliases: ["Dragapult ex / Charizard ex", "PultZard"],
+  },
+  {
+    id: "dragapult-iron-thorns", label: "Dragapult Iron Thorns", variantOf: "dragapult-ex",
+    mustInclude: ["dragapult", "iron thorns"],
+    iconSpecs: ["dragapult.png", "iron-thorns.png"], sprite: "dragapult.png",
+    aliases: ["Dragapult ex / Iron Thorns ex"],
+  },
+  {
+    id: "dragapult-gholdengo", label: "Dragapult Gholdengo", variantOf: "dragapult-ex",
+    mustInclude: ["dragapult", "gholdengo"],
+    iconSpecs: ["dragapult.png", "gholdengo.png"], sprite: "dragapult.png",
+    aliases: ["Dragapult ex / Gholdengo ex"],
+  },
+  {
+    id: "dragapult-froslass", label: "Dragapult Froslass", variantOf: "dragapult-ex",
+    mustInclude: ["dragapult", "froslass"],
+    iconSpecs: ["dragapult.png", "froslass.png"], sprite: "dragapult.png",
+    aliases: ["Dragapult ex / Froslass"],
+  },
+  {
+    id: "dragapult-zoroark", label: "Dragapult Zoroark", variantOf: "dragapult-ex",
+    mustInclude: ["dragapult", "zoroark"],
+    iconSpecs: ["dragapult.png", "zoroark.png"], sprite: "dragapult.png",
+    aliases: ["Dragapult ex / N's Zoroark ex"],
+  },
+  {
+    id: "dragapult-noctowl", label: "Dragapult Noctowl", variantOf: "dragapult-ex",
+    mustInclude: ["dragapult", "noctowl"],
+    iconSpecs: ["dragapult.png", "noctowl.png"], sprite: "dragapult.png",
+    aliases: ["Dragapult ex / Noctowl"],
+  },
+  {
+    id: "dragapult-lz-box", label: "Dragapult LZ Box", variantOf: "dragapult-ex",
+    mustInclude: ["dragapult", "comfey"],
+    iconSpecs: ["dragapult.png", "comfey.png"], sprite: "dragapult.png",
+    aliases: ["Dragapult Lost Zone Box", "Dragapult Lost Box"],
+  },
+  {
+    id: "alakazam-dudunsparce", label: "Alakazam Dudunsparce", variantOf: "alakazam-powerful-hand",
+    mustInclude: ["alakazam", "dudunsparce"],
+    iconSpecs: ["alakazam.png", "dudunsparce.png"], sprite: "alakazam.png",
+  },
+  {
+    id: "alakazam-dusknoir", label: "Alakazam Dusknoir", variantOf: "alakazam-powerful-hand",
+    mustInclude: ["alakazam", "dusknoir"],
+    iconSpecs: ["alakazam.png", "dusknoir.png"], sprite: "alakazam.png",
+  },
+  {
+    id: "clefairy-ogerpon", label: "Clefairy Ogerpon", variantOf: "lillies-clefairy-ex",
+    mustInclude: ["clefairy", "ogerpon"],
+    iconSpecs: ["clefairy.png", "ogerpon.png"], sprite: "clefairy.png",
+    aliases: ["Lillie's Clefairy ex / Teal Mask Ogerpon ex"],
+  },
+  {
+    id: "lucario-hariyama", label: "Lucario Hariyama", variantOf: "mega-lucario-ex",
+    mustInclude: ["mega lucario", "hariyama"],
+    iconSpecs: ["lucario-mega.png", "hariyama.png"], sprite: "lucario-mega.png",
+    aliases: ["Mega Lucario ex / Hariyama"],
+  },
+  {
+    id: "raging-bolt-ogerpon", label: "Raging Bolt Ogerpon", variantOf: "raging-bolt-ex",
+    mustInclude: ["raging bolt", "ogerpon"],
+    iconSpecs: ["raging-bolt.png", "ogerpon.png"], sprite: "raging-bolt.png",
+    aliases: ["Raging Bolt ex / Teal Mask Ogerpon ex"],
+  },
+  {
+    id: "grimmsnarl-froslass", label: "Grimmsnarl Froslass", variantOf: "marnies-grimmsnarl-ex",
+    mustInclude: ["grimmsnarl", "froslass"],
+    iconSpecs: ["grimmsnarl.png", "froslass.png"], sprite: "grimmsnarl.png",
+    aliases: ["Marnie's Grimmsnarl ex / Froslass"],
+  },
+  {
+    id: "lopunny-dusknoir", label: "Lopunny Dusknoir", variantOf: "mega-lopunny-ex",
+    mustInclude: ["mega lopunny", "dusknoir"],
+    iconSpecs: ["lopunny-mega.png", "dusknoir.png"], sprite: "lopunny-mega.png",
+    aliases: ["Mega Lopunny ex / Dusknoir"],
+  },
+  {
+    id: "lopunny-dudunsparce", label: "Lopunny Dudunsparce", variantOf: "mega-lopunny-ex",
+    mustInclude: ["mega lopunny", "dudunsparce"],
+    iconSpecs: ["lopunny-mega.png", "dudunsparce.png"], sprite: "lopunny-mega.png",
+    aliases: ["Mega Lopunny ex / Dudunsparce"],
+  },
+  {
+    id: "sharpedo-toxtricity", label: "Sharpedo Toxtricity", variantOf: "mega-sharpedo-ex",
+    mustInclude: ["mega sharpedo", "toxtricity"],
+    iconSpecs: ["sharpedo-mega.png", "toxtricity.png"], sprite: "sharpedo-mega.png",
+    aliases: ["Mega Sharpedo ex / Toxtricity"],
+  },
+  {
+    id: "seaking-festival-lead", label: "Seaking Festival Lead", variantOf: "festival-lead",
+    mustInclude: ["seaking", "thwackey"],
+    iconSpecs: ["seaking.png", "thwackey.png"], sprite: "seaking.png",
+    aliases: ["Seaking Thwackey", "Seaking Dipplin"],
+  },
+  {
+    id: "toxtricity-box", label: "Toxtricity Box", variantOf: "toxtricity-sinister-surge",
+    mustInclude: ["toxtricity"],
+    // A box classification depends on the wider deck composition, not one sighting.
+    autoDetect: false,
+    iconSpecs: ["toxtricity.png", "absol-mega.png"], sprite: "toxtricity.png",
+    aliases: ["Toxtricity Mega Absol Box"],
+  },
+  {
+    id: "kangaskhan-bouffalant", label: "Kangaskhan Bouffalant", variantOf: "mega-kangaskhan-ex",
+    mustInclude: ["mega kangaskhan", "bouffalant"],
+    iconSpecs: ["kangaskhan-mega.png", "bouffalant.png"], sprite: "kangaskhan-mega.png",
+    aliases: ["Mega Kangaskhan ex / Bouffalant"],
+  },
+  {
+    id: "starmie-dusknoir", label: "Starmie Dusknoir", variantOf: "mega-starmie-ex",
+    mustInclude: ["mega starmie", "dusknoir"],
+    iconSpecs: ["starmie-mega.png", "dusknoir.png"], sprite: "starmie-mega.png",
+    aliases: ["Mega Starmie ex / Dusknoir"],
+  },
+  {
+    id: "diancie-dusknoir", label: "Diancie Dusknoir", variantOf: "mega-diancie-ex",
+    mustInclude: ["mega diancie", "dusknoir"],
+    iconSpecs: ["diancie-mega.png", "dusknoir.png"], sprite: "diancie-mega.png",
+    aliases: ["Mega Diancie ex / Dusknoir"],
+  },
+  {
+    id: "okidogi-barbaracle", label: "Okidogi Barbaracle", variantOf: "okidogi-adrena-power",
+    mustInclude: ["okidogi", "barbaracle"],
+    iconSpecs: ["okidogi.png", "barbaracle.png"], sprite: "okidogi.png",
+    aliases: ["Okidogi Adrena-Power / Barbaracle"],
+  },
+  {
+    id: "manectric-eelektrik", label: "Manectric Eelektrik", variantOf: "mega-manectric-ex",
+    mustInclude: ["mega manectric", "eelektrik"],
+    iconSpecs: ["manectric-mega.png", "eelektrik.png"], sprite: "manectric-mega.png",
+    aliases: ["Mega Manectric ex / Eelektrik"],
+  },
+]
+
+export const ARCHETYPE_RULES: ArchetypeRule[] = BASE_ARCHETYPE_RULES.flatMap((base) => [
+  base,
+  ...ARCHETYPE_VARIANT_RULES.filter((variant) => variant.variantOf === base.id),
+])
+
+const PREFERRED_ARCHETYPE_ORDER = [
   "dragapult-ex", "basic-box", "alakazam-powerful-hand", "n-zoroark-ex", "slowking-seek-inspiration", "mega-excadrill-ex", "festival-lead", "lillies-clefairy-ex", "crustle-mysterious-rock-inn", "raging-bolt-ex", "marnies-grimmsnarl-ex", "mega-lopunny-ex", "mega-lucario-ex", "dhelmise-hide-n-sneak", "hydrapple-ex", "toxtricity-sinister-surge", "mega-absol-box", "greninja-ex", "cynthias-garchomp-ex", "mega-sharpedo-ex", "mega-greninja-ex", "rockets-mewtwo-ex", "mega-venusaur-ex", "mega-kangaskhan-ex", "mega-chandelure-ex",
 ] as const
+
+// Preserve the familiar family order, put each variant beside its family, and
+// include every catalog entry so a second hand-maintained allowlist cannot hide it.
+export const AVAILABLE_ARCHETYPE_IDS: string[] = [
+  ...new Set<string>([...PREFERRED_ARCHETYPE_ORDER, ...BASE_ARCHETYPE_RULES.map((rule) => rule.id)]),
+].flatMap((id) => [id, ...ARCHETYPE_VARIANT_RULES.filter((rule) => rule.variantOf === id).map((rule) => rule.id)])
 
 function normalizeText(input: string): string {
   return input
     .toLowerCase()
-    .replace(/’/g, "'")
-    .replace(/[^a-z0-9\s]/g, "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
+}
+
+export function matchesArchetypeSearch(value: string, search: string, keywords: string[] = []): boolean {
+  const text = normalizeText([value, ...keywords].join(" "))
+  return normalizeText(search).split(" ").every((token) => text.includes(token))
 }
 
 function slugify(input: string): string {
@@ -516,12 +728,24 @@ function inferForSide(main: string, others: unknown): string | null {
   const otherArr = safeStringArray(others)
   const names = [main, ...otherArr].map(normalizeText)
 
-  for (const rule of ARCHETYPE_RULES) {
-    const matches = rule.mustInclude.every((token) => {
-      const t = normalizeText(token)
-      return names.some((n) => n.includes(t))
-    })
-    if (matches) return rule.id
+  const matches = (rule: ArchetypeRule) => rule.autoDetect !== false && rule.mustInclude.every((token) => {
+    const t = normalizeText(token)
+    return names.some((name) => ` ${name} `.includes(` ${t} `))
+  })
+
+  // All required Pokémon must have appeared on this side. Never combine one
+  // player's Dragapult with the other player's Dusknoir to guess a variant.
+  const variants = ARCHETYPE_VARIANT_RULES.filter(matches)
+  if (variants.length === 1) return variants[0].id
+  if (variants.length > 1) {
+    const families = new Set(variants.map((rule) => rule.variantOf))
+    // Hybrid builds can satisfy several variants. Keep the broad family until
+    // the player chooses a specific label rather than guessing by rule order.
+    if (families.size === 1) return variants[0].variantOf ?? null
+  }
+
+  for (const rule of BASE_ARCHETYPE_RULES) {
+    if (matches(rule)) return rule.id
   }
   return null
 }

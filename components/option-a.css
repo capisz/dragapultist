@@ -21,7 +21,8 @@
 .archetype-popover [cmdk-item] {gap:10px;min-height:50px;margin:3px 5px;border-radius:7px;font-size:13px;color:inherit;cursor:pointer;}
 .archetype-popover [cmdk-item][data-selected=true] {background:var(--dialog-field);color:inherit;}
 .archetype-popover [cmdk-item]>span:not(.archetype-icons) {flex:1;}.archetype-popover small {font-size:10px;white-space:nowrap;}
-.archetype-popover [cmdk-list] {max-height:min(380px,55dvh);overscroll-behavior:contain;}
+.archetype-popover [cmdk-input-wrapper] {flex-shrink:0;}
+.archetype-popover [cmdk-list] {min-height:0;max-height:min(380px,55dvh,max(0px,calc(var(--radix-popover-content-available-height,100dvh) - 48px)));overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;}
 .prize-picker>.archetype-combobox {margin-bottom:10px;}
 @media(max-width:600px) {.archetype-popover {width:calc(100vw - 24px)!important;}.archetype-popover [cmdk-item] {min-height:54px;}.option-a-auth {padding:20px!important;}}
 .archetype-icons img {image-rendering:auto!important;}
