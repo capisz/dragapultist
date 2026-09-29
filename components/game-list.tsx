@@ -5,8 +5,8 @@ import type { GameSummary } from '@/types/game'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { MatchSprite } from './match-sprite'
-import { matchOutcome, matchupName } from '@/utils/match-presentation'
+import { ArchetypeIconPair } from './archetype-icon-pair'
+import { matchArchetype, matchOutcome } from '@/utils/match-presentation'
 import { GhostScaffold } from './ghost-scaffold'
 import './game-list.css'
 
@@ -41,7 +41,7 @@ interface GameListProps {
 
 export function GameList({ toolbar, importComposer, loading = false, freshId, filterRevision = 0, games, onSelectGame, sortConfig, onSort, restoreMatchId, hasHistory, searchQuery = '', onClearSearch, onImport }: GameListProps) {
   const [filterSide, setFilterSide] = useState<'user' | 'opponent'>('user')
-  const [pokemonFilter, setPokemonFilter] = useState<string | null>(null)
+  const [archetypeFilter, setArchetypeFilter] = useState<{ id: string | null } | null>(null)
   const field = useRef<HTMLDivElement>(null)
   const [briefId, setBriefId] = useState<string | null>(null)
   const [opponentPreviewId, setOpponentPreviewId] = useState<string | null>(null)
@@ -61,7 +61,7 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
     window.addEventListener('resize', measure)
     return () => { observer.disconnect(); window.removeEventListener('resize', measure) }
   }, [])
-  useEffect(() => { setPokemonFilter(null); setBriefId(null) }, [filterRevision])
+  useEffect(() => { setArchetypeFilter(null); setBriefId(null) }, [filterRevision])
   useEffect(() => {
     setOpponentPreviewId(null)
     if (!briefId) return
@@ -76,16 +76,20 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
     return () => { window.removeEventListener('keydown', key); window.removeEventListener('pointerdown', outside) }
   }, [])
   const closeBrief = (id: string) => setBriefId(current => current === id ? null : current)
-  const filterPokemonKey = filterSide === 'opponent' ? 'opponentMainAttacker' : 'userMainAttacker'
-  const pokemonFilters = Array.from(new Set(games.map(game => game[filterPokemonKey]).filter(Boolean)))
-  const visibleGames = pokemonFilter ? games.filter(game => game[filterPokemonKey] === pokemonFilter) : games
+  const archetypeFilters = Array.from(new Map(games.map(game => {
+    const archetype = matchArchetype(game, filterSide === 'opponent')
+    return [archetype.id, archetype] as const
+  })).values())
+  const visibleGames = archetypeFilter
+    ? games.filter(game => matchArchetype(game, filterSide === 'opponent').id === archetypeFilter.id)
+    : games
   useEffect(() => {
     if (restoreMatchId) field.current?.querySelector<HTMLButtonElement>(`[data-match-id="${CSS.escape(restoreMatchId)}"]`)?.focus({ preventScroll: true })
   }, [restoreMatchId])
   const wins = visibleGames.filter(game => matchOutcome(game).code === 'W').length
   const losses = visibleGames.length - wins
-  const hasFilter = Boolean(searchQuery.trim() || pokemonFilter)
-  function clearFilters() { setPokemonFilter(null); onClearSearch?.() }
+  const hasFilter = Boolean(searchQuery.trim() || archetypeFilter)
+  function clearFilters() { setArchetypeFilter(null); onClearSearch?.() }
   return <section ref={history} className="match-history" aria-label="Match history" aria-busy={loading} style={{ "--match-columns": columns } as CSSProperties}>
     <div className="games-working-band">{toolbar}<div className="match-metrics" aria-live="polite" aria-atomic="true">
       <div><strong>{loading ? "—" : visibleGames.length}</strong><span>Matches</span></div>
@@ -98,30 +102,35 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
       </ToggleGroup>
       {importComposer}
     </div>
-    {loading || (!hasHistory && !hasFilter) ? <><span className="sr-only" role="status">{loading ? "Loading matches…" : ""}</span><GhostScaffold /></> : games.length > 0 || pokemonFilter ? <div className="constellation-panel">
-      <div className="constellation-filter-bar" role="group" aria-label={`Filter matches by ${filterSide === 'opponent' ? "opponent's" : 'your'} Pokémon`}>
-        <select className="constellation-filter-side" aria-label="Choose whose Pokémon to filter" value={filterSide} onChange={event => {
-          setFilterSide(event.target.value === 'opponent' ? 'opponent' : 'user')
-          setPokemonFilter(null)
+    {loading || (!hasHistory && !hasFilter) ? <><span className="sr-only" role="status">{loading ? "Loading matches…" : ""}</span><GhostScaffold /></> : games.length > 0 || archetypeFilter ? <div className="constellation-panel">
+      <div className="constellation-filter-bar" role="group" aria-label={`Filter matches by ${filterSide === 'opponent' ? "opponent's" : 'your'} archetype`}>
+        <ToggleGroup type="single" className="constellation-filter-toggle" aria-label="Choose whose archetypes to filter" value={filterSide} onValueChange={side => {
+          if (side !== 'user' && side !== 'opponent') return
+          setFilterSide(side)
+          setArchetypeFilter(null)
           setBriefId(null)
         }}>
-          <option value="user">Your Pokémon</option>
-          <option value="opponent">Opponent Pokémon</option>
-        </select>
-        {pokemonFilter && <button type="button" onClick={() => { setPokemonFilter(null); setBriefId(null) }} aria-label="Show all Pokémon">All</button>}
-        {pokemonFilters.map(name => <button key={name} type="button" className="constellation-filter" aria-pressed={pokemonFilter === name} onClick={() => { setPokemonFilter(previous => previous === name ? null : name); setBriefId(null) }} title={filterSide === 'opponent' ? `Show matches against ${name}` : `Show your ${name} matches`}>
-          <MatchSprite name={name} /><span className="sr-only">{filterSide === 'opponent' ? `Show matches against ${name}` : `Show your ${name} matches`}</span>
-        </button>)}
+          <ToggleGroupItem value="user">Your decks</ToggleGroupItem>
+          <ToggleGroupItem value="opponent">Opponent decks</ToggleGroupItem>
+        </ToggleGroup>
+        <div className="constellation-filter-options">
+          {archetypeFilter && <button type="button" onClick={() => { setArchetypeFilter(null); setBriefId(null) }} aria-label="Show all archetypes">All</button>}
+          {archetypeFilters.map(({ id, label }) => <button key={JSON.stringify(id)} type="button" className="constellation-filter" aria-pressed={archetypeFilter?.id === id} onClick={() => { setArchetypeFilter(previous => previous?.id === id ? null : { id }); setBriefId(null) }} title={filterSide === 'opponent' ? `Show matches against ${label}` : `Show your ${label} matches`}>
+            <ArchetypeIconPair archetypeId={id} size={26} localSprites /><span className="sr-only">{filterSide === 'opponent' ? `Show matches against ${label}` : `Show your ${label} matches`}</span>
+          </button>)}
+        </div>
       </div>
       <TooltipProvider delayDuration={0} skipDelayDuration={0}>
         <div ref={field} className="constellation-field" role="group" aria-label="Matches">
           {visibleGames.map(game => {
             const outcome = matchOutcome(game)
+            const userArchetype = matchArchetype(game)
+            const opponentArchetype = matchArchetype(game, true)
             return <div key={game.id} className="constellation-position">
               <Tooltip open={briefId === game.id}>
                 <TooltipTrigger asChild>
                   <button type="button" data-match-id={game.id} data-match-tile data-brief={briefId === game.id} data-opponent-preview={briefId === game.id && opponentPreviewId === game.id} data-fresh={freshId === game.id} className="constellation-point"
-                    aria-label={`${outcome.label} against ${game.opponent}, ${matchupName(game)} versus ${matchupName(game, true)}, ${game.date}. Open match review.`}
+                    aria-label={`${outcome.label} against ${game.opponent}, ${userArchetype.label} versus ${opponentArchetype.label}, ${game.date}. Open match review.`}
                     onPointerDown={event => { lastPointer.current = { type: event.pointerType, at: Date.now() } }}
                     onPointerEnter={event => { if (event.pointerType === 'mouse') setBriefId(game.id) }}
                     onPointerLeave={event => { if (event.pointerType === 'mouse') closeBrief(game.id) }}
@@ -133,8 +142,8 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
                       setBriefId(null); onSelectGame(game)
                     }}>
                     <span className="constellation-identity" data-outcome={outcome.code}>
-                      <span className="constellation-sprite constellation-sprite--user" aria-hidden="true"><MatchSprite name={game.userMainAttacker} /></span>
-                      <span className="constellation-sprite constellation-sprite--opponent" aria-hidden="true"><MatchSprite name={game.opponentMainAttacker} /></span>
+                      <span className="constellation-sprite constellation-sprite--user" aria-hidden="true"><ArchetypeIconPair archetypeId={userArchetype.id} size={50} localSprites /></span>
+                      <span className="constellation-sprite constellation-sprite--opponent" aria-hidden="true"><ArchetypeIconPair archetypeId={opponentArchetype.id} size={50} localSprites /></span>
                     </span>
                   </button>
                 </TooltipTrigger>
@@ -148,6 +157,6 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
         </div>
       </TooltipProvider>
     </div> : null}
-    {!loading && !visibleGames.length && <div className="match-empty" role="status"><div><h3>{hasFilter || hasHistory ? 'No matches found.' : 'Import a game to begin.'}</h3><p>{hasFilter ? (searchQuery.trim() ? `Nothing recorded matches “${searchQuery.trim()}”.` : 'No matches for that Pokémon.') : 'Each match becomes one point in this field.'}</p></div><Button className="action" onClick={hasFilter || hasHistory ? clearFilters : onImport}>{hasFilter || hasHistory ? 'Clear search' : 'Import a game'}</Button></div>}
+    {!loading && !visibleGames.length && <div className="match-empty" role="status"><div><h3>{hasFilter || hasHistory ? 'No matches found.' : 'Import a game to begin.'}</h3><p>{hasFilter ? (searchQuery.trim() ? `Nothing recorded matches “${searchQuery.trim()}”.` : 'No matches for that archetype.') : 'Each match becomes one point in this field.'}</p></div><Button className="action" onClick={hasFilter || hasHistory ? clearFilters : onImport}>{hasFilter || hasHistory ? 'Clear search' : 'Import a game'}</Button></div>}
   </section>
 }

@@ -6,7 +6,7 @@ import { ClipboardPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { matchesSearch, matchupName } from "@/utils/match-presentation"
+import { matchArchetype, matchesSearch } from "@/utils/match-presentation"
 import { GameList } from "@/components/game-list"
 import { GameDetail } from "@/components/game-detail"
 import { ImportConfirmationDialog } from "@/components/import-confirmation-dialog"
@@ -537,9 +537,8 @@ export function PokemonTCGAnalyzer() {
 
   const sortedGames = [...games].sort((a, b) => {
     if (sortConfig.key === "opponentArchetype") {
-      // Use the displayed deck label, including the observed Pokémon fallback
-      // for older matches without a saved archetype. Never change saved records.
-      const compared = matchupName(a, true).localeCompare(matchupName(b, true), undefined, { sensitivity: "base", numeric: true })
+      // Sort the same assigned archetypes shown by the constellation icons.
+      const compared = matchArchetype(a, true).label.localeCompare(matchArchetype(b, true).label, undefined, { sensitivity: "base", numeric: true })
       return sortConfig.direction === "asc" ? compared : -compared
     }
     const left = a[sortConfig.key]

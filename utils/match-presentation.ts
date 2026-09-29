@@ -1,11 +1,17 @@
 import type { GameSummary } from '@/types/game'
-import { formatArchetypeLabel } from './archetype-mapping'
+import { canonicalizeArchetypeId, formatArchetypeLabel } from './archetype-mapping'
 
 // Presentation of annotations already written by the existing review callbacks.
 export type ReviewGame = GameSummary & { notes?: Record<number, string>; deckList?: string; deckName?: string }
 
 export function matchOutcome(game: GameSummary) {
   return game.userWon ? { code: 'W', label: 'Win' } : { code: 'L', label: 'Loss' }
+}
+export function matchArchetype(game: GameSummary, opponent = false) {
+  const saved = (opponent ? game.opponentArchetype : game.userArchetype)?.trim() || null
+  const id = canonicalizeArchetypeId(saved) ?? saved
+  // An attacker is not an assigned archetype. Keep missing assignments explicit.
+  return { id, label: id ? formatArchetypeLabel(id) : 'Unknown archetype' }
 }
 export function matchupName(game: GameSummary, opponent = false) {
   const archetype = opponent ? game.opponentArchetype : game.userArchetype

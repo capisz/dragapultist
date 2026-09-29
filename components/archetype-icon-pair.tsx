@@ -12,10 +12,12 @@ export function CandidateSprite({ candidates, size = 30 }: { candidates: string[
     className="archetype-sprite" onError={event => { if (index >= sources.length - 1) event.currentTarget.style.visibility = "hidden"; else setIndex(value => value + 1) }} />
 }
 
-export function ArchetypeIconPair({ archetypeId, size = 30 }: { archetypeId: string | null; size?: number }) {
+export function ArchetypeIconPair({ archetypeId, size = 30, localSprites = false }: { archetypeId: string | null; size?: number; localSprites?: boolean }) {
   const slots = getArchetypeIconCandidatePaths(archetypeId)
   return <span className="archetype-icons" aria-hidden="true">
-    {(slots.length ? slots : [[FALLBACK_ICON]]).slice(0, 3).map((candidates, index) =>
-      <CandidateSprite key={`${archetypeId}-${index}-${candidates.join('|')}`} candidates={candidates} size={size} />)}
+    {(slots.length ? slots : [[FALLBACK_ICON]]).slice(0, 3).map((candidates, index) => {
+      const sources = localSprites ? candidates.filter(source => source.startsWith('/sprites/')) : candidates
+      return <CandidateSprite key={`${archetypeId}-${index}-${sources.join('|')}`} candidates={sources} size={size} />
+    })}
   </span>
 }
