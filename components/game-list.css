@@ -7,12 +7,15 @@
 .constellation-filter-bar .constellation-filter-toggle button[data-state=on] {background:var(--ui-raised);color:var(--ui-ink);box-shadow:var(--ui-shadow);}
 .constellation-filter-bar .constellation-filter-toggle button:focus-visible {outline:2px solid var(--ui-link);outline-offset:2px;box-shadow:none;}
 .constellation-filter-options {display:flex;align-items:center;flex:1;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding:4px;}
-.constellation-filter-options button {flex:0 0 40px;display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;background:transparent;color:var(--ui-ink);font-size:11px;}
+.constellation-filter-options button {position:relative;flex:0 0 52px;display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;background:transparent;color:var(--ui-ink);font-size:11px;}
 .constellation-filter-options button:hover,.constellation-filter-options button[aria-pressed=true] {background:var(--ui-raised);}
 .constellation-filter-options button[aria-pressed=true] {box-shadow:inset 0 -2px var(--ui-action);}
-.constellation-filter-options .constellation-filter {flex:0 0 auto;width:auto;min-width:40px;padding:0 6px;}
-.constellation-filter .archetype-icons {min-width:0;gap:1px;}
-.constellation-filter .archetype-sprite {width:26px;height:26px;object-fit:contain;}
+.constellation-filter-options .constellation-filter {flex:0 0 auto;width:auto;min-width:64px;min-height:48px;padding:0 16px;border-radius:0;}
+.constellation-filter-options button+button::before {content:"";position:absolute;left:0;top:10px;bottom:10px;width:1px;background:var(--ui-border);}
+.archetype-sprite-frame {position:relative;display:inline-block;overflow:hidden;width:var(--sprite-size);height:var(--sprite-size);}
+.archetype-sprite-frame .archetype-sprite-image {width:100%;height:100%;object-fit:contain;}
+.constellation-filter .archetype-icons {min-width:0;gap:8px;}
+.constellation-filter .archetype-sprite {flex:0 0 30px;width:30px;height:30px;object-fit:contain;}
 .constellation-field {display:grid;grid-template-columns:repeat(var(--match-columns,6),104px);grid-auto-rows:112px;align-items:center;justify-content:start;gap:14px;padding:18px 20px 76px;}
 .constellation-position {display:flex;justify-content:center;min-width:0;}
 .constellation-point {display:flex;align-items:center;justify-content:center;width:64px;height:64px;padding:0;border:0;background:transparent;border-radius:50%;transition:box-shadow 160ms ease;}
@@ -23,8 +26,12 @@
 .constellation-identity {position:relative;display:flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;transition:box-shadow 160ms ease;border:1px solid color-mix(in srgb,var(--result-win-dot) 24%,transparent);background:color-mix(in srgb,var(--result-win-bg) 55%,var(--ui-panel));box-shadow:var(--ui-shadow);}
 .constellation-identity[data-outcome=L] {background:color-mix(in srgb,var(--result-loss-bg) 55%,var(--ui-panel));border-color:color-mix(in srgb,var(--result-loss-dot) 24%,transparent);}
 .constellation-sprite {position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;transition:opacity 120ms ease-out;}
-.constellation-sprite .archetype-icons {width:58px;min-width:0;justify-content:center;gap:1px;}
-.constellation-sprite .archetype-sprite {flex:1 1 0;min-width:0;width:0;max-width:50px;height:50px;object-fit:contain;}
+.constellation-sprite .archetype-icons {min-width:0;justify-content:center;gap:6px;}
+.constellation-sprite .archetype-sprite {flex:0 0 auto;width:42px;height:42px;object-fit:contain;}
+.constellation-point:has(.archetype-icons[data-count="2"]),.constellation-point:has(.archetype-icons[data-count="3"]),.constellation-identity:has(.archetype-icons[data-count="2"]),.constellation-identity:has(.archetype-icons[data-count="3"]) {width:76px;border-radius:32px;}
+.constellation-sprite .archetype-icons[data-count="2"] .archetype-sprite {width:30px;height:30px;}
+.constellation-sprite .archetype-icons[data-count="3"] {gap:3px;}
+.constellation-sprite .archetype-icons[data-count="3"] .archetype-sprite {width:20px;height:20px;}
 .constellation-sprite--user {opacity:1;}
 .constellation-sprite--opponent {opacity:0;}
 .constellation-point[data-opponent-preview=true] .constellation-sprite {transition-duration:180ms;}
