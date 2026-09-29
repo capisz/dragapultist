@@ -32,7 +32,8 @@ interface CustomArchetypeSpec {
 
 // Sprite IDs resolve through PokeAPI first, then local /public/sprites fallbacks.
 const BASE_ARCHETYPE_RULES: ArchetypeRule[] = [
-  { id: "basic-box", label: "Basic Box", mustInclude: ["mew"], iconSpecs: ["mew.png", "latias.png"], sprite: "mew.png", aliases: ["Basic Box"] },
+  // A Mew sighting cannot distinguish Basic Box from the current Memory Helix deck.
+  { id: "basic-box", label: "Basic Box", mustInclude: ["mew"], autoDetect: false, iconSpecs: ["mew.png", "latias.png"], sprite: "mew.png", aliases: ["Basic Box"] },
   {
     id: "dragapult-ex",
     label: "Dragapult ex",
@@ -379,11 +380,35 @@ const BASE_ARCHETYPE_RULES: ArchetypeRule[] = [
     iconSpecs: ["beedrill.png"],
     sprite: "beedrill.png",
   },
+  {
+    id: "mew-box-memory-helix",
+    label: "Mew Box Memory Helix",
+    mustInclude: ["mew"],
+    autoDetect: false,
+    iconSpecs: ["mew.png"],
+    sprite: "mew.png",
+    aliases: ["Memory Helix Mew", "Mew Box"],
+  },
+  {
+    id: "mega-darkrai-ex",
+    label: "Mega Darkrai ex",
+    mustInclude: ["mega darkrai"],
+    iconSpecs: [{ candidates: ["darkrai-mega.png", "darkrai.png"] }],
+    sprite: "darkrai.png",
+  },
+  {
+    id: "toucannon-feather-rondo",
+    label: "Toucannon Feather Rondo",
+    mustInclude: ["toucannon"],
+    autoDetect: false,
+    iconSpecs: ["toucannon.png"],
+    sprite: "toucannon.png",
+    aliases: ["Feather Rondo Toucannon"],
+  },
 ]
 
-// Limitless's split-variant index, reviewed 2026-09-28. Keep the broad family
-// selectable when a log does not reveal enough to identify a particular build.
-// Sources and the intentionally manual-only entries: docs/archetype-catalog.md.
+// Keep historical rules for saved labels and icons. Selection and new inference
+// are restricted separately to the current Standard snapshot below.
 const ARCHETYPE_VARIANT_RULES: ArchetypeRule[] = [
   {
     id: "dragapult-dusknoir", label: "Dragapult Dusknoir", variantOf: "dragapult-ex",
@@ -530,6 +555,12 @@ const ARCHETYPE_VARIANT_RULES: ArchetypeRule[] = [
     aliases: ["Mega Starmie ex / Dusknoir"],
   },
   {
+    id: "starmie-froslass", label: "Starmie Froslass", variantOf: "mega-starmie-ex",
+    mustInclude: ["mega starmie", "froslass"],
+    iconSpecs: ["starmie-mega.png", "froslass.png"], sprite: "starmie-mega.png",
+    aliases: ["Mega Starmie ex / Froslass"],
+  },
+  {
     id: "diancie-dusknoir", label: "Diancie Dusknoir", variantOf: "mega-diancie-ex",
     mustInclude: ["mega diancie", "dusknoir"],
     iconSpecs: ["diancie-mega.png", "dusknoir.png"], sprite: "diancie-mega.png",
@@ -554,15 +585,64 @@ export const ARCHETYPE_RULES: ArchetypeRule[] = BASE_ARCHETYPE_RULES.flatMap((ba
   ...ARCHETYPE_VARIANT_RULES.filter((variant) => variant.variantOf === base.id),
 ])
 
+// 2026 Standard (H/I/J), reviewed 2026-09-28 against Limitless's TEF-30C
+// family and split-variant indexes. This is an explicit snapshot: adding a
+// historical rule above must never make it a current choice automatically.
+// Sources and refresh instructions: docs/archetype-catalog.md.
+const CURRENT_STANDARD_ARCHETYPE_IDS = new Set<string>([
+  "dragapult-ex", "dragapult-dusknoir", "dragapult-blaziken", "dragapult-dudunsparce",
+  "slowking-seek-inspiration",
+  "basic-box",
+  "n-zoroark-ex",
+  "festival-lead", "seaking-festival-lead",
+  "alakazam-powerful-hand", "alakazam-dudunsparce", "alakazam-dusknoir",
+  "mega-lopunny-ex", "lopunny-dusknoir", "lopunny-dudunsparce",
+  "hydrapple-ex",
+  "crustle-mysterious-rock-inn",
+  "mega-excadrill-ex",
+  "mega-lucario-ex", "lucario-hariyama",
+  "dhelmise-hide-n-sneak",
+  "rockets-honchkrow",
+  "cynthias-garchomp-ex",
+  "mega-sharpedo-ex", "sharpedo-toxtricity",
+  "lillies-clefairy-ex", "clefairy-ogerpon",
+  "hops-trevenant",
+  "marnies-grimmsnarl-ex", "grimmsnarl-froslass",
+  "ogerpon-meganium",
+  "raging-bolt-ex", "raging-bolt-ogerpon",
+  "mew-box-memory-helix",
+  "ethans-typhlosion",
+  "toxtricity-sinister-surge", "toxtricity-box",
+  "greninja-ex",
+  "beedrill-ex",
+  "mega-absol-box",
+  "tera-box",
+  "mega-greninja-ex",
+  "mega-starmie-ex", "starmie-froslass",
+  "rockets-mewtwo-ex",
+  "mega-chandelure-ex",
+  "okidogi-adrena-power", "okidogi-barbaracle",
+  "ceruledge-ex",
+  "mega-venusaur-ex",
+  "stevens-metagross-ex",
+  "mega-darkrai-ex",
+  "toucannon-feather-rondo",
+])
+
 const PREFERRED_ARCHETYPE_ORDER = [
   "dragapult-ex", "basic-box", "alakazam-powerful-hand", "n-zoroark-ex", "slowking-seek-inspiration", "mega-excadrill-ex", "festival-lead", "lillies-clefairy-ex", "crustle-mysterious-rock-inn", "raging-bolt-ex", "marnies-grimmsnarl-ex", "mega-lopunny-ex", "mega-lucario-ex", "dhelmise-hide-n-sneak", "hydrapple-ex", "toxtricity-sinister-surge", "mega-absol-box", "greninja-ex", "cynthias-garchomp-ex", "mega-sharpedo-ex", "mega-greninja-ex", "rockets-mewtwo-ex", "mega-venusaur-ex", "mega-kangaskhan-ex", "mega-chandelure-ex",
 ] as const
 
-// Preserve the familiar family order, put each variant beside its family, and
-// include every catalog entry so a second hand-maintained allowlist cannot hide it.
+// Preserve the familiar family order and keep current variants by their family.
 export const AVAILABLE_ARCHETYPE_IDS: string[] = [
   ...new Set<string>([...PREFERRED_ARCHETYPE_ORDER, ...BASE_ARCHETYPE_RULES.map((rule) => rule.id)]),
 ].flatMap((id) => [id, ...ARCHETYPE_VARIANT_RULES.filter((rule) => rule.variantOf === id).map((rule) => rule.id)])
+  .filter((id) => CURRENT_STANDARD_ARCHETYPE_IDS.has(id))
+
+export function isCurrentStandardArchetype(value?: string | null): boolean {
+  const id = canonicalizeArchetypeId(value)
+  return id !== null && CURRENT_STANDARD_ARCHETYPE_IDS.has(id)
+}
 
 function normalizeText(input: string): string {
   return input
@@ -728,10 +808,13 @@ function inferForSide(main: string, others: unknown): string | null {
   const otherArr = safeStringArray(others)
   const names = [main, ...otherArr].map(normalizeText)
 
-  const matches = (rule: ArchetypeRule) => rule.autoDetect !== false && rule.mustInclude.every((token) => {
-    const t = normalizeText(token)
-    return names.some((name) => ` ${name} `.includes(` ${t} `))
-  })
+  const matches = (rule: ArchetypeRule) =>
+    CURRENT_STANDARD_ARCHETYPE_IDS.has(rule.id) &&
+    rule.autoDetect !== false &&
+    rule.mustInclude.every((token) => {
+      const t = normalizeText(token)
+      return names.some((name) => ` ${name} `.includes(` ${t} `))
+    })
 
   // All required Pokémon must have appeared on this side. Never combine one
   // player's Dragapult with the other player's Dusknoir to guess a variant.

@@ -8,7 +8,7 @@ import { ArchetypeIconPair as SharedArchetypeIconPair } from "./archetype-icon-p
 import type { GameSummary } from "@/types/game"
 import { cn } from "@/lib/utils"
 import {
-  ARCHETYPE_RULES,
+  AVAILABLE_ARCHETYPE_IDS,
   canonicalizeArchetypeId,
   formatArchetypeLabel,
   getArchetypeIconCandidatePaths,
@@ -405,7 +405,7 @@ export function PrizeMapperPanel({ ptcglUsername, games, loading = false, error 
     personalDeckTotals.games > 0 ? (personalDeckTotals.wins / personalDeckTotals.games) * 100 : 0
 
   const usedDecks = Array.from(new Set(games.flatMap(game => [resolveSideArchetypeId(game, "user"), resolveSideArchetypeId(game, "opponent")]).filter(Boolean))) as string[]
-  const allDecks = Array.from(new Set([...usedDecks, ...ARCHETYPE_RULES.map(rule => rule.id)]))
+  const allDecks = Array.from(new Set([...usedDecks, ...AVAILABLE_ARCHETYPE_IDS]))
   const filteredDecks = allDecks.filter(id => formatArchetypeLabel(id).toLowerCase().includes(archetypeQuery.toLowerCase()))
   const renderPath = (path: PrizePathStat, row: MatchupRow, index: number) => <div className="prize-path" key={path.key}>
     <div className="prize-path-caption"><span>{row.allPaths.some(top => top.key === path.key) ? 'Frequent path' : 'Observed path'} {index + 1}</span><strong>{path.count}/{row.globalWins} wins · {path.percentOfWins.toFixed(0)}%</strong></div>
