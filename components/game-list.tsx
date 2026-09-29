@@ -11,6 +11,14 @@ import { GhostScaffold } from './ghost-scaffold'
 import './game-list.css'
 
 type SortConfig = { key: keyof GameSummary; direction: 'asc' | 'desc' }
+const SORT_OPTIONS = [
+  { key: 'date', label: 'Date' },
+  { key: 'opponent', label: 'Opponent name' },
+  { key: 'opponentArchetype', label: 'Opponent deck' },
+  { key: 'userWon', label: 'Result' },
+  { key: 'turns', label: 'Rounds' },
+] as const
+
 interface GameListProps {
   toolbar?: ReactNode
   importComposer?: ReactNode
@@ -32,9 +40,11 @@ interface GameListProps {
 }
 
 export function GameList({ toolbar, importComposer, loading = false, freshId, filterRevision = 0, games, onSelectGame, sortConfig, onSort, restoreMatchId, hasHistory, searchQuery = '', onClearSearch, onImport }: GameListProps) {
+  const [filterSide, setFilterSide] = useState<'user' | 'opponent'>('user')
   const [pokemonFilter, setPokemonFilter] = useState<string | null>(null)
   const field = useRef<HTMLDivElement>(null)
   const [briefId, setBriefId] = useState<string | null>(null)
+  const [opponentPreviewId, setOpponentPreviewId] = useState<string | null>(null)
   const lastPointer = useRef({ type: '', at: 0 })
   const history = useRef<HTMLElement>(null)
   const [columns, setColumns] = useState(6)
@@ -53,6 +63,12 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
   }, [])
   useEffect(() => { setPokemonFilter(null); setBriefId(null) }, [filterRevision])
   useEffect(() => {
+    setOpponentPreviewId(null)
+    if (!briefId) return
+    const timer = window.setTimeout(() => setOpponentPreviewId(briefId), 450)
+    return () => window.clearTimeout(timer)
+  }, [briefId])
+  useEffect(() => {
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') setBriefId(null) }
     const outside = (event: PointerEvent) => { if (!(event.target as Element).closest('[data-match-tile]')) setBriefId(null) }
     window.addEventListener('keydown', key)
@@ -60,8 +76,9 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
     return () => { window.removeEventListener('keydown', key); window.removeEventListener('pointerdown', outside) }
   }, [])
   const closeBrief = (id: string) => setBriefId(current => current === id ? null : current)
-  const pokemonFilters = Array.from(new Set(games.map(game => game.userMainAttacker).filter(Boolean)))
-  const visibleGames = pokemonFilter ? games.filter(game => game.userMainAttacker === pokemonFilter) : games
+  const filterPokemonKey = filterSide === 'opponent' ? 'opponentMainAttacker' : 'userMainAttacker'
+  const pokemonFilters = Array.from(new Set(games.map(game => game[filterPokemonKey]).filter(Boolean)))
+  const visibleGames = pokemonFilter ? games.filter(game => game[filterPokemonKey] === pokemonFilter) : games
   useEffect(() => {
     if (restoreMatchId) field.current?.querySelector<HTMLButtonElement>(`[data-match-id="${CSS.escape(restoreMatchId)}"]`)?.focus({ preventScroll: true })
   }, [restoreMatchId])
@@ -77,15 +94,23 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
       <div><strong>{!loading && visibleGames.length ? (visibleGames.reduce((sum, game) => sum + game.turns, 0) / visibleGames.length).toFixed(1) : '—'}</strong><span>Avg rounds</span></div>
     </div>
       <ToggleGroup type="single" value={sortConfig.key} className="match-sort" aria-label="Sort matches">
-        {(['date', 'opponent', 'userWon', 'turns'] as const).map(key => <ToggleGroupItem key={key} value={key} onClick={() => onSort(key)}>{key === 'userWon' ? 'Result' : key === 'turns' ? 'Rounds' : key === 'date' ? 'Date' : 'Opponent'}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</ToggleGroupItem>)}
+        {SORT_OPTIONS.map(({ key, label }) => <ToggleGroupItem key={key} value={key} onClick={() => onSort(key)}>{label}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</ToggleGroupItem>)}
       </ToggleGroup>
       {importComposer}
     </div>
     {loading || (!hasHistory && !hasFilter) ? <><span className="sr-only" role="status">{loading ? "Loading matches…" : ""}</span><GhostScaffold /></> : games.length > 0 || pokemonFilter ? <div className="constellation-panel">
-      <div className="constellation-filter-bar" role="group" aria-label="Filter matches by Pokémon">
+      <div className="constellation-filter-bar" role="group" aria-label={`Filter matches by ${filterSide === 'opponent' ? "opponent's" : 'your'} Pokémon`}>
+        <select className="constellation-filter-side" aria-label="Choose whose Pokémon to filter" value={filterSide} onChange={event => {
+          setFilterSide(event.target.value === 'opponent' ? 'opponent' : 'user')
+          setPokemonFilter(null)
+          setBriefId(null)
+        }}>
+          <option value="user">Your Pokémon</option>
+          <option value="opponent">Opponent Pokémon</option>
+        </select>
         {pokemonFilter && <button type="button" onClick={() => { setPokemonFilter(null); setBriefId(null) }} aria-label="Show all Pokémon">All</button>}
-        {pokemonFilters.map(name => <button key={name} type="button" className="constellation-filter" aria-pressed={pokemonFilter === name} onClick={() => { setPokemonFilter(previous => previous === name ? null : name); setBriefId(null) }} title={`Show ${name} matches`}>
-          <MatchSprite name={name} /><span className="sr-only">Show {name} matches</span>
+        {pokemonFilters.map(name => <button key={name} type="button" className="constellation-filter" aria-pressed={pokemonFilter === name} onClick={() => { setPokemonFilter(previous => previous === name ? null : name); setBriefId(null) }} title={filterSide === 'opponent' ? `Show matches against ${name}` : `Show your ${name} matches`}>
+          <MatchSprite name={name} /><span className="sr-only">{filterSide === 'opponent' ? `Show matches against ${name}` : `Show your ${name} matches`}</span>
         </button>)}
       </div>
       <TooltipProvider delayDuration={0} skipDelayDuration={0}>
@@ -95,7 +120,7 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
             return <div key={game.id} className="constellation-position">
               <Tooltip open={briefId === game.id}>
                 <TooltipTrigger asChild>
-                  <button type="button" data-match-id={game.id} data-match-tile data-brief={briefId === game.id} data-fresh={freshId === game.id} className="constellation-point"
+                  <button type="button" data-match-id={game.id} data-match-tile data-brief={briefId === game.id} data-opponent-preview={briefId === game.id && opponentPreviewId === game.id} data-fresh={freshId === game.id} className="constellation-point"
                     aria-label={`${outcome.label} against ${game.opponent}, ${matchupName(game)} versus ${matchupName(game, true)}, ${game.date}. Open match review.`}
                     onPointerDown={event => { lastPointer.current = { type: event.pointerType, at: Date.now() } }}
                     onPointerEnter={event => { if (event.pointerType === 'mouse') setBriefId(game.id) }}
@@ -107,7 +132,10 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
                       if (touch && briefId !== game.id) { setBriefId(game.id); return }
                       setBriefId(null); onSelectGame(game)
                     }}>
-                    <span className="constellation-identity" data-outcome={outcome.code}><MatchSprite name={game.userMainAttacker} /></span>
+                    <span className="constellation-identity" data-outcome={outcome.code}>
+                      <span className="constellation-sprite constellation-sprite--user" aria-hidden="true"><MatchSprite name={game.userMainAttacker} /></span>
+                      <span className="constellation-sprite constellation-sprite--opponent" aria-hidden="true"><MatchSprite name={game.opponentMainAttacker} /></span>
+                    </span>
                   </button>
                 </TooltipTrigger>
                 <Portal><TooltipContent side="bottom" sideOffset={2} collisionPadding={8} collisionBoundary={history.current} className="match-brief">
