@@ -1,4 +1,4 @@
-const { app, BrowserWindow, clipboard, ipcMain, Tray, Menu, nativeImage, shell, Notification, safeStorage, session } = require('electron')
+const { app, BrowserWindow, clipboard, ipcMain, Tray, Menu, nativeImage, shell, Notification, safeStorage, session, dialog } = require('electron')
 const path = require('node:path')
 const { createHash } = require('node:crypto')
 const clipboardHash = text => createHash('sha256').update(text).digest('hex')
@@ -6,12 +6,13 @@ const { pathToFileURL } = require('node:url')
 const { syncEntry } = require('./transport.cjs')
 const { looksLikeLog } = require('./queue.cjs')
 const { openSecureQueue } = require('./startup.cjs')
+const { ensureAgreement, showLegalDocuments, focusAgreement } = require('./agreement.cjs')
 const PRODUCTION = 'https://dragapultist.vercel.app'
 const requested = process.env.DRAGAPULTIST_URL
 const base = !app.isPackaged && requested && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(requested) ? requested.replace(/\/$/,'') : PRODUCTION
 const offlineURL = pathToFileURL(path.join(__dirname, 'offline.html')).href
 let window, tray, queue, webSession, quitting = false, initializing = true, fatal = '', online = false, identity = null, lastClipboardHash = '', polling = false, submitting = false, syncingIdentity = null
-let configuring = false, captureGeneration = 0
+let configuring = false, captureGeneration = 0, acceptedAgreementDigest = null
 let timers = []
 async function readClipboardText() {
   try {
@@ -37,6 +38,7 @@ function emit() {
   if (window && !window.isDestroyed() && window.webContents.getURL().startsWith(base+'/')) window.webContents.send('desktop:status', value)
   if (tray) { tray.setToolTip(`Dragapultist: ${value.state} (${value.queued} queued)`); tray.setContextMenu(Menu.buildFromTemplate([
     {label:'Open Dragapultist',click:showMainWindow},
+    {label:'Beta terms & privacy',click:()=>{void showLegalDocuments({app,BrowserWindow,ipcMain}).catch(error=>dialog.showErrorBox('Could not open documents',error.message))}},
     {label:queue?.data.settings.enabled?'Pause capture':'Resume capture',enabled:!!queue&&!fatal&&!initializing,click:async()=>{try{await configure({enabled:!queue.data.settings.enabled})}catch(e){notify(e.message)}emit()}},
     {label:`${value.queued} queued · ${value.state}`,enabled:false},
     {label:'Quit Dragapultist',click:()=>app.quit()},
@@ -122,7 +124,9 @@ function createWindow(){
   if(!app.isPackaged&&process.env.DRAGAPULTIST_DEVTOOLS==='1')mainWindow.webContents.openDevTools({mode:'detach'})
 }
 function showMainWindow(){
-  if(quitting||!webSession)return
+  if(quitting)return
+  if(focusAgreement())return
+  if(!webSession)return
   if(!window||window.isDestroyed())createWindow()
   if(window.isMinimized())window.restore()
   window.show();window.focus()
@@ -132,6 +136,10 @@ async function initializeCapture(){
     // Opening storage must never delay creation or reopening of the app window.
     queue=await openSecureQueue(path.join(app.getPath('userData'),'capture-queue.enc'),safeStorage)
     if(quitting)return
+    // A newly accepted agreement starts with fresh clipboard permission. Preserve queued logs.
+    if(queue.data.settings.captureAgreementDigest!==acceptedAgreementDigest){
+      await queue.configure({enabled:false,captureAgreementDigest:acceptedAgreementDigest})
+    }
     await refreshIdentity()
     // Clipboard access is only needed when capture was already enabled.
     if(queue.data.settings.enabled){
@@ -146,7 +154,11 @@ if(!app.requestSingleInstanceLock())app.quit()
 else {
  app.on('second-instance',showMainWindow)
  app.on('activate',showMainWindow)
- app.whenReady().then(()=>{
+ app.whenReady().then(async()=>{
+  // Do not connect to the service, open the queue, or read the clipboard before acceptance.
+  const agreement=await ensureAgreement({app,BrowserWindow,ipcMain})
+  if(!agreement.accepted||quitting){app.quit();return}
+  acceptedAgreementDigest=agreement.digest
   // Stable per-user location: upgrades and uninstall must not erase queued logs.
   webSession=session.fromPartition('persist:dragapultist')
   webSession.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
@@ -169,7 +181,7 @@ else {
   tray=new Tray(icon);tray.on('click',showMainWindow);emit()
   timers.push(setInterval(()=>void capture(),1000),setInterval(async()=>{await refreshIdentity();if(online&&window&&!window.isDestroyed()&&window.webContents.getURL()===offlineURL)void window.loadURL(base).catch(()=>{})},30000))
   void initializeCapture()
- })
+ }).catch(error=>{dialog.showErrorBox('Dragapultist could not start',error.message);app.quit()})
  app.on('before-quit',event=>{if(quitting)return;event.preventDefault();quitting=true;timers.forEach(clearInterval);Promise.resolve(queue?.tail).finally(()=>app.quit())})
  app.on('window-all-closed',()=>{})
 }

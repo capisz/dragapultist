@@ -9,15 +9,15 @@ const root = path.join(__dirname, '..')
 const pending = () => new Promise(() => {})
 const flush = () => new Promise(resolve => setImmediate(resolve))
 
-async function launch({ openQueue = pending, readText = async () => '', fetch = pending } = {}) {
+async function launch({ openQueue = pending, readText = async () => '', fetch = pending, agreement = async () => ({ accepted: true, digest: 'test-agreement' }) } = {}) {
   const windows = [], intervals = [], handlers = new Map()
-  let tray, clipboardReads = 0
+  let tray, clipboardReads = 0, quitCalls = 0, sessionCalls = 0
   const app = Object.assign(new EventEmitter(), {
     isPackaged: true,
     requestSingleInstanceLock: () => true,
     whenReady: () => Promise.resolve(),
     getPath: () => '/unused-test-user-data',
-    quit: () => {},
+    quit: () => { quitCalls++ },
   })
   class BrowserWindow extends EventEmitter {
     constructor(options) {
@@ -57,7 +57,8 @@ async function launch({ openQueue = pending, readText = async () => '', fetch = 
     shell: { openExternal: async () => {} },
     Notification: { isSupported: () => false },
     safeStorage: {},
-    session: { fromPartition: () => ({ setPermissionRequestHandler() {}, setPermissionCheckHandler() {}, fetch }) },
+    dialog: { showErrorBox: (_title, message) => { throw Error(message) } },
+    session: { fromPartition: () => { sessionCalls++; return { setPermissionRequestHandler() {}, setPermissionCheckHandler() {}, fetch } } },
   }
   const context = vm.createContext({
     __dirname: root, process: { env: {} }, URL, AbortSignal, Buffer,
@@ -65,6 +66,7 @@ async function launch({ openQueue = pending, readText = async () => '', fetch = 
     clearInterval() {},
     require: name => name === 'electron' ? electron : name === './startup.cjs'
       ? { openSecureQueue: (...args) => { assert.equal(windows.length, 1, 'create the window before opening storage'); return openQueue(...args) } }
+      : name === './agreement.cjs' ? { ensureAgreement: agreement, focusAgreement: () => false, showLegalDocuments: async () => {} }
       : name.startsWith('.') ? require(path.join(root, name)) : require(name),
   })
   vm.runInContext(fs.readFileSync(path.join(root, 'main.js'), 'utf8'), context, { filename: 'main.js' })
@@ -73,14 +75,14 @@ async function launch({ openQueue = pending, readText = async () => '', fetch = 
     const current = windows.at(-1)
     return handlers.get('desktop:request')({ sender: current.webContents, senderFrame: current.webContents.mainFrame }, { version: 1, method, value })
   }
-  return { app, windows, tray, intervals, request, clipboardReads: () => clipboardReads,
+  return { app, windows, tray, intervals, request, quitCalls: () => quitCalls, sessionCalls: () => sessionCalls, clipboardReads: () => clipboardReads,
     capture: () => vm.runInContext('capture()', context),
     refreshIdentity: () => vm.runInContext('refreshIdentity()', context) }
 }
 
 function readyQueue(settings = {}) {
   return {
-    data: { settings: { enabled: false, username: '', owner: null, notifications: false, ...settings }, entries: [] },
+    data: { settings: { enabled: false, username: '', owner: null, notifications: false, captureAgreementDigest: 'test-agreement', ...settings }, entries: [] },
     async configure(patch) { Object.assign(this.data.settings, patch) },
     async add(rawLog, owner, username) { this.data.entries.push({ rawLog, owner, username }); return true },
   }
@@ -228,7 +230,7 @@ test('a storage failure leaves the window available and exposes a paused error',
   assert.equal(status.enabled, false)
   assert.match(status.error, /Secure storage did not respond/)
   assert.equal(await run.request('next'), null)
-  assert.equal(run.tray.menu[1].enabled, false)
+  assert.equal(run.tray.menu.find(item => item.label === 'Resume capture').enabled, false)
 })
 
 test('Dock activation, second launch and the tray restore a minimized window during startup', async () => {
@@ -266,4 +268,38 @@ test('a failed website load still opens the local offline page', async () => {
   window.webContents.emit('did-fail-load', {}, -106, 'offline', 'https://dragapultist.vercel.app/', true)
   assert.equal(window.file, path.join(root, 'offline.html'))
   assert.equal(window.visible, true)
+})
+
+
+test('waits for agreement before opening web sessions, storage, timers or clipboard', async () => {
+  let decide, storageCalls = 0
+  const run = await launch({ agreement: () => new Promise(resolve => { decide = resolve }),
+    openQueue: async () => { storageCalls++; return readyQueue() } })
+  assert.equal(run.windows.length, 0)
+  assert.equal(run.sessionCalls(), 0)
+  assert.equal(run.intervals.length, 0)
+  assert.equal(storageCalls, 0)
+  assert.equal(run.clipboardReads(), 0)
+  run.app.emit('activate')
+  assert.equal(run.windows.length, 0)
+  decide({ accepted: false })
+  await flush()
+  assert.equal(run.quitCalls(), 1)
+  assert.equal(run.sessionCalls(), 0)
+})
+
+test('a changed agreement durably disables capture before any clipboard read and preserves queued logs', async () => {
+  const queue = readyQueue({ owner: 'account-a', username: 'Alice', enabled: true, captureAgreementDigest: 'old-agreement' })
+  queue.data.entries.push({ id: 'keep-me', owner: 'account-a', rawLog: gameLog })
+  let finishSave
+  queue.configure = patch => new Promise(resolve => { finishSave = () => { Object.assign(queue.data.settings, patch); resolve() } })
+  const run = await launch({ openQueue: async () => queue, fetch: signedIn })
+  assert.equal(run.clipboardReads(), 0)
+  assert.equal((await run.request('status')).enabled, false)
+  finishSave()
+  await flush()
+  assert.equal(queue.data.settings.enabled, false)
+  assert.equal(queue.data.settings.captureAgreementDigest, 'test-agreement')
+  assert.equal(queue.data.entries[0].id, 'keep-me')
+  assert.equal(run.clipboardReads(), 0)
 })

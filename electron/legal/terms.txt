@@ -1,0 +1,62 @@
+Dragapultist Beta Terms and Software License
+Version {{VERSION}} · Effective {{EFFECTIVE_DATE}}
+
+1. Operator and eligibility
+
+Dragapultist is operated by {{OPERATOR}}, based in {{LOCATION}}. Questions and privacy requests: {{CONTACT_EMAIL}}.
+
+These terms cover the Dragapultist desktop beta and the account, import, and match-review services you use through it. This private beta is for invited testers aged 18 or older who can legally accept these terms. Keep your invitation and account credentials private.
+
+Read these terms before accepting. Choosing Agree means you accept these terms. The accompanying Privacy Notice explains data handling; acknowledging it does not enable clipboard capture. If you disagree, choose Decline and do not use this beta. Merely downloading or copying the app is not the acceptance action.
+
+2. Completely free beta
+
+The beta is free. There are no donations, advertisements, subscriptions, in-app purchases, or payment collection. Acceptance does not authorize a charge. Any future change to that arrangement would need separate notice and any legally required agreement before it takes effect.
+
+3. Your software license
+
+While your beta access is active, we give you a limited, non-exclusive license to install and use the beta on devices you own or control for personal match review and beta evaluation. This covers only rights we are entitled to grant. Third-party software keeps its own license terms and any rights those terms give you.
+
+Do not sell the beta, redistribute private installers to people who have not been invited, access another person's account, bypass security controls, disrupt the service, or submit unlawful material. Use content you are entitled to submit. These terms do not limit rights protected by applicable law or third-party software licenses.
+
+4. Beta limitations
+
+The beta can contain bugs. Imports, reconstructed gameplay, statistics, and saved information may be incomplete or incorrect. Service availability and features may change. Keep your own copies of logs you want to retain; this beta is not a guaranteed backup service.
+
+Desktop capture requires using Copy log in Pokémon TCG Live after each supported completed match. It is not an automatic match feed. Engine scoring and move grading are not available yet. No persistent Elo rating is provided. Future analysis may be unavailable or cover only decisions supported by the log.
+
+5. Your content
+
+You keep any rights you hold in material you submit. You allow us and our service providers to receive, store, process, and display that material to operate the features you request, protect the service, and respond to support requests as described in the Privacy Notice. This does not transfer ownership of third-party material or grant a general license to sell your logs or use them for unrelated model training.
+
+Logs can include an opponent's handle and gameplay details. Do not add unrelated private or sensitive information. This agreement does not override other people's rights or give us ownership of their information.
+
+6. Clipboard capture and background operation
+
+Capture is optional and needs a separate Enable capture choice. While enabled, Dragapultist checks clipboard text locally to identify supported game logs, saves recognized logs in an encrypted local queue, and uploads them to your account. Other copied text is not saved or uploaded by this capture feature.
+
+Closing the window keeps the app running. Pause capture stops new capture; already queued logs may still upload. Quit Dragapultist stops the app. Previously queued logs can resume syncing after you accept and the app connects. See the Privacy Notice for retention and deletion limits.
+
+7. Feedback and support
+
+Feedback is voluntary. We may use suggestions you send to improve the app. Do not send passwords, authentication tokens, or confidential material. Include only the log excerpt or screenshot needed to describe an issue, removing unnecessary personal information. Contact {{CONTACT_EMAIL}} for support; a response time is not guaranteed.
+
+8. Independent project and third-party materials
+
+Dragapultist is an independent fan project and is not produced by, endorsed by, or affiliated with The Pokémon Company, Nintendo, Creatures, or Game Freak. Pokémon-related names, images, and trademarks belong to their respective owners. This statement does not grant permission to use their material. This agreement grants no rights in third-party artwork or branding.
+
+Electron and Chromium license notices are included with the app. Their licenses govern those components. Other content and linked services remain subject to their own applicable rights and terms.
+
+9. Updates, access, and leaving the beta
+
+The app loads a hosted service, so web features may change without a new desktop installer. Desktop updates may require installing a new package. We may suspend access for misuse or security reasons, or end the beta, subject to applicable law.
+
+You can stop using the beta by quitting and uninstalling it. Uninstalling does not delete cloud matches or your account and can leave local app data. Request account closure or data assistance at {{CONTACT_EMAIL}}. Individual matches can be deleted from Match Review. The current beta has no self-service full account deletion or discard-pending-logs button.
+
+Materially updated desktop terms will be presented for acceptance. New optional data collection needs its own appropriate notice and choice. This agreement is not advance permission for undisclosed future data uses.
+
+10. Legal rights
+
+To the extent permitted by applicable law, this experimental beta is supplied as is and as available, without a promise that it will be error-free, uninterrupted, or suitable for every purpose. Nothing in these terms excludes liability, rights, or remedies that cannot legally be excluded. This agreement does not require arbitration, waive class actions, or impose a monetary liability cap.
+
+Contact: {{OPERATOR}} · {{LOCATION}} · {{CONTACT_EMAIL}}

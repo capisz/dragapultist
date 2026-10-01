@@ -1,12 +1,13 @@
-name: Build private desktop beta candidates
+name: Build desktop beta installers
 on:
+  push:
+    branches: [codex/desktop-mac-window-fix]
+    paths: ['electron/**', '.github/workflows/desktop-beta.yml']
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   installers:
-    # Candidate artifacts must stay private until native acceptance passes.
-    if: github.event.repository.private == true
     strategy:
       fail-fast: false
       matrix:
@@ -28,6 +29,8 @@ jobs:
           cache-dependency-path: electron/package-lock.json
       - run: npm install --global npm@12.1.0
       - run: npm ci
+      - run: node node_modules/electron/install.js
+      - run: npm run legal:prepare
       - run: npm test
       - run: npm run ${{ matrix.script }}
         env:

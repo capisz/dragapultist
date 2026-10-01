@@ -1,0 +1,68 @@
+Dragapultist Beta Privacy Notice
+Version {{VERSION}} · Effective {{EFFECTIVE_DATE}}
+
+1. Who is responsible
+
+{{OPERATOR}}, based in {{LOCATION}}, operates Dragapultist. Contact {{CONTACT_EMAIL}} about privacy, support, or information relating to you in an imported log. This notice covers the desktop beta and the hosted Dragapultist features it uses. Pokémon TCG Live is a separate service.
+
+2. Accounts and saved matches
+
+Account creation asks for an email, username, and password. Google Firebase Authentication handles email/password authentication and verification. Dragapultist's MongoDB profile stores your account identifier, email, username, verification/profile information, optional profile and banner images, and account timestamps. The application profile does not store your password.
+
+Imported records include raw game logs, player and opponent handles, gameplay events, results, and parsed statistics. We also store notes, tags, favorites, and optional deck details you add. We use these records to provide your match history and review tools. Match and player-history requests are scoped to your account; service providers and the operator may need access to operate or support the service.
+
+Guest game history, locally saved decks, and some preferences use browser or desktop web storage. Guest game records are not automatically synced to an account. Using guest mode still involves network requests to deliver the app and its assets.
+
+3. Optional clipboard capture
+
+Capture is off for a new installation and requires a separate Enable capture choice. While it is enabled, the app periodically reads clipboard text locally to determine whether it resembles a supported game log. Recognizing a log requires inspecting copied text first. Text that does not match is not persisted in the queue or uploaded by this feature. An in-memory fingerprint avoids repeatedly handling identical clipboard content.
+
+Recognized logs are stored in an encrypted local queue with the account association, Pokémon TCG Live username, capture time, and import/retry information. Logs are uploaded to the signed-in account when a connection is available. Recognition uses text patterns and can make mistakes. Logs may include your opponent's handle and gameplay details.
+
+Copy a completed game log after enabling capture. Existing clipboard text is treated as a starting point. Capture can continue while the app is in the background or its window is closed. An enabled preference can be restored on a later launch. Offline logs may remain queued for later upload.
+
+Pause capture stops new capture; previously queued logs may still sync. Quit Dragapultist stops the app. A confirmed sign-out disables capture; pending logs remain associated with the original account. Accepting the agreement does not enable capture. Existing queued imports may resume when the app connects after acceptance.
+
+The companion does not inspect Pokémon TCG Live process memory or collect hidden game state. It relies on the logs you copy.
+
+4. Cookies, settings, and acceptance records
+
+Cookies maintain sign-in and protect requests. Local storage remembers guest records and preferences. The encrypted desktop queue also holds capture, notification, startup, account, and username preferences. Browser and desktop-app storage are separate. Clearing web storage may remove local records or sign you out; it does not necessarily clear the encrypted queue or cloud records.
+
+When you explicitly accept the desktop agreement, the app saves the document version and content fingerprint, acceptance time, app version, and acceptance/acknowledgement choices in a local record in your operating-system user profile. This record is not uploaded or attached to saved matches. It is not a verified signature or a server-side account acceptance record. A changed document requires a new acceptance.
+
+5. Providers and technical information
+
+Google Firebase Authentication provides account sign-in and verification. MongoDB Atlas stores account profiles and saved matches. Vercel hosts the website and its server endpoints. These services receive the information needed for their respective functions. Hosting and authentication can process IP addresses, browser/request information, authentication events, and operational diagnostics for delivery, security, and troubleshooting.
+
+The hosted app includes Vercel Web Analytics for traffic measurement. Where enabled, this service processes page-view, referring-page, approximate location, and browser/device information using request-derived identifiers. It is separate from advertising. The provider describes its practices at https://vercel.com/docs/analytics/privacy-policy. No personal game logs or review notes are intentionally supplied as analytics events. Provider processing and retention depend on the actual service configuration; this beta does not offer a separate in-app analytics preference.
+
+Some sprites load from GitHub-hosted PokeAPI assets. The image host receives network request information, including your IP address. Following external links takes you to services with their own privacy practices.
+
+Messages sent to the contact email and any attachments are processed to handle your request, including by the email service. Send only information needed to explain the issue. We may disclose information when legally required or necessary to investigate abuse or protect the service and people's rights, consistent with applicable law.
+
+This beta is free, with no donations, advertisements, subscriptions, payment collection, or integrated ad network. Free access does not mean all processing stays on your computer.
+
+6. Retention and deletion
+
+Cloud matches remain saved until deleted; the beta does not automatically expire them. Deleting a match removes it from active game storage and associated import/prize-map records. It does not automatically remove provider logs, backups, a separate local copy, or another person's copy of a log.
+
+An acknowledged upload removes the log from the pending queue. Failed, offline, or review entries can remain without automatic expiry. The current beta has no discard-pending-logs button. Pause or sign-out does not erase the queue, and uninstalling can leave app data behind. A log copied again later may be imported again. Local acceptance records and preferences remain until the corresponding app data is removed.
+
+Deleting matches or signing out does not delete your Firebase account or MongoDB profile. There is currently no self-service full account deletion button. Contact {{CONTACT_EMAIL}} to request access, correction, deletion, account closure, or assistance removing local data. We may need to verify that a request relates to you. Requests will be handled subject to applicable law and any permitted retention; we cannot remotely erase all offline copies on other devices.
+
+Operational logs, authentication records, analytics, support correspondence, and backups can have separate retention periods. No universal deletion interval or immediate erasure from every backup is promised. We use retention criteria based on providing the requested service, resolving support/security issues, and applicable legal obligations. Provider deletion limitations can affect completion times. Contact us for information relevant to your request.
+
+7. Security, locations, and rights
+
+The desktop queue uses operating-system-backed encryption. Production connections use HTTPS, and account access uses authenticated requests. These measures do not guarantee perfect security or mean that cloud records are end-to-end encrypted. Protect access to your computer and account.
+
+Service providers can process information outside your location, including in the United States. Your rights and any required transfer safeguards depend on applicable law. Contact {{CONTACT_EMAIL}} to exercise applicable privacy rights or raise a concern. You may also contact the privacy or consumer-protection authority responsible for your location.
+
+8. Adults-only invitation policy and changes
+
+The private desktop beta is offered to invited testers aged 18 or older. Contact {{CONTACT_EMAIL}} if you believe a child's information has been submitted. This beta policy does not determine the age of opponents whose handles appear in logs.
+
+Updated notices will show a new date and version. Material changes will be explained through the app or account contact email as appropriate, with additional notice or choice before new collection or use where required. A new privacy notice alone does not enable clipboard capture.
+
+Contact: {{OPERATOR}} · {{LOCATION}} · {{CONTACT_EMAIL}}

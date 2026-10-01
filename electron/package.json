@@ -1,28 +1,79 @@
 {
   "name": "dragapultist-desktop",
   "productName": "Dragapultist Beta",
-  "version": "0.2.0-beta.3",
+  "version": "0.2.0-beta.4",
   "private": true,
   "description": "Dragapultist desktop clipboard companion",
-  "author": "Dragapultist",
+  "author": {
+    "name": "Christopher Capizzuto"
+  },
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "test": "node --test test/*.test.cjs",
     "pack": "electron-builder --dir --publish never",
     "dist:mac": "electron-builder --mac dmg --arm64 --x64 --publish never && node scripts/checksums.cjs",
-    "dist:win": "electron-builder --win nsis --x64 --publish never && node scripts/checksums.cjs"
+    "dist:win": "electron-builder --win nsis --x64 --publish never && node scripts/checksums.cjs",
+    "legal:prepare": "node scripts/prepare-legal.cjs"
   },
-  "devDependencies": { "electron": "44.4.5", "electron-builder": "26.15.3" },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  },
   "build": {
     "appId": "com.dragapultist.desktop.beta",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "queue.cjs", "transport.cjs", "startup.cjs", "assets/**/*", "offline.html", "package.json"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "queue.cjs",
+      "transport.cjs",
+      "startup.cjs",
+      "assets/**/*",
+      "offline.html",
+      "package.json",
+      "agreement.cjs",
+      "agreement-preload.js",
+      "agreement-renderer.js",
+      "agreement.html",
+      "agreement.css",
+      "legal/generated/manifest.json"
+    ],
     "asar": true,
     "artifactName": "Dragapultist-${version}-${os}-${arch}.${ext}",
-    "mac": { "target": "dmg", "category": "public.app-category.games", "identity": null, "icon": "assets/icon.png" },
-    "win": { "target": "nsis", "icon": "assets/icon.png" },
-    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "deleteAppDataOnUninstall": false },
-    "publish": null
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.games",
+      "identity": null,
+      "icon": "assets/icon.png"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "license": "legal/generated/installer-license.txt"
+    },
+    "publish": null,
+    "beforePack": "scripts/prepare-legal.cjs",
+    "extraResources": [
+      {
+        "from": "legal/generated",
+        "to": "Legal",
+        "filter": [
+          "*.txt",
+          "*.html"
+        ]
+      }
+    ],
+    "dmg": {
+      "license": "legal/generated/installer-license.txt"
+    }
   }
 }
