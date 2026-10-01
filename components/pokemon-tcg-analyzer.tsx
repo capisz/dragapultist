@@ -23,11 +23,11 @@ import {
   guestGamePersistence,
   PersistenceError,
   remoteGamePersistence,
-  type GamePersistence,
 } from "@/lib/game-persistence"
 import { gameDraftSchema } from "@/lib/game-contract"
 import type { PersistenceState } from "@/lib/api-contract"
 import { mergeAcknowledgedGame } from "@/lib/game-list-state"
+import { useGameHistory } from "@/hooks/use-game-history"
 
 declare global {
   interface Window {
@@ -42,13 +42,9 @@ export function PokemonTCGAnalyzer() {
     "games",
   )
 
-  const [gamesLoading, setGamesLoading] = useState(true)
-  const [gamesError, setGamesError] = useState<string | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
-  const [loadRevision, setLoadRevision] = useState(0)
-  const pendingHistoryRefresh = useRef(false)
-  const [games, setGames] = useState<GameSummary[]>([])
   const [searchResultIds, setSearchResultIds] = useState<Set<string> | null>(null)
+  const searchRequestKey = useRef<string | null>(null)
   const [selectedGame, setSelectedGame] = useState<GameSummary | null>(null)
   const returnState = useRef<{ id: string | null; scrollY: number }>({ id: null, scrollY: 0 })
   const [manualInput, setManualInput] = useState<string>("")
@@ -84,6 +80,15 @@ export function PokemonTCGAnalyzer() {
   const buttonTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const [ptcglUsername, setPtcglUsername] = useState<string>("")
+  const remoteHistory = !!user && user.username !== "Guest"
+  const historyOwner = remoteHistory ? `account:${user.id}` : "guest"
+  const { games, setGames, loading: gamesLoading, error: gamesError, setError: setGamesError,
+    revision: loadRevision, refresh: refreshHistory, cancelRefresh: cancelHistoryRefresh } = useGameHistory({
+    owner: historyOwner,
+    persistence: remoteHistory ? remoteGamePersistence : guestGamePersistence,
+    remote: remoteHistory,
+    paused: !!selectedGame || saveState === "saving" || !!retrySave || !!retryUpdate,
+  })
 
 
   const tabsBarRef = useRef<HTMLDivElement | null>(null)
@@ -157,81 +162,19 @@ export function PokemonTCGAnalyzer() {
   }, [])
 
   useEffect(() => {
-    const controller = new AbortController()
-    setGamesError(null)
-    const persistence: GamePersistence = !user || user.username === "Guest" ? guestGamePersistence : remoteGamePersistence
-    setGames([])
-    setGamesLoading(true)
-    setSaveState("loading")
-    const loadAllPages = async () => {
-      const loaded: GameSummary[] = []
-      let cursor: string | undefined
-      do {
-        const page = await persistence.list({ cursor, limit: 100, signal: controller.signal })
-        loaded.push(...page.games as unknown as GameSummary[])
-        cursor = page.nextCursor ?? undefined
-      } while (cursor && !controller.signal.aborted)
-      return loaded
-    }
-    loadAllPages()
-      .then(data => {
-        if (!controller.signal.aborted) {
-          setGames(data)
-          setSaveState("idle")
-        }
-      })
-      .catch(error => {
-        if (!controller.signal.aborted) {
-          setGamesError("Your match history is unavailable. Please retry.")
-          setSaveState(error instanceof PersistenceError ? error.status : "unavailable")
-        }
-      })
-      .finally(() => { if (!controller.signal.aborted) setGamesLoading(false) })
-    return () => controller.abort()
-  }, [user, loadRevision])
-
-  useEffect(() => {
-    if (!user || user.username === "Guest") {
-      pendingHistoryRefresh.current = false
-      return
-    }
-
-    const refresh = () => {
-      // Keep an open review and its unsaved notes in place during desktop sync.
-      if (selectedGame || saveState === "saving" || saveState === "loading" || document.visibilityState !== "visible") {
-        pendingHistoryRefresh.current = true
-        return
-      }
-      pendingHistoryRefresh.current = false
-      setLoadRevision(value => value + 1)
-    }
-
-    if (pendingHistoryRefresh.current && !selectedGame && saveState !== "saving" && saveState !== "loading") refresh()
-    document.addEventListener("visibilitychange", refresh)
-    window.addEventListener("focus", refresh)
-    window.addEventListener("online", refresh)
-    window.addEventListener("dragapultist-games-changed", refresh)
-    const timer = window.setInterval(refresh, 60000)
-    return () => {
-      clearInterval(timer)
-      document.removeEventListener("visibilitychange", refresh)
-      window.removeEventListener("focus", refresh)
-      window.removeEventListener("online", refresh)
-      window.removeEventListener("dragapultist-games-changed", refresh)
-    }
-  }, [selectedGame, user, saveState])
-
-  useEffect(() => {
     const query = searchTerm.trim()
     if (!query) {
+      searchRequestKey.current = null
       setSearchResultIds(null)
       setSearchError(null)
       return
     }
-    setSearchResultIds(new Set())
+    const key = JSON.stringify([historyOwner, query])
+    if (searchRequestKey.current !== key) setSearchResultIds(new Set())
+    searchRequestKey.current = key
 
     const controller = new AbortController()
-    const persistence: GamePersistence = !user || user.username === "Guest" ? guestGamePersistence : remoteGamePersistence
+    const persistence = remoteHistory ? remoteGamePersistence : guestGamePersistence
     const timer = window.setTimeout(() => {
       void (async () => {
         const ids = new Set<string>()
@@ -248,7 +191,6 @@ export function PokemonTCGAnalyzer() {
       })().catch(error => {
         if (!controller.signal.aborted) {
           setSearchError(error instanceof Error ? error.message : "Search is unavailable. Please retry.")
-          setSearchResultIds(new Set())
         }
       })
     }, 200)
@@ -257,7 +199,7 @@ export function PokemonTCGAnalyzer() {
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [searchTerm, user, loadRevision])
+  }, [searchTerm, historyOwner, remoteHistory, loadRevision])
 
   useEffect(() => {
     if (activeTab !== "topDeckCalc") return
@@ -276,7 +218,7 @@ export function PokemonTCGAnalyzer() {
       }
     })()
     return () => controller.abort()
-  }, [activeTab, games, user])
+  }, [activeTab, games, user, setGames])
 
   useEffect(() => {
     return () => {
@@ -308,6 +250,7 @@ export function PokemonTCGAnalyzer() {
 
   const saveImportedGame = useCallback(async (game: GameSummary, idempotencyKey: string) => {
     const persistence = !user || user.username === "Guest" ? guestGamePersistence : remoteGamePersistence
+    cancelHistoryRefresh()
     setSaveState("saving")
     try {
       const draft = gameDraftSchema.parse(game)
@@ -344,7 +287,7 @@ export function PokemonTCGAnalyzer() {
       setSaveState(error instanceof PersistenceError ? error.status : "retryable_failure")
       throw error
     }
-  }, [user, showImportStatus])
+  }, [user, showImportStatus, cancelHistoryRefresh, setGames])
 
   const addGame = useCallback(
     (
@@ -366,7 +309,7 @@ export function PokemonTCGAnalyzer() {
       void run().catch(() => undefined).finally(() => { importLock.current = false; setQuickBusy(false) })
 
     },
-    [ptcglUsername, saveImportedGame, games, user, showImportStatus],
+    [ptcglUsername, saveImportedGame],
   )
 
   const handleQuickAdd = async () => {
@@ -473,6 +416,7 @@ export function PokemonTCGAnalyzer() {
     async (id: string) => {
       const persistence = !user || user.username === "Guest" ? guestGamePersistence : remoteGamePersistence
       const current = games.find(game => game.id === id)
+      cancelHistoryRefresh()
       setSaveState("saving")
       try {
         await persistence.remove(id, current?.revision)
@@ -487,7 +431,7 @@ export function PokemonTCGAnalyzer() {
       if (selectedGame && selectedGame.id === id) setSelectedGame(null)
       setSaveState("saved")
     },
-    [games, selectedGame, user],
+    [games, selectedGame, user, cancelHistoryRefresh, setGames],
   )
 
   const handleUpdateGame = useCallback(
@@ -496,6 +440,7 @@ export function PokemonTCGAnalyzer() {
       setGames(newGames)
       setSelectedGame((previous) => previous?.id === updatedGame.id ? updatedGame : previous)
       const persistence = !user || user.username === "Guest" ? guestGamePersistence : remoteGamePersistence
+      cancelHistoryRefresh()
       setSaveState("saving")
       try {
         const saved = await persistence.update(updatedGame.id, {
@@ -525,7 +470,7 @@ export function PokemonTCGAnalyzer() {
         return false
       }
     },
-    [games, user],
+    [games, user, cancelHistoryRefresh, setGames],
   )
 
   const handleSort = useCallback((key: keyof GameSummary) => {
@@ -575,7 +520,7 @@ export function PokemonTCGAnalyzer() {
         setGamesError(error instanceof Error ? error.message : "This match is unavailable.")
       }
     },
-    [games, user],
+    [games, user, setGamesError],
   )
 
   const buttonStyles = {
@@ -703,7 +648,7 @@ export function PokemonTCGAnalyzer() {
                 <div>
 
 
-                  {(gamesError || searchError) && <div role="alert" className="studio-state"><p>{gamesError || searchError}</p><Button onClick={() => setLoadRevision(value => value + 1)}>Retry</Button></div>}
+                  {(gamesError || searchError) && <div role="alert" className="studio-state"><p>{gamesError || searchError}</p><Button onClick={() => refreshHistory()}>Retry</Button></div>}
                   {(
                     <GameList
                       toolbar={<>                  <div className="games-search mb-4 relative">
@@ -836,7 +781,7 @@ export function PokemonTCGAnalyzer() {
           ) : activeTab === "players" ? (
             <PlayerDatabasePanel />
           ) : activeTab === "prizeMapper" ? (
-            <PrizeMapperPanel ptcglUsername={ptcglUsername} games={games} loading={gamesLoading} error={gamesError} onRetry={() => setLoadRevision(value => value + 1)} onImport={() => { setActiveTab("games"); setImportOpen(true); requestAnimationFrame(() => document.getElementById("match-log")?.focus()) }} isGuest={!user || user.username === "Guest"} />
+            <PrizeMapperPanel ptcglUsername={ptcglUsername} games={games} loading={gamesLoading} error={gamesError} onRetry={() => refreshHistory()} onImport={() => { setActiveTab("games"); setImportOpen(true); requestAnimationFrame(() => document.getElementById("match-log")?.focus()) }} isGuest={!user || user.username === "Guest"} />
           ) : (
             <DeckLab games={games} currentGameId={selectedGame?.id} />
           )}
