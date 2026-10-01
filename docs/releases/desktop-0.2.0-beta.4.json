@@ -1,0 +1,73 @@
+{
+  "version": "0.2.0-beta.4",
+  "sourceCommit": "0138a79a1255f7df9f473a259e227eeed70f9270",
+  "sourceBranch": "codex/desktop-mac-window-fix",
+  "buildRun": "https://github.com/capisz/dragapultist/actions/runs/36909154626",
+  "supportEmail": "chriszcodes@gmail.com",
+  "signed": false,
+  "macNotarized": false,
+  "files": [
+    {
+      "name": "Dragapultist-0.2.0-beta.4-mac-arm64.dmg",
+      "url": "https://jrwouolwnfcqokw1.public.blob.vercel-storage.com/desktop/0.2.0-beta.4/Dragapultist-0.2.0-beta.4-mac-arm64.dmg",
+      "bytes": 131390324,
+      "sha256": "95dd4c18529e8e9a75075d0f7e81140ee3425b1200fc4644349719ef44908926",
+      "httpStatus": 200,
+      "contentType": "application/octet-stream",
+      "contentDisposition": "attachment; filename=\"Dragapultist-0.2.0-beta.4-mac-arm64.dmg\"",
+      "downloadVerifiedAt": "2026-10-01T18:55:40.739Z"
+    },
+    {
+      "name": "Dragapultist-0.2.0-beta.4-mac-x64.dmg",
+      "url": "https://jrwouolwnfcqokw1.public.blob.vercel-storage.com/desktop/0.2.0-beta.4/Dragapultist-0.2.0-beta.4-mac-x64.dmg",
+      "bytes": 135074994,
+      "sha256": "c992f9cb806c9780861ec26086347cb08dcc31b487c9b987e624ae2700fd42f1",
+      "httpStatus": 200,
+      "contentType": "application/octet-stream",
+      "contentDisposition": "attachment; filename=\"Dragapultist-0.2.0-beta.4-mac-x64.dmg\"",
+      "downloadVerifiedAt": "2026-10-01T18:55:33.726Z"
+    },
+    {
+      "name": "Dragapultist-0.2.0-beta.4-win-x64.exe",
+      "url": "https://jrwouolwnfcqokw1.public.blob.vercel-storage.com/desktop/0.2.0-beta.4/Dragapultist-0.2.0-beta.4-win-x64.exe",
+      "bytes": 112553967,
+      "sha256": "3c606a6c06893cd9390182d5136af7cc2e70c277c48d0f3cb767ac192c5d4092",
+      "httpStatus": 200,
+      "contentType": "application/octet-stream",
+      "contentDisposition": "attachment; filename=\"Dragapultist-0.2.0-beta.4-win-x64.exe\"",
+      "downloadVerifiedAt": "2026-10-01T18:55:39.702Z"
+    }
+  ],
+  "packageChecks": [
+    {
+      "target": "mac-arm64",
+      "version": "0.2.0-beta.4",
+      "supportEmail": "chriszcodes@gmail.com",
+      "agreementDigest": "e62acf41ac448adf6cd4bfebba28e22fdc806c3551838288ea6f3569cff69645",
+      "documentsVerified": true
+    },
+    {
+      "target": "mac-x64",
+      "version": "0.2.0-beta.4",
+      "supportEmail": "chriszcodes@gmail.com",
+      "agreementDigest": "e62acf41ac448adf6cd4bfebba28e22fdc806c3551838288ea6f3569cff69645",
+      "documentsVerified": true
+    },
+    {
+      "target": "win-x64",
+      "version": "0.2.0-beta.4",
+      "supportEmail": "chriszcodes@gmail.com",
+      "agreementDigest": "829ecd826a661983b9cf6b07a50b4116b407638ef0b79d8c0b1f4a419267a237",
+      "documentsVerified": true
+    }
+  ],
+  "validation": {
+    "automatedTestsPerPlatform": 35,
+    "platforms": [
+      "macOS",
+      "Windows"
+    ],
+    "dmgChecksums": "Both valid",
+    "nativeInteractiveCheck": "Not completed. macOS computer-control permission unavailable; no native Windows GUI session."
+  }
+}
