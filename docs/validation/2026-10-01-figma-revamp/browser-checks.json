@@ -1,0 +1,32 @@
+{
+  "localUrl": "http://127.0.0.1:3027",
+  "sample": "Repository fixture imported into guest storage on this local origin only",
+  "viewReload": "List remains selected",
+  "themeReload": {
+    "class": "dark",
+    "pageBackground": "rgb(13, 17, 23)"
+  },
+  "previewClose": {
+    "focusedMatchId": "1790869769209",
+    "previewOpen": false
+  },
+  "previewEscape": {
+    "focusedMatchId": "1790869769209",
+    "previewOpen": false
+  },
+  "narrowViewport": {
+    "width": 320,
+    "documentScrollWidth": 320,
+    "dotSize": 16
+  },
+  "assetChecks": {
+    "suppliedSpritesByteIdentical": true,
+    "nonemptyPngAssets": 83
+  },
+  "lightSecondaryText": {
+    "computedColor": "rgb(66, 94, 121)",
+    "previewSurface": "rgb(227, 238, 251)",
+    "contrastOnHeader": 5.75,
+    "contrastOnPanel": 6.38
+  }
+}

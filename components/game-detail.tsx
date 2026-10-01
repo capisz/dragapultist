@@ -44,9 +44,8 @@ const UNKNOWN_ARCHETYPE = "__unknown__"
 export function GameDetail({ game, onBack, onDelete, allGames, onUpdateGame: commitGame, saveState = "idle", onRetrySave }: GameDetailProps) {
   const pillBtn = (pressed: boolean, extra?: string) =>
     cn(
-      "rounded-full px-5 h-9 text-sm whitespace-nowrap transition-transform duration-150",
-      "bg-[#5e82ab] text-slate-50 hover:bg-sky-800/50",
-      "dark:bg-[#b1cce8] dark:text-[#121212] dark:hover:bg-[#a1c2e4]",
+      "rounded-lg px-4 h-9 text-sm whitespace-nowrap transition-colors duration-150",
+      "bg-[var(--ui-action)] text-[var(--ui-action-label)] hover:bg-[var(--ui-action-hover)]",
       pressed ? "scale-95" : "scale-100",
       extra,
     )
@@ -54,6 +53,7 @@ export function GameDetail({ game, onBack, onDelete, allGames, onUpdateGame: com
   const [activeTurnIndex, setActiveTurnIndex] = useState(0)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const roundList = useRef<HTMLDivElement>(null)
+  const changePokemonButton = useRef<HTMLButtonElement>(null)
   const [pendingUpdate, setPendingUpdate] = useState<ReviewGame | null>(null)
   async function onUpdateGame(updatedGame: ReviewGame): Promise<boolean> {
     try {
@@ -78,7 +78,6 @@ export function GameDetail({ game, onBack, onDelete, allGames, onUpdateGame: com
   const [isAddButtonPressed, setIsAddButtonPressed] = useState(false)
 
   const [isDeckButtonPressed, setIsDeckButtonPressed] = useState(false)
-  const [isSetPlayersButtonPressed, setIsSetPlayersButtonPressed] = useState(false)
   const [isApplyPlayersPressed, setIsApplyPlayersPressed] = useState(false)
   const [isSaveDeckPressed, setIsSaveDeckPressed] = useState(false)
 
@@ -748,7 +747,7 @@ const matchDetails = (<>
       </div>
     </dl>
 
-    {/* Add deck + Set Players moved to the left column */}
+    {/* Deck list action */}
     <div className="flex flex-wrap gap-2">
       <Button
         onClick={() => {
@@ -762,17 +761,6 @@ const matchDetails = (<>
         {game.deckList || deckList ? "Deck list" : "Add deck"}
       </Button>
 
-      <Button
-        onClick={() => {
-          setIsSetPlayersButtonPressed(true)
-          setTimeout(() => setIsSetPlayersButtonPressed(false), 150)
-          setShowSetPlayersDialog(true)
-        }}
-        className={pillBtn(isSetPlayersButtonPressed, "inline-flex items-center gap-2")}
-      >
-        <Pencil className="h-4 w-4" />
-        Edit matchup
-      </Button>
     </div>
   </div>
 {/* RIGHT COLUMN */}
@@ -906,7 +894,8 @@ return (
             <Button
               type="button"
               variant="outline"
-              className="review-delete-action"
+              className="review-delete-action danger-action"
+              data-confirm={confirmDelete}
               disabled={saveState === "saving"}
               onClick={() => {
                 if (confirmDelete) onDelete()
@@ -935,7 +924,12 @@ return (
 
       <header className="review-summary">
         <div><p>{game.date} · {game.wentFirst ? 'Went first' : 'Went second'}</p><h2>{game.opponent}</h2><SummaryPills /></div>
-        <div className="review-matchup-actions"><MatchupSpritePair user={game.userMainAttacker} opponent={game.opponentMainAttacker} /><Button type="button" variant="ghost" className="review-edit-matchup" onClick={() => setShowSetPlayersDialog(true)}>Edit matchup</Button></div>
+        <div className="review-matchup-actions">
+          <MatchupSpritePair user={game.userMainAttacker} opponent={game.opponentMainAttacker} />
+          <Button ref={changePokemonButton} type="button" variant="ghost" aria-haspopup="dialog" className="review-edit-matchup" onClick={() => setShowSetPlayersDialog(true)}>
+            <Pencil size={13} aria-hidden="true" />Change Pokémon
+          </Button>
+        </div>
       </header>
 
       <section aria-label="Engine score" className="mt-3 rounded-xl border border-[var(--ui-border)] bg-[var(--ui-panel)] px-3 py-2">
@@ -1119,7 +1113,12 @@ className={cn(
           setShowSetPlayersDialog(next)
         }}
       >
-        <DialogContent className="sm:max-w-[520px] bg-white dark:bg-slate-900 rounded-2xl">
+        <DialogContent className="sm:max-w-[520px] bg-white dark:bg-slate-900 rounded-2xl"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            changePokemonButton.current?.focus()
+          }}
+        >
           <DialogHeader>
   <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-50">
     Edit matchup
@@ -1586,7 +1585,7 @@ function CandidateSprite({
       title={title}
       loading="lazy"
       decoding="async"
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, imageRendering: "pixelated" }}
       className="object-contain shrink-0 bg-transparent"
       onError={() => setIdx((v) => Math.min(v + 1, candidates.length - 1))}
     />

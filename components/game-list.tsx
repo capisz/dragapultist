@@ -8,6 +8,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { ArchetypeIconPair } from './archetype-icon-pair'
 import { matchArchetype, matchOutcome } from '@/utils/match-presentation'
 import { GhostScaffold } from './ghost-scaffold'
+import { MatchHistoryList } from './match-history-list'
 import './game-list.css'
 
 type SortConfig = { key: keyof GameSummary; direction: 'asc' | 'desc' }
@@ -40,6 +41,8 @@ interface GameListProps {
 }
 
 export function GameList({ toolbar, importComposer, loading = false, freshId, filterRevision = 0, games, onSelectGame, sortConfig, onSort, restoreMatchId, hasHistory, searchQuery = '', onClearSearch, onImport }: GameListProps) {
+  const [view, setView] = useState<'constellation' | 'list'>('constellation')
+  useEffect(() => { try { if (localStorage.getItem('dragapultist-match-view') === 'list') setView('list') } catch {} }, [])
   const [filterSide, setFilterSide] = useState<'user' | 'opponent'>('user')
   const [archetypeFilter, setArchetypeFilter] = useState<{ id: string | null } | null>(null)
   const field = useRef<HTMLDivElement>(null)
@@ -85,7 +88,7 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
     : games
   useEffect(() => {
     if (restoreMatchId) field.current?.querySelector<HTMLButtonElement>(`[data-match-id="${CSS.escape(restoreMatchId)}"]`)?.focus({ preventScroll: true })
-  }, [restoreMatchId])
+  }, [restoreMatchId, view])
   const wins = visibleGames.filter(game => matchOutcome(game).code === 'W').length
   const losses = visibleGames.length - wins
   const hasFilter = Boolean(searchQuery.trim() || archetypeFilter)
@@ -120,8 +123,20 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
           </button>)}
         </div>
       </div>
+      <div className="match-view-bar">
+        <ToggleGroup type="single" value={view} aria-label="Match view" onValueChange={value => {
+          if (value !== 'constellation' && value !== 'list') return
+          setView(value); setBriefId(null)
+          try { localStorage.setItem('dragapultist-match-view', value) } catch {}
+        }}>
+          <ToggleGroupItem value="constellation">Constellation</ToggleGroupItem>
+          <ToggleGroupItem value="list">List</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+      <div ref={field}>
+      {view === 'list' ? <MatchHistoryList key={`${filterSide}-${archetypeFilter?.id ?? 'all'}-${filterRevision}-${searchQuery}`} games={visibleGames} side={filterSide} freshId={freshId} onSelectGame={onSelectGame} /> :
       <TooltipProvider delayDuration={0} skipDelayDuration={0}>
-        <div ref={field} className="constellation-field" role="group" aria-label="Matches">
+        <div className="constellation-field" role="group" aria-label="Matches">
           {visibleGames.map(game => {
             const outcome = matchOutcome(game)
             const userArchetype = matchArchetype(game)
@@ -155,7 +170,8 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
             </div>
           })}
         </div>
-      </TooltipProvider>
+      </TooltipProvider>}
+      </div>
     </div> : null}
     {!loading && !visibleGames.length && <div className="match-empty" role="status"><div><h3>{hasFilter || hasHistory ? 'No matches found.' : 'Import a game to begin.'}</h3><p>{hasFilter ? (searchQuery.trim() ? `Nothing recorded matches “${searchQuery.trim()}”.` : 'No matches for that archetype.') : 'Each match becomes one point in this field.'}</p></div><Button className="action" onClick={hasFilter || hasHistory ? clearFilters : onImport}>{hasFilter || hasHistory ? 'Clear search' : 'Import a game'}</Button></div>}
   </section>

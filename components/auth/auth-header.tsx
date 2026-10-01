@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Montserrat } from "next/font/google"
-import { HelpCircle, UserRound } from "lucide-react"
+import { UserRound } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -29,6 +29,9 @@ import { AuthPanel } from "./auth-panel"
 import { LoginForm } from "@/components/auth/login-form"
 import { SignUpForm } from "@/components/auth/signup-form"
 import { useDesktopSettings } from "@/components/desktop-companion"
+
+import { HeaderPokemonIcon } from "@/components/header-pokemon-icon"
+import { AppearanceSettings } from "@/components/appearance-settings"
 
 const montserrat = Montserrat({ subsets: ["latin"] })
 
@@ -133,21 +136,8 @@ export function AuthHeader() {
             {/* Help button (LEFT of Sign in) */}
             <Dialog>
               <DialogTrigger asChild>
-                <Button
-                  type="button"
-                  aria-label="Help"
-                  variant="ghost"
-                  className="
-                    group flex items-center justify-center
-                    h-12 w-12 rounded-full
-                    bg-transparent border-none shadow-none
-                    text-slate-600 hover:bg-transparent hover:text-sky-600
-                    dark:text-sky-200/80 dark:hover:text-sky-200
-                    focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0
-                    transition-all duration-200 hover:scale-110 hover:-translate-y-0.5 active:scale-95
-                  "
-                >
-                  <HelpCircle aria-label="Help" size={40} className="transition-transform duration-200" />
+                <Button type="button" aria-label="Help" title="Unown · Help" variant="ghost" className="header-pokemon-button">
+                  <HeaderPokemonIcon kind="help" />
                 </Button>
               </DialogTrigger>
 
@@ -287,6 +277,7 @@ export function AuthHeader() {
               </DropdownMenu>
             )}
 
+            <AppearanceSettings />
           </div>
         </div>
       </header>

@@ -167,7 +167,7 @@ function CandidateSprite({
   className?: string
 }) {
   const [idx, setIdx] = useState(0)
-  const sources = [...new Set([...candidates.filter(path => path.startsWith("/sprites/")), FALLBACK_ICON])]
+  const sources = [...new Set([...candidates, FALLBACK_ICON])]
   const src = sources[Math.min(idx, sources.length - 1)] ?? FALLBACK_ICON
 
   return (
@@ -176,7 +176,7 @@ function CandidateSprite({
       alt={alt}
       title={title}
       decoding="async"
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, imageRendering: "pixelated" }}
       className={cn("object-contain shrink-0 bg-transparent", className)}
       onError={() => setIdx((v) => Math.min(v + 1, sources.length - 1))}
     />

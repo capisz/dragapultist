@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
 import "./globals.css"
 import { DesktopCompanion } from "@/components/desktop-companion"
+import { ThemeProvider } from "@/components/theme-provider"
 
 export const metadata: Metadata = {
   title: "Dragapultist Pokémon TCG Analyzer",
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           "app-body"
         )}
       >
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
         <div className="min-h-dvh flex flex-col">
             {/* If you have a header/nav, render it here */}
 
@@ -35,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Footer is outside any max-width page container */}
             <SiteFooter />
         </div>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

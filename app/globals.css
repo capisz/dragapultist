@@ -176,19 +176,30 @@ body {
   --ui-page:#d9ebff; --ui-chrome:#f7fbff; --ui-panel:#f4f9ff; --ui-panel-header:#e3eefb;
   --ui-raised:#fff; --ui-border:#b8d2ea; --ui-border-soft:#cfe0f1; --ui-border-chrome:#c3d9ee; --ui-grid:#dceaf8;
   --ui-ink:#294b70; --ui-ink-2:#425e79; --ui-ink-3:#5b7692; --ui-ink-4:#7a94ad; --ui-link:#315f91;
-  --ui-action:#5e82ab; --ui-action-hover:#4f739d; --ui-action-label:#f8fafc;
-  --result-win-bg:#d3f0e2; --result-win-fg:#216e54; --result-win-dot:#3f9e7b;
-  --result-loss-bg:#fadde2; --result-loss-fg:#9c3349; --result-loss-dot:#c4546a;
+  --ui-action:#456d97; --ui-action-hover:#315f91; --ui-action-label:#f8fafc;
+  --ui-danger-bg:#fff0f2; --ui-danger-hover:#fbdde2; --ui-danger-ink:#9c2438; --ui-danger-border:#ce8792; --ui-danger-solid:#b4233d; --ui-danger-solid-hover:#941c32;
+  --result-win-bg:#d3f0e2; --result-win-fg:#216e54; --result-win-dot:#559b80;
+  --result-loss-bg:#fadde2; --result-loss-fg:#9c3349; --result-loss-dot:#bc7586;
   --ui-shadow:0 1px 2px rgba(23,54,80,.05);
   --ui-lift:var(--ui-shadow),0 10px 24px -18px rgba(23,54,80,.4);
   --ui-brief-shadow:0 1px 2px rgba(23,54,80,.06),0 6px 14px -8px rgba(23,54,80,.35);
 }
 .dark {
-  --ui-page:#345275; --ui-chrome:#20374f; --ui-panel:#294563; --ui-panel-header:#304e6d;
-  --ui-raised:#203b57; --ui-border:#7594b3; --ui-border-soft:#496989; --ui-border-chrome:#496989; --ui-grid:#496989;
-  --ui-ink:#edf5ff; --ui-ink-2:#d3e3f4; --ui-ink-3:#bfd3e8; --ui-ink-4:#a9c4df; --ui-link:#b8d7ff;
-  --ui-action:#b8d7ff; --ui-action-hover:#a1c2e4; --ui-action-label:#173650;
-  --result-win-bg:#234f49; --result-win-fg:#b2ebd3; --result-loss-bg:#603a4b; --result-loss-fg:#ffd3dd;
+  --ui-page:#0d1117; --ui-chrome:#161b22; --ui-panel:#161b22; --ui-panel-header:#21262d;
+  --ui-raised:#1c2633; --ui-border:#30363d; --ui-border-soft:#30363d; --ui-border-chrome:#30363d; --ui-grid:#30363d;
+  --ui-ink:#e6edf3; --ui-ink-2:#b7c3cf; --ui-ink-3:#8b949e; --ui-ink-4:#8b949e; --ui-link:#58a6ff;
+  --ui-action:#4c667f; --ui-action-hover:#59758f; --ui-action-label:#ffffff;
+  --ui-danger-bg:#351c24; --ui-danger-hover:#4b2430; --ui-danger-ink:#ffb4ae; --ui-danger-border:#8a3d48; --ui-danger-solid:#b73445; --ui-danger-solid-hover:#a42b3b;
+  --result-win-bg:#2e4a3e; --result-win-fg:#7ee2a8; --result-win-dot:#79b397;
+  --result-loss-bg:#49303b; --result-loss-fg:#ffa7a5; --result-loss-dot:#ce8c96;
+  --status-warn-bg:#40331d; --status-warn-ink:#f1d599;
+  --background:215 28% 7%; --foreground:208 35% 93%;
+  --card:215 21% 11%; --card-foreground:208 35% 93%;
+  --popover:215 21% 11%; --popover-foreground:208 35% 93%;
+  --secondary:213 15% 15%; --secondary-foreground:208 35% 93%;
+  --muted:213 15% 15%; --muted-foreground:212 8% 58%;
+  --accent:214 29% 15%; --accent-foreground:208 35% 93%;
+  --border:214 13% 21%; --input:214 13% 21%; --ring:212 100% 67%;
 }
 ::selection {background:var(--ui-panel-header);color:var(--ui-ink);}
 input,textarea {caret-color:var(--ui-link);}
@@ -226,3 +237,12 @@ input,textarea {caret-color:var(--ui-link);}
 .desktop-review p {overflow-wrap:anywhere;line-height:1.6;}
 .desktop-review textarea {width:100%;resize:vertical;padding:10px;background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:8px;}
 @media (max-width:480px) {.desktop-settings-dialog {padding:20px;gap:16px;}.desktop-settings-footer {align-items:flex-start;}}
+
+/* Deletion has one recognizable treatment across match actions. */
+button.danger-action, .studio button.danger-action {
+  background:var(--ui-danger-bg);color:var(--ui-danger-ink);border:1px solid var(--ui-danger-border);box-shadow:none;
+}
+button.danger-action:hover:not(:disabled), .studio button.danger-action:hover:not(:disabled) {background:var(--ui-danger-hover);}
+button.danger-action[data-confirm=true], .studio button.danger-action[data-confirm=true] {background:var(--ui-danger-solid);border-color:var(--ui-danger-solid);color:#fff;}
+button.danger-action[data-confirm=true]:hover:not(:disabled), .studio button.danger-action[data-confirm=true]:hover:not(:disabled) {background:var(--ui-danger-solid-hover);border-color:var(--ui-danger-solid-hover);}
+button.danger-action:focus-visible, .studio button.danger-action:focus-visible {outline:2px solid var(--ui-danger-ink);outline-offset:3px;}

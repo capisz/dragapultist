@@ -1,5 +1,5 @@
 :root {--header-surface:rgba(247,251,255,.95);--header-ink:#294b70;--dialog-field:#eef5fc;}
-.dark {--header-surface:#20374f;--header-ink:#e3efff;--dialog-field:#2c4864;}
+.dark {--header-surface:var(--ui-chrome);--header-ink:var(--ui-ink);--dialog-field:var(--ui-panel-header);}
 .option-a-header {background:var(--header-surface);color:var(--header-ink);}
 .studio>main {padding-top:0!important;}
 .studio .studio-nav {isolation:isolate;border:0!important;}
@@ -41,7 +41,7 @@
 .sample-card-dialog .hydrated-card-detail {flex-direction:column;}.sample-card-dialog .exact-card-image {width:200px;}
 
 .archetype-popover,.card-search-results {background:#f7fbff!important;}
-.dark .archetype-popover,.dark .card-search-results {background:#20374f!important;}
+.dark .archetype-popover,.dark .card-search-results {background:var(--ui-panel)!important;}
 
 .card-detail-close {margin-top:6px;font-size:11px;}
 
@@ -70,7 +70,7 @@
 .header-identity h1 {font-size:22px;line-height:1.25;}.header-identity p {font-size:11px;white-space:nowrap;}
 .header-utilities {flex-shrink:0;}.header-utilities>button,.header-utilities>button[aria-haspopup] {min-height:44px;}
 .auth-segments button[data-state=active] {background:#cadff4!important;font-weight:650;}
-.dark .auth-segments button[data-state=active] {background:#47698e!important;}
+.dark .auth-segments button[data-state=active] {background:var(--ui-raised)!important;}
 .guest-action {background:var(--dialog-field);text-decoration:underline;text-underline-offset:3px;min-height:44px;}
 @media(max-width:600px) {.header-row {min-height:48px;gap:4px;}.header-inner {padding:6px 12px!important;}.header-identity {gap:4px;}.header-identity>img {width:30px;height:38px;}.header-identity h1 {font-size:17px;}.header-identity p {font-size:9px;}.header-utilities {gap:0;}.header-utilities>button {padding-inline:8px;}.header-utilities>button:first-child {width:36px;min-width:36px;}.header-utilities>button svg {width:16px;height:16px;}.header-utilities>button:nth-child(2) {font-size:11px;max-width:110px;}.header-utilities>button:nth-child(2)>svg {margin-right:4px;}}
 @media(max-width:350px) {.header-identity h1 {font-size:15px;}.header-identity p {font-size:8px;}.header-utilities>button:nth-child(2) {max-width:84px;padding-inline:6px;}.header-utilities>button:first-child {width:44px;min-width:44px;}.header-utilities>button:nth-child(2)>svg {display:none;}}

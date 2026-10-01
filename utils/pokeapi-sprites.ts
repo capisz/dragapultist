@@ -1,14 +1,14 @@
 import { POKEAPI_POKEMON_IDS } from "./pokeapi-sprite-ids"
+import localPixelSprites from "./local-pixel-sprites.json"
+
+const localPixelSpriteIds = new Set<number>(localPixelSprites)
 
 export const POKEAPI_SPRITE_BASE =
   "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon"
 
 export const FALLBACK_POKEMON_SPRITE = "/sprites/substitute.png"
 
-type SpritePreference = "icon" | "artwork"
-
 interface SpriteCandidateOptions {
-  preference?: SpritePreference
   includeFallback?: boolean
 }
 
@@ -84,40 +84,26 @@ export function getPokeApiPokemonSpriteNumber(spriteRef: string): number | null 
   return POKEAPI_POKEMON_IDS[spriteId as keyof typeof POKEAPI_POKEMON_IDS] ?? null
 }
 
-export function getPokeApiPokemonSpriteUrls(
-  spriteRef: string,
-  preference: SpritePreference = "icon",
-): string[] {
+// Every surface uses the same still, full-body front sprite. A missing sprite
+// falls back to the neutral substitute, never to artwork or miniature icons.
+export function getPokeApiPokemonSpriteUrls(spriteRef: string): string[] {
   const pokemonNumber = getPokeApiPokemonSpriteNumber(spriteRef)
-  if (!pokemonNumber) return []
-
-  const icon = `${POKEAPI_SPRITE_BASE}/versions/generation-viii/icons/${pokemonNumber}.png`
-  const home = `${POKEAPI_SPRITE_BASE}/other/home/${pokemonNumber}.png`
-  const official = `${POKEAPI_SPRITE_BASE}/other/official-artwork/${pokemonNumber}.png`
-  const defaultFront = `${POKEAPI_SPRITE_BASE}/${pokemonNumber}.png`
-
-  return preference === "artwork"
-    ? uniquePreserveOrder([home, official, defaultFront, icon])
-    : uniquePreserveOrder([home, icon, official, defaultFront])
+  return pokemonNumber ? [`${POKEAPI_SPRITE_BASE}/${pokemonNumber}.png`] : []
 }
 
 export function getLocalPokemonSpriteUrls(spriteRef: string): string[] {
-  const spriteId = normalizePokemonSpriteId(spriteRef)
-  if (!spriteId) return []
-
-  return [`/sprites/${spriteId}.png`, `/sprites/${spriteId}.webp`]
+  const number = getPokeApiPokemonSpriteNumber(spriteRef)
+  return number && localPixelSpriteIds.has(number) ? [`/pokemon/${number}.png`] : []
 }
 
 export function getPokemonSpriteCandidateSources(
   spriteRef: string,
   options: SpriteCandidateOptions = {},
 ): string[] {
-  const { preference = "icon", includeFallback = true } = options
-
   return uniquePreserveOrder([
-    ...getPokeApiPokemonSpriteUrls(spriteRef, preference),
     ...getLocalPokemonSpriteUrls(spriteRef),
-    includeFallback ? FALLBACK_POKEMON_SPRITE : "",
+    ...getPokeApiPokemonSpriteUrls(spriteRef),
+    options.includeFallback !== false ? FALLBACK_POKEMON_SPRITE : "",
   ])
 }
 
@@ -134,7 +120,7 @@ function spriteIdsForDisplayName(displayName: string): string[] {
   if (!normalized) return []
 
   const base = normalized
-    .replace(/\bex\b/g, " ")
+    .replace(/\b(?:ex|gx|v|vmax|vstar)\b/g, " ")
     .replace(/\bmask\b/g, " ")
     .replace(/\s+/g, " ")
     .trim()
@@ -191,4 +177,10 @@ export function getKnownPokemonSpriteOptions(): PokemonSpriteOption[] {
       }
     })
     .sort((a, b) => a.label.localeCompare(b.label))
+}
+
+// Keep externally supplied candidates within the same default sprite style.
+export function pixelSpriteCandidates(sources: string[]): string[] {
+  return sources.filter(source => source.startsWith('/pokemon/') || source === FALLBACK_POKEMON_SPRITE ||
+    (source.startsWith(`${POKEAPI_SPRITE_BASE}/`) && /^\d+\.png$/.test(source.slice(POKEAPI_SPRITE_BASE.length + 1))))
 }

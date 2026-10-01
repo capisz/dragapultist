@@ -25,8 +25,8 @@ function CandidateSprite({
       alt={alt}
       loading="lazy"
       decoding="async"
-      style={{ width: size, height: size }}
-      className="rounded-full border border-slate-200 bg-white/80 object-cover dark:border-slate-600 dark:bg-slate-900/70"
+      style={{ width: size, height: size, imageRendering: "pixelated" }}
+      className="object-contain"
       onError={() => setIdx((prev) => (prev < candidates.length - 1 ? prev + 1 : prev))}
     />
   )

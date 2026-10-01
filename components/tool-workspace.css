@@ -11,7 +11,7 @@
 .studio button:disabled {opacity:.5;cursor:not-allowed;}
 .studio .action,.studio .secondary,.icon-button {padding:8px 14px;border-radius:8px;font-size:13px;}
 .studio .action {background:#315f91;color:#fff;}
-.dark .studio .action {background:#b8d7ff;color:#173650;}
+.dark .studio .action {background:var(--ui-action);color:var(--ui-action-label);}
 .studio .secondary,.icon-button {background:var(--raised);color:var(--ink);}
 .studio :is(.action,.secondary):active {transform:scale(.97);}
 .studio p,.studio small {color:var(--muted);}
@@ -91,7 +91,7 @@
 .odds-settings>label {display:block;font-size:12px;margin-bottom:7px;}.odds-settings>input {width:100%;padding:8px 10px;}
 .odds-settings fieldset {margin:14px 0;}.odds-settings legend {margin-bottom:8px;}
 .copy-choices {display:flex;gap:6px;}.copy-choices button {width:40px;background:var(--raised);border-radius:7px;}
-.copy-choices button[aria-pressed=true] {background:var(--action);color:#fff;}.dark .copy-choices button[aria-pressed=true] {color:#173650;}
+.copy-choices button[aria-pressed=true] {background:var(--action);color:#fff;}.dark .copy-choices button[aria-pressed=true] {color:var(--ui-ink);}
 .odds-settings .second-card-toggle {display:flex;align-items:center;gap:7px;margin:10px 0;}.odds-settings p {font-size:11px;line-height:1.5;margin:12px 0;}
 .odds-canvas {grid-column:2;grid-row:1;min-width:0;background:var(--surface);padding:18px;border-radius:12px;}
 .odds-feature {display:flex;gap:20px;align-items:center;justify-content:space-between;margin-bottom:14px;}

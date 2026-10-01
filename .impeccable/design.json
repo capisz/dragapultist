@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-25T00:34:23.895086+00:00",
+  "generatedAt": "2026-10-01T16:06:25.742145+00:00",
   "title": "Design System: Dragapultist",
   "extensions": {
     "shadows": [
@@ -21,7 +21,7 @@
       {
         "name": "match-emphasis",
         "value": "box-shadow 160ms ease",
-        "purpose": "Hover shadow on the visible 64px circular identity; newly saved match emphasis on the matching button. No scaling; briefs appear instantly."
+        "purpose": "Constellation hover shadow follows the visible identity: 64px for singles or 76px when either side has multiple icons. Newly saved match emphasis uses the matching button. No sprite scaling; briefs appear instantly."
       },
       {
         "name": "fresh-match",
@@ -32,18 +32,48 @@
         "name": "ghost-pulse",
         "value": "3.4s ease-in-out infinite; 50% opacity .55",
         "purpose": "Dashed loading/empty scaffold; disabled with reduced motion."
+      },
+      {
+        "name": "constellation-opponent-preview",
+        "value": "450ms delay; 180ms reveal; 120ms return",
+        "purpose": "Stable sprite layers crossfade to the opponent while a brief remains open. Reduced motion retains the delay and swaps without a fade."
+      },
+      {
+        "name": "list-square-emphasis",
+        "value": "transform 120ms ease; scale(1.1)",
+        "purpose": "Hover or active preview emphasizes a result square with an outline. Reduced motion removes scaling and transitions."
+      },
+      {
+        "name": "klink-settings",
+        "value": "1.68s linear infinite",
+        "purpose": "Two supplied gear layers rotate in opposite directions on hover, focus, activation, or while Settings is open; otherwise paused. Disabled with reduced motion."
+      },
+      {
+        "name": "unown-help",
+        "value": "2.6s ease-in-out infinite",
+        "purpose": "Supplied Unown bobs and tilts on hover or keyboard focus. Disabled with reduced motion."
+      },
+      {
+        "name": "appearance-thumb",
+        "value": "transform 250ms ease-out; translateX(64px)",
+        "purpose": "Solrock/Lunatone switch moves its selection thumb. Disabled with reduced motion."
       }
     ],
     "breakpoints": [
       {
         "name": "mobile-viewport",
         "value": "720px",
-        "purpose": "Below: compact field, stacked chrome/tools, horizontal review rounds."
+        "purpose": "Below: compact Constellation, 76px List summaries and 16px result squares, stacked chrome/tools, horizontal review rounds."
       },
       {
         "name": "desktop-review-viewport",
         "value": "1024px",
-        "purpose": "Review switches from two columns to three; Sample Lab restores its larger-screen layout."
+        "purpose": "At and above: three-column review, larger Sample Lab, and List right preview column. Below: List preview is a dismissible fixed bottom panel."
+      },
+      {
+        "name": "narrow-header-viewport",
+        "value": "400px",
+        "purpose": "Below: header utility widths reduce to 36px while maintaining 44px height; identity typography and appearance-switch spacing tighten."
       }
     ],
     "sources": [
@@ -57,11 +87,41 @@
       "components/game-detail.tsx",
       "components/pokemon-tcg-analyzer.tsx",
       "components/top-deck-calc-panel.tsx",
-      "components/sample-hand-lab.tsx"
+      "components/sample-hand-lab.tsx",
+      "app/layout.tsx",
+      "components/auth/auth-header.tsx",
+      "components/appearance-settings.tsx",
+      "components/appearance-settings.css",
+      "components/header-pokemon-icon.tsx",
+      "components/match-history-list.tsx",
+      "components/archetype-icon-pair.tsx",
+      "components/match-sprite.tsx",
+      "utils/pokeapi-sprites.ts",
+      "utils/local-pixel-sprites.json",
+      "docs/validation/2026-10-01-figma-revamp/VALIDATION.md"
     ],
-    "assetProvenance": "Existing public raster assets reused unchanged; no new or replaced rasters.",
-    "notes": "No synthesized color ramps or new visual concepts; fixed user-supplied reference. CSS custom properties inherit from the project root.",
-    "releaseBoundary": "September 24 revision: localhost review only; production push requires later user approval. No live migration or deployment."
+    "assetProvenance": "October 1 Figma export supplied as Revamp color scheme (1).zip: unchanged Klink/Unown regular and shiny header assets plus 14 supplied full-body pixel sprites. Matching front sprites are cached for built-in archetypes, with 77 local Pokemon images total. All Pokemon display surfaces use still front sprites; uncached custom identities use matching remote front PNGs and unavailable images use the neutral substitute. Animated sprites, miniature icons, and artwork fallbacks are excluded. Match review keeps one Change Pokemon action beneath the pair. Origins and checksums are recorded beside the October 1 validation document.",
+    "notes": "Scoped merge of the incumbent Claude/September 24 composition with the user-approved October 1 Figma settings, List, pixel-sprite, and dark-palette changes. No new visual concept or unrelated tab redesign. CSS custom properties inherit from the project root; dark palette primitives live in DESIGN.md, not this sidecar.",
+    "releaseBoundary": "October 1 revision: local browser/build verification only. No push, deployment, real-account sync, native Windows/Mac runtime, or live installer download was verified. Public Windows EXE and Mac Apple Silicon/Intel DMG buttons remain disabled with Coming soon until verified public links are configured.",
+    "appearance": {
+      "default": "light",
+      "preferences": [
+        "light",
+        "dark",
+        "system"
+      ],
+      "persistence": "Device-local next-themes preference; system is opt-in.",
+      "secondaryText": "List and settings use ui-ink-2 in light mode and ui-ink-3 in dark mode.",
+      "headerArtwork": "Regular Klink/Unown in light mode, shiny variants in dark mode; existing help and account actions retained."
+    },
+    "historyViews": {
+      "default": "constellation",
+      "persistenceKey": "dragapultist-match-view",
+      "listGrouping": "Current filtered/sorted matches, grouped by saved archetype for the selected user/opponent perspective. Unknown assignments remain unknown.",
+      "listPreview": "Mouse hover or keyboard focus previews; click/tap pins. Close/Escape clears and restores square focus without reopening. Existing review callback and return-focus behavior remain.",
+      "emptySquares": "Decorative unused slots with aria-hidden, never match data."
+    },
+    "validation": "See docs/validation/2026-10-01-figma-revamp/VALIDATION.md for local tests and 1280/390/320px browser evidence. Reduced-motion CSS was inspected; OS emulation and the optional Impeccable detector were unavailable."
   },
   "components": [
     {
@@ -87,7 +147,7 @@
     {
       "name": "Match brief",
       "kind": "chip",
-      "html": "<span class=\"ds-brief\"><span class=\"ds-dot\"></span><strong>Opponent</strong> \u00b7 Win</span>",
+      "html": "<span class=\"ds-brief\"><span class=\"ds-dot\"></span><strong>Opponent</strong> · Win</span>",
       "css": ".ds-brief{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border:1px solid var(--ui-border);border-radius:999px;background:var(--ui-raised);color:var(--ui-ink-3);font:11px Geist Sans,sans-serif;box-shadow:var(--ui-brief-shadow);}.ds-brief strong{color:var(--ui-ink);font-weight:600;}.ds-dot{width:7px;height:7px;border-radius:50%;background:var(--result-win-dot);}",
       "refersTo": "match-brief",
       "description": "Static appearance sample; production behavior is controlled by pointer type, keyboard focus and collision boundaries."
@@ -104,14 +164,38 @@
       "kind": "chip",
       "html": "<span class=\"ds-status\" role=\"status\">Clipboard blocked. Paste below instead.</span>",
       "css": ".ds-status{display:inline-flex;align-items:center;min-height:26px;padding:4px 10px;border-radius:999px;background:var(--status-warn-bg);color:var(--status-warn-ink);font:500 11.5px Geist Sans,sans-serif;overflow-wrap:anywhere;}"
+    },
+    {
+      "name": "List result squares",
+      "kind": "custom",
+      "refersTo": "match-square-win",
+      "description": "Static sample of List results and unused slots. Production labels include match details; hover/focus previews, activation pins, and mobile squares grow to 16px.",
+      "html": "<div class=\"ds-results\" role=\"group\" aria-label=\"Match results\"><button type=\"button\" class=\"ds-result\" aria-label=\"Win; preview match\" aria-pressed=\"false\"></button><button type=\"button\" class=\"ds-result ds-result-loss\" aria-label=\"Loss; preview match\" aria-pressed=\"false\"></button><span class=\"ds-result-empty\" aria-hidden=\"true\"></span></div>",
+      "css": ".ds-results{display:flex;gap:5px;padding:4px;}.ds-result,.ds-result-empty{display:block;width:14px;height:14px;padding:0;border-radius:3px;border:1px solid var(--result-win-dot);background:var(--result-win-dot);}.ds-result{cursor:pointer;transition:transform 120ms ease;}.ds-result-loss{background:var(--result-loss-dot);border-color:var(--result-loss-dot);}.ds-result-empty{background:var(--ui-panel-header);border-color:var(--ui-border-soft);}.ds-result:hover,.ds-result:active{transform:scale(1.1);outline:2px solid var(--ui-link);outline-offset:2px;}.ds-result:focus-visible{outline:2px solid var(--ui-link);outline-offset:3px;}@media(prefers-reduced-motion:reduce){.ds-result{transition:none;transform:none;}}"
+    },
+    {
+      "name": "History view selector",
+      "kind": "nav",
+      "description": "Saved List or Constellation selection; this static sample shows List selected.",
+      "html": "<div class=\"ds-views\" role=\"group\" aria-label=\"History view\"><button type=\"button\" aria-pressed=\"false\">Constellation</button><button type=\"button\" aria-pressed=\"true\">List</button></div>",
+      "css": ".ds-views{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--ui-border);border-radius:8px;}.ds-views button{height:32px;padding:0 12px;border:0;border-radius:6px;background:transparent;color:var(--ui-ink-2);font:12px Geist Sans,sans-serif;cursor:pointer;}.ds-views button[aria-pressed=true],.ds-views button:hover,.ds-views button:active{background:var(--ui-panel-header);color:var(--ui-ink);}.ds-views button:focus-visible{outline:2px solid var(--ui-link);outline-offset:3px;}"
+    },
+    {
+      "name": "Unavailable beta download",
+      "kind": "button",
+      "refersTo": "beta-download-disabled",
+      "description": "Browser-only installer choice before a verified public HTTPS link exists; disabled with explicit availability copy.",
+      "html": "<button type=\"button\" class=\"ds-download\" disabled><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3\"/></svg><span>Windows<small>.exe · Coming soon</small></span></button>",
+      "css": ".ds-download{display:flex;align-items:center;gap:12px;min-height:48px;padding:10px 12px;text-align:left;border:1px solid var(--ui-border);border-radius:8px;background:var(--ui-panel-header);color:var(--ui-ink);font:12px Geist Sans,sans-serif;cursor:not-allowed;}.ds-download small{display:block;margin-top:2px;font-size:11px;color:var(--ui-ink-2);}.ds-download svg{flex-shrink:0;}"
     }
   ],
   "narrative": {
-    "overview": "The supplied Claude HTML and September 24 UI frontend redesign revision are the visual authority: a compact Pok\u00e9mon match field followed by practical round review. Cool-blue surfaces, blue ink, pixelated sprites, and restrained outcome colors retain the existing import, history, and tool navigation model. This document records implementation; it introduces no new product claims or visual concept.",
+    "overview": "The supplied Claude HTML and September 24 UI frontend redesign establish the compact Pokémon match field and practical round review. The October 1 Figma revision adds grouped List history, a charcoal dark palette, full-body pixel sprites, and Pokémon settings/help controls within that existing composition. Cool-blue light surfaces and restrained outcome colors remain; import, review, account actions, tab layouts, and tool navigation retain their existing behavior. This document records the approved implementation without introducing product claims.",
     "dos": [
       "Do use semantic theme tokens and preserve the supplied composition.",
-      "Do retain real data, save states, tool navigation, and existing raster artwork.",
-      "Do preserve responsive reflow and keyboard access to every match."
+      "Do retain real data, save states, tool navigation, saved Pokémon identities, and the approved supplied artwork.",
+      "Do preserve responsive reflow, keyboard access to every match, and focus after closing previews or returning from review.",
+      "Do keep unavailable installers visibly disabled until verified public links are configured."
     ],
     "donts": [
       "Don't substitute illustrative prototype records for persisted history.",

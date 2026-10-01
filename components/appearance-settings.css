@@ -1,0 +1,34 @@
+.option-a-header .header-utilities .header-pokemon-button {display:inline-flex;align-items:center;justify-content:center;width:44px;min-width:44px;min-height:44px;height:44px;padding:6px;border:0;border-radius:8px;background:transparent;color:var(--ui-ink);box-shadow:none;transform:none;}
+.option-a-header .header-utilities .header-pokemon-button:hover {background:var(--ui-panel-header);transform:none;}
+.option-a-header .header-utilities .header-pokemon-button:focus-visible {outline:2px solid var(--ui-link)!important;outline-offset:2px;}
+.header-pokemon-icon {position:relative;display:block;width:32px;height:30px;flex-shrink:0;}
+.header-pokemon-icon>span {position:absolute;inset:0;}
+.header-pokemon-icon img {object-fit:contain;pointer-events:none;}
+.pokemon-icon-dark {display:none;}.dark .pokemon-icon-light {display:none;}.dark .pokemon-icon-dark {display:block;}
+.header-pokemon-icon--help {width:28px;height:32px;transform-origin:50% 65%;}
+.header-pokemon-icon--help img {width:100%;height:100%;}
+.header-pokemon-icon--settings img {position:absolute;width:20px;height:20px;animation:klink-turn 1.68s linear infinite paused;}
+.klink-first {top:0;left:0;}.header-pokemon-icon--settings .klink-second {bottom:0;right:0;animation-direction:reverse;}
+.header-pokemon-button:is(:hover,:focus-visible,:active,[data-state=open]) .header-pokemon-icon--settings img {animation-play-state:running;}
+.header-pokemon-button:is(:hover,:focus-visible) .header-pokemon-icon--help {animation:unown-curious 2.6s ease-in-out infinite;}
+@keyframes klink-turn {to {transform:rotate(360deg);}}
+@keyframes unown-curious {0%,100% {transform:translateY(0) rotate(0);}25% {transform:translateY(-3px) rotate(-12deg);}55% {transform:translateY(1px) rotate(10deg);}80% {transform:translateY(-2px) rotate(-5deg);}}
+.appearance-settings-dialog,.dark .appearance-settings-dialog {width:calc(100% - 32px);max-width:440px;max-height:85dvh;overflow-y:auto;gap:24px;padding:24px;background:var(--ui-panel);color:var(--ui-ink);border-color:var(--ui-border);backdrop-filter:none;}
+.appearance-settings-dialog h2 {font-size:20px;}.appearance-settings-dialog h3 {font-size:14px;font-weight:600;margin-bottom:10px;}
+.appearance-settings-dialog [id$=description],.appearance-hint {font-size:12px;line-height:1.6;color:var(--appearance-muted, var(--ui-ink-2));}
+.pokemon-theme-choice {display:flex;align-items:center;justify-content:center;gap:20px;padding:20px 0;}
+.pokemon-theme-choice>span {text-align:center;font-size:12px;font-weight:600;}
+.pokemon-theme-choice small {display:block;font-size:10px;font-weight:400;color:var(--appearance-muted, var(--ui-ink-2));margin-top:4px;}
+.pokemon-theme-switch {position:relative;display:grid;grid-template-columns:1fr 1fr;align-items:center;justify-items:center;width:132px;height:56px;flex-shrink:0;border:1px solid var(--ui-border);border-radius:999px;background:var(--ui-page);}
+.pokemon-theme-switch img {position:relative;width:44px;height:44px;object-fit:contain;image-rendering:pixelated;}
+.pokemon-theme-thumb {position:absolute;top:3px;left:3px;width:60px;height:48px;border:1px solid var(--ui-border);border-radius:999px;background:var(--ui-raised);transition:transform 250ms ease-out;}
+.pokemon-theme-switch[aria-checked=true] .pokemon-theme-thumb {transform:translateX(64px);border-color:var(--ui-link);}
+.system-appearance {display:flex;align-items:center;gap:10px;min-height:40px;font-size:12px;cursor:pointer;}.system-appearance input {width:16px;height:16px;accent-color:var(--ui-link);}
+.beta-downloads {border-top:1px solid var(--ui-border-soft);padding-top:20px;}.beta-download-options {display:grid;gap:8px;margin-top:12px;}
+.beta-download {display:flex;align-items:center;gap:12px;text-align:left;min-height:48px;padding:10px 12px;border:1px solid var(--ui-border);border-radius:8px;color:var(--ui-ink);background:var(--ui-raised);font-size:12px;}
+.beta-download small {display:block;margin-top:2px;font-size:11px;color:var(--appearance-muted, var(--ui-ink-2));}.beta-download:disabled {cursor:not-allowed;background:var(--ui-panel-header);}.beta-download[href]:hover {background:var(--ui-panel-header);border-color:var(--ui-link);}
+.appearance-settings-dialog :is(button,input,a):focus-visible {outline:2px solid var(--ui-link);outline-offset:3px;}
+@media(max-width:400px) {.option-a-header .header-identity h1 {font-size:17px;}.option-a-header .header-identity p {font-size:9px;}.option-a-header .header-identity>img {width:30px;height:38px;}.pokemon-theme-choice {gap:12px;}.header-utilities {gap:2px;}.option-a-header .header-utilities .header-pokemon-button {width:36px;min-width:36px;}}
+@media(prefers-reduced-motion:reduce) {.header-pokemon-icon,.header-pokemon-icon img {animation:none!important;}.pokemon-theme-thumb {transition:none;}}
+
+.dark .appearance-settings-dialog {--appearance-muted:var(--ui-ink-3);}

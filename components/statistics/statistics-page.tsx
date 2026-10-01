@@ -774,7 +774,7 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 rounded-full text-rose-500 hover:text-rose-600 dark:text-rose-300 dark:hover:text-rose-200"
+                                    className="danger-action h-8 w-8 rounded-lg"
                                     disabled={deleteBusy}
                                     onClick={() => void handleHistoryDelete(game.id)}
                                     aria-label="Delete game"

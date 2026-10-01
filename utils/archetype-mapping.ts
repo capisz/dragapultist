@@ -758,11 +758,11 @@ const FALLBACK_ICON = FALLBACK_POKEMON_SPRITE
 
 export function getArchetypeSpritePath(value?: string | null): string {
   const custom = parseCustomArchetypeId(value ?? null)
-  if (custom) return getPokemonSpritePrimarySource(custom.firstPokemonId, { preference: "artwork" })
+  if (custom) return getPokemonSpritePrimarySource(custom.firstPokemonId)
 
   const id = canonicalizeArchetypeId(value ?? null)
   const rule = id ? ARCHETYPE_RULES.find((r) => r.id === id) : undefined
-  if (rule?.sprite) return getPokemonSpritePrimarySource(rule.sprite, { preference: "artwork" })
+  if (rule?.sprite) return getPokemonSpritePrimarySource(rule.sprite)
   return FALLBACK_ICON
 }
 

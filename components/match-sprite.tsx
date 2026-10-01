@@ -1,9 +1,9 @@
 "use client"
 import { useState } from 'react'
-import { getPokemonSpriteCandidateSourcesForDisplayName } from '@/utils/pokeapi-sprites'
+import { getPokemonSpriteCandidateSourcesForDisplayName, pixelSpriteCandidates } from '@/utils/pokeapi-sprites'
 
 export function MatchSprite({ name }: { name: string }) {
-  const sources = getPokemonSpriteCandidateSourcesForDisplayName(name).filter(src => src.startsWith('/sprites/'))
+  const sources = pixelSpriteCandidates(getPokemonSpriteCandidateSourcesForDisplayName(name))
   const [failed, setFailed] = useState<string[]>([])
   const source = sources.find(src => !failed.includes(src))
   const isMega = /\bmega\b/i.test(name)

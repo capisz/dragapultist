@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties } from 'react'
 import { getArchetypeIconCandidatePaths } from '@/utils/archetype-mapping'
+import { pixelSpriteCandidates } from '@/utils/pokeapi-sprites'
 
 const FALLBACK_ICON = '/sprites/substitute.png'
 const spriteFraming = new Map<string, CSSProperties>()
@@ -47,7 +48,7 @@ export function CandidateSprite({ candidates, size = 30, normalize = false }: { 
   const [index, setIndex] = useState(0)
   const [frame, setFrame] = useState<CSSProperties>()
   const sprite = <img src={sources[Math.min(index, sources.length - 1)]} alt="" loading="lazy" width={size} height={size}
-    style={normalize ? frame : undefined}
+    style={{ imageRendering: 'pixelated', ...(normalize ? frame : undefined) }}
     onLoad={normalize ? event => setFrame(visibleSpriteFrame(event.currentTarget)) : undefined}
     className={normalize ? 'archetype-sprite-image' : 'archetype-sprite'} onError={event => { if (index >= sources.length - 1) event.currentTarget.style.visibility = "hidden"; else { setFrame(undefined); setIndex(value => value + 1) } }} />
   return normalize ? <span className="archetype-sprite archetype-sprite-frame" style={{ '--sprite-size': `${size}px` } as CSSProperties}>{sprite}</span> : sprite
@@ -57,7 +58,7 @@ export function ArchetypeIconPair({ archetypeId, size = 30, localSprites = false
   const slots = getArchetypeIconCandidatePaths(archetypeId)
   return <span className="archetype-icons" data-count={Math.min(slots.length || 1, 3)} aria-hidden="true">
     {(slots.length ? slots : [[FALLBACK_ICON]]).slice(0, 3).map((candidates, index) => {
-      const sources = localSprites ? candidates.filter(source => source.startsWith('/sprites/')) : candidates
+      const sources = localSprites ? pixelSpriteCandidates(candidates) : candidates
       return <CandidateSprite key={`${archetypeId}-${index}-${sources.join('|')}`} candidates={sources} size={size} normalize={localSprites} />
     })}
   </span>

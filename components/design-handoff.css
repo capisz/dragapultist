@@ -54,7 +54,6 @@
 .prize-picker-label {margin-bottom:8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;}
 .studio .match-review {color:var(--ui-ink);}
 .studio .review-panel-heading h3, .review-turn-controls {color:var(--ui-ink);}
-.review-matchup>button {font-size:11px;color:var(--ui-link);}
 .review-evidence article>div.grid>div {border:0;}
 
 .games-actions {order:3;display:flex;align-items:center;justify-content:flex-end;flex:1 1 auto;flex-wrap:wrap;gap:8px;}

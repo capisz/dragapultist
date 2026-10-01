@@ -16,7 +16,7 @@ import {
   isCustomArchetypeId,
   parseCustomArchetypeId,
 } from "@/utils/archetype-mapping"
-import { FALLBACK_POKEMON_SPRITE, type PokemonSpriteOption } from "@/utils/pokeapi-sprites"
+import { FALLBACK_POKEMON_SPRITE, getPokemonSpriteCandidateSources, type PokemonSpriteOption } from "@/utils/pokeapi-sprites"
 
 interface ImportConfirmationDialogProps {
   open: boolean
@@ -61,9 +61,7 @@ const EMPTY_CUSTOM_BUILDER: CustomArchetypeBuilderState = {
 }
 
 function PokemonSuggestionSprite({ option }: { option: PokemonSpriteOption }) {
-  const candidates = option.spriteUrls?.length
-    ? option.spriteUrls
-    : [option.spriteUrl, `/sprites/${option.id}.png`, FALLBACK_POKEMON_SPRITE].filter(Boolean)
+  const candidates = getPokemonSpriteCandidateSources(option.id)
   const [idx, setIdx] = useState(0)
   const src = candidates[Math.min(idx, candidates.length - 1)] ?? FALLBACK_POKEMON_SPRITE
 
@@ -73,7 +71,8 @@ function PokemonSuggestionSprite({ option }: { option: PokemonSpriteOption }) {
       alt={option.label}
       loading="lazy"
       decoding="async"
-      className="h-5 w-5 rounded-sm object-contain"
+      className="h-7 w-7 object-contain"
+      style={{ imageRendering: "pixelated" }}
       onError={() => setIdx((value) => Math.min(value + 1, candidates.length - 1))}
     />
   )

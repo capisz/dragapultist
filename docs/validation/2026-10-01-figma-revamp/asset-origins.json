@@ -1,0 +1,6 @@
+{
+  "date": "2026-10-01",
+  "header_assets": { "source": "/Users/admin/Downloads/Revamp color scheme (1).zip", "entries": "src/assets/klink-gear-{1,2}{,-shiny}.png and unown-question{,-shiny}.png", "destination": "public/settings", "modified": false },
+  "supplied_sprites": { "source": "/Users/admin/Downloads/Revamp color scheme (1).zip", "entries": "public/pokemon/*.png", "destination": "public/pokemon", "modified": false },
+  "additional_sprites": { "source": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{id}.png", "destination": "public/pokemon", "manifest": "utils/local-pixel-sprites.json", "modified": false }
+}
