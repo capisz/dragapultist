@@ -7,7 +7,7 @@ import { ArchetypeIconPair } from './archetype-icon-pair'
 import { MatchPreview } from './match-preview'
 import { matchArchetype, matchOutcome } from '@/utils/match-presentation'
 
-const PAGE_SIZE = 15
+const PAGE_SIZE = 24
 
 export function MatchConstellation({ games, freshId, restoreMatchId, onRestoreComplete, onSelectGame }: {
   games: GameSummary[]

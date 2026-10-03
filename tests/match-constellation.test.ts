@@ -14,7 +14,7 @@ const previewModule = loadComponent<typeof import('../components/match-preview')
 const { MatchConstellation } = loadComponent<typeof import('../components/match-constellation')>('match-constellation.tsx', { ...imports, './match-preview': previewModule })
 type Props = Parameters<typeof MatchConstellation>[0]
 const game = (index: number) => ({ id: `${index}`, opponent: `Opponent ${index}`, date: '10/2/2026', turns: 5, userWon: true, userPrizeCardsTaken: 6, opponentPrizeCardsTaken: 2 }) as GameSummary
-const games = Array.from({ length: 31 }, (_, index) => game(index))
+const games = Array.from({ length: 49 }, (_, index) => game(index))
 let root: Root, container: HTMLDivElement
 let props: Props
 async function render(patch: Partial<Props> = {}, key = 'default') {
@@ -42,38 +42,38 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); container.remove() })
 
 describe('constellation pages and shared preview', () => {
-  it('shows 15 ordered matches per page, a partial last page, and safe boundaries', async () => {
+  it('shows 24 ordered matches per page, a partial last page, and safe boundaries', async () => {
     await render()
-    expect(matches()).toEqual(games.slice(0, 15).map(game => game.id))
+    expect(matches()).toEqual(games.slice(0, 24).map(game => game.id))
     expect(button('Previous page').disabled).toBe(true)
     await click('Next page')
-    expect(matches()).toEqual(games.slice(15, 30).map(game => game.id))
+    expect(matches()).toEqual(games.slice(24, 48).map(game => game.id))
     await click('Next page')
-    expect(matches()).toEqual(['30'])
+    expect(matches()).toEqual(['48'])
     expect(button('Next page').disabled).toBe(true)
-    expect(container.textContent).toContain('31–31 of 31 matches')
+    expect(container.textContent).toContain('49–49 of 49 matches')
     await click('Previous page')
-    expect(matches()[0]).toBe('15')
+    expect(matches()[0]).toBe('24')
   })
   it('keeps the current page and mounted matches during background refresh', async () => {
     await render(); await click('Page 2')
-    const first = container.querySelector('[data-match-id="15"]')
+    const first = container.querySelector('[data-match-id="24"]')
     await render({ games: games.map(game => ({ ...game })) })
-    expect(matches()).toHaveLength(15)
-    expect(container.querySelector('[data-match-id="15"]')).toBe(first)
+    expect(matches()).toHaveLength(24)
+    expect(container.querySelector('[data-match-id="24"]')).toBe(first)
   })
   it('clamps a removed last page and starts new filtered result sets on page one', async () => {
     await render(); await click('Page 3')
-    await render({ games: games.slice(0, 16) })
-    expect(matches()).toEqual(['15'])
+    await render({ games: games.slice(0, 25) })
+    expect(matches()).toEqual(['24'])
     await render({ games }, 'new-filter')
     expect(matches()[0]).toBe('0')
   })
   it('restores the reviewed match on its page without undoing later navigation', async () => {
     const restored = vi.fn()
-    await render({ restoreMatchId: '19', onRestoreComplete: restored })
-    expect(matches()[0]).toBe('15')
-    expect(document.activeElement?.getAttribute('data-match-id')).toBe('19')
+    await render({ restoreMatchId: '28', onRestoreComplete: restored })
+    expect(matches()[0]).toBe('24')
+    expect(document.activeElement?.getAttribute('data-match-id')).toBe('28')
     expect(restored).toHaveBeenCalledTimes(1)
     await click('Previous page')
     expect(matches()[0]).toBe('0')
