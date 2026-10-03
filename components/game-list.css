@@ -18,7 +18,28 @@
 .archetype-sprite-frame .archetype-sprite-image {width:100%;height:100%;object-fit:contain;}
 .constellation-filter .archetype-icons {min-width:0;gap:8px;}
 .constellation-filter .archetype-sprite {flex:0 0 30px;width:30px;height:30px;object-fit:contain;}
-.constellation-field {display:grid;grid-template-columns:repeat(var(--match-columns,6),104px);grid-auto-rows:112px;align-items:center;justify-content:start;gap:14px;padding:18px 20px 76px;}
+.constellation-field {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(3,112px);align-items:center;gap:14px;padding:18px 20px;}
+.constellation-pages {min-width:0;container-type:inline-size;display:flex;flex-direction:column;}
+.constellation-pagination {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:auto;padding:12px 20px;border-top:1px solid var(--ui-border-soft);}
+.constellation-pagination p {font-size:11px;color:var(--list-muted,var(--ui-ink-2));font-variant-numeric:tabular-nums;}
+.constellation-page-controls {display:flex;align-items:center;gap:4px;}
+.constellation-page-controls button {display:flex;align-items:center;justify-content:center;gap:4px;min-width:36px;min-height:36px;padding:0 8px;border:1px solid transparent;border-radius:8px;font-size:11px;color:var(--ui-ink-2);font-variant-numeric:tabular-nums;}
+.constellation-page-controls button:hover:not(:disabled) {background:var(--ui-panel-header);color:var(--ui-ink);}
+.constellation-page-controls button[aria-current=page] {background:var(--ui-panel-header);border-color:var(--ui-border);color:var(--ui-ink);font-weight:600;}
+.constellation-page-controls button:disabled {opacity:.4;cursor:default;}
+@container(max-width:540px) {
+  .constellation-field {grid-template-rows:repeat(3,88px);gap:8px 4px;padding:16px 8px;}
+  .constellation-field .constellation-point,.constellation-field .constellation-identity {width:44px;height:44px;}
+  .constellation-field .constellation-point:has(.archetype-icons[data-count="2"]),.constellation-field .constellation-point:has(.archetype-icons[data-count="3"]),.constellation-field .constellation-identity:has(.archetype-icons[data-count="2"]),.constellation-field .constellation-identity:has(.archetype-icons[data-count="3"]) {width:48px;max-width:100%;}
+  .constellation-field .constellation-sprite .archetype-sprite {width:32px;height:32px;}
+  .constellation-field .constellation-sprite .archetype-icons {gap:3px;}
+  .constellation-field .constellation-sprite .archetype-icons[data-count="2"] .archetype-sprite {width:20px;height:20px;}
+  .constellation-field .constellation-sprite .archetype-icons[data-count="3"] .archetype-sprite {width:12px;height:20px;}
+  .constellation-pagination {justify-content:center;gap:8px;padding:12px 8px;}
+  .constellation-pagination p {flex-basis:100%;text-align:center;}
+  .constellation-page-controls {gap:2px;}
+  .constellation-page-controls button {min-width:40px;min-height:44px;}
+}
 .constellation-position {display:flex;justify-content:center;min-width:0;}
 .constellation-point {display:flex;align-items:center;justify-content:center;width:64px;height:64px;padding:0;border:0;background:transparent;border-radius:50%;transition:box-shadow 160ms ease;}
 .constellation-point[data-brief=true] .constellation-identity {box-shadow:0 4px 12px -4px rgba(23,54,80,.4);}
@@ -47,7 +68,6 @@
 .brief-result-dot[data-outcome=L] {background:var(--result-loss-dot);}
 .match-empty {display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px;margin-top:20px;background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:14px;}
 .match-empty h3 {font-size:14px;font-weight:600;}.match-empty p {margin-top:4px;font-size:12px;color:var(--ui-ink-3);}
-@media(max-width:719px) {.constellation-field {grid-template-columns:repeat(var(--match-columns,4),72px);grid-auto-rows:96px;justify-content:center;gap:8px;padding:18px 12px 76px;}}
 .match-brief {animation:none!important;transition:none!important;}
 @media(prefers-reduced-motion:reduce) {.constellation-point,.constellation-identity,.constellation-sprite,.match-brief {transition:none;animation:none;}}
 

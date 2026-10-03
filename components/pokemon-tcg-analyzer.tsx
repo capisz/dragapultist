@@ -6,7 +6,7 @@ import { ClipboardPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { matchArchetype, matchesSearch } from "@/utils/match-presentation"
+import { sortMatchesByDate, matchArchetype, matchesSearch } from "@/utils/match-presentation"
 import { GameList } from "@/components/game-list"
 import { GameDetail } from "@/components/game-detail"
 import { ImportConfirmationDialog } from "@/components/import-confirmation-dialog"
@@ -480,7 +480,7 @@ export function PokemonTCGAnalyzer() {
     }))
   }, [])
 
-  const sortedGames = [...games].sort((a, b) => {
+  const sortedGames = sortConfig.key === "date" ? sortMatchesByDate(games, sortConfig.direction, !remoteHistory) : [...games].sort((a, b) => {
     if (sortConfig.key === "opponentArchetype") {
       // Sort the same assigned archetypes shown by the constellation icons.
       const compared = matchArchetype(a, true).label.localeCompare(matchArchetype(b, true).label, undefined, { sensitivity: "base", numeric: true })

@@ -1,6 +1,7 @@
 export interface GameSummary {
   id: string
   date: string
+  createdAt?: string
   username: string
   opponent: string
   userMainAttacker: string

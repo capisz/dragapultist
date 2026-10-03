@@ -4,6 +4,16 @@ import { canonicalizeArchetypeId, formatArchetypeLabel } from './archetype-mappi
 // Presentation of annotations already written by the existing review callbacks.
 export type ReviewGame = GameSummary & { notes?: Record<number, string>; deckList?: string; deckName?: string }
 
+export function sortMatchesByDate(games: GameSummary[], direction: 'asc' | 'desc', oldestFirst = false) {
+  // Legacy guest records have no timestamps but retain their import insertion order.
+  const ordered = oldestFirst && direction === 'desc' ? [...games].reverse() : [...games]
+  const timestamp = (value?: string) => value ? Date.parse(value) || 0 : 0
+  return ordered.sort((a, b) => {
+    const compared = timestamp(a.date) - timestamp(b.date) || timestamp(a.createdAt) - timestamp(b.createdAt)
+    return direction === 'asc' ? compared : -compared
+  })
+}
+
 export function matchOutcome(game: GameSummary) {
   return game.userWon ? { code: 'W', label: 'Win' } : { code: 'L', label: 'Loss' }
 }

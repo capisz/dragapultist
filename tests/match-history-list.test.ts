@@ -5,6 +5,12 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { matchArchetype, matchOutcome } from '@/utils/match-presentation'
+import { loadComponent } from './component-loader'
+
+const previewModule = loadComponent('match-preview.tsx', {
+  './archetype-icon-pair': { ArchetypeIconPair: () => null },
+  '@/utils/match-presentation': { matchArchetype, matchOutcome },
+})
 
 // The backend runner preserves Next's JSX. Compile this isolated rendering test
 // just as the existing sprite component tests do, without changing app tooling.
@@ -16,6 +22,7 @@ const output = ts.transpileModule(readFileSync(new URL('../components/match-hist
 }).outputText
 new Function('module', 'exports', 'require', output)(compiled, compiled.exports, (name: string) => {
   if (name === './archetype-icon-pair') return { ArchetypeIconPair: () => null }
+  if (name === './match-preview') return previewModule
   if (name === '@/utils/match-presentation') return { matchArchetype, matchOutcome }
   return require(name)
 })
