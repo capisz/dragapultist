@@ -106,25 +106,25 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
       {importComposer}
     </div>
     {loading || (!hasHistory && !hasFilter) ? <><span className="sr-only" role="status">{loading ? "Loading matches…" : ""}</span><GhostScaffold /></> : games.length > 0 || archetypeFilter ? <div className="constellation-panel">
-      <div className="constellation-filter-bar" role="group" aria-label={`Filter matches by ${filterSide === 'opponent' ? "opponent's" : 'your'} archetype`}>
-        <ToggleGroup type="single" className="constellation-filter-toggle" aria-label="Choose whose archetypes to filter" value={filterSide} onValueChange={side => {
-          if (side !== 'user' && side !== 'opponent') return
-          setFilterSide(side)
-          setArchetypeFilter(null)
-          setBriefId(null)
-        }}>
-          <ToggleGroupItem value="user">Your decks</ToggleGroupItem>
-          <ToggleGroupItem value="opponent">Opponent decks</ToggleGroupItem>
-        </ToggleGroup>
-        <div className="constellation-filter-options">
-          {archetypeFilter && <button type="button" onClick={() => { setArchetypeFilter(null); setBriefId(null) }} aria-label="Show all archetypes">All</button>}
-          {archetypeFilters.map(({ id, label }) => <button key={JSON.stringify(id)} type="button" className="constellation-filter" aria-pressed={archetypeFilter?.id === id} onClick={() => { setArchetypeFilter(previous => previous?.id === id ? null : { id }); setBriefId(null) }} title={filterSide === 'opponent' ? `Show matches against ${label}` : `Show your ${label} matches`}>
-            <ArchetypeIconPair archetypeId={id} size={26} localSprites /><span className="sr-only">{filterSide === 'opponent' ? `Show matches against ${label}` : `Show your ${label} matches`}</span>
-          </button>)}
+      <div className="constellation-filter-bar">
+        <div className="constellation-filter-scroll" role="group" aria-label={`Filter matches by ${filterSide === 'opponent' ? "opponent's" : 'your'} archetype`} tabIndex={0}>
+          <ToggleGroup type="single" className="constellation-filter-toggle" aria-label="Choose whose archetypes to filter" value={filterSide} onValueChange={side => {
+            if (side !== 'user' && side !== 'opponent') return
+            setFilterSide(side)
+            setArchetypeFilter(null)
+            setBriefId(null)
+          }}>
+            <ToggleGroupItem value="user">Your decks</ToggleGroupItem>
+            <ToggleGroupItem value="opponent">Opponent decks</ToggleGroupItem>
+          </ToggleGroup>
+          <div className="constellation-filter-options">
+            {archetypeFilter && <button type="button" onClick={() => { setArchetypeFilter(null); setBriefId(null) }} aria-label="Show all archetypes">All</button>}
+            {archetypeFilters.map(({ id, label }) => <button key={JSON.stringify(id)} type="button" className="constellation-filter" aria-pressed={archetypeFilter?.id === id} onClick={() => { setArchetypeFilter(previous => previous?.id === id ? null : { id }); setBriefId(null) }} title={filterSide === 'opponent' ? `Show matches against ${label}` : `Show your ${label} matches`}>
+              <ArchetypeIconPair archetypeId={id} size={26} localSprites /><span className="sr-only">{filterSide === 'opponent' ? `Show matches against ${label}` : `Show your ${label} matches`}</span>
+            </button>)}
+          </div>
         </div>
-      </div>
-      <div className="match-view-bar">
-        <ToggleGroup type="single" value={view} aria-label="Match view" onValueChange={value => {
+        <ToggleGroup type="single" className="match-view-toggle" value={view} aria-label="Match view" onValueChange={value => {
           if (value !== 'constellation' && value !== 'list') return
           setView(value); setBriefId(null)
           try { localStorage.setItem('dragapultist-match-view', value) } catch {}
