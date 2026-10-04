@@ -690,12 +690,10 @@ export function PokemonTCGAnalyzer() {
                     }}
                     className={cn(
                       "w-full h-24 rounded-2xl",
-                      "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
-                      "border border-slate-300 shadow-[0_0_22px_rgba(42,81,128,0.1)]",
+                      "text-gray-900 placeholder:text-slate-400",
                       "ring-offset-0 focus:ring-offset-0 focus-visible:ring-offset-0",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300",
-                      "dark:bg-[#355a7c] dark:text-white dark:placeholder:text-slate-200/90",
-                      "dark:border-slate-600 dark:shadow-none",
+                      "dark:text-white dark:placeholder:text-slate-200/90",
                       "dark:focus-visible:ring-slate-300/70",
                       "px-5 py-4",
                     )}
@@ -706,12 +704,7 @@ export function PokemonTCGAnalyzer() {
                       <Button
                         onClick={handleManualSubmit}
                         disabled={quickBusy || saveState === "saving"}
-                        className={cn(
-                          "rounded-md px-5 h-9 text-sm",
-                          "bg-[#5e82ab] text-slate-50 hover:bg-sky-800/50",
-                          "dark:bg-[#b1cce8] dark:text-[#121212] dark:hover:bg-[#a1c2e4]",
-                          isButtonPressed ? "scale-95" : "scale-100",
-                        )}
+                        className="action px-5 h-9"
                         style={buttonStyles}
                       >
                         Import
