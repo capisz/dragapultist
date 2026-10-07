@@ -12,10 +12,10 @@
     "start": "electron .",
     "test": "node --test test/*.test.cjs",
     "verify:focus": "node scripts/verify-focus-dependency.cjs",
-    "pack": "electron-builder --dir --publish never",
-    "dist:mac": "electron-builder --mac dmg --arm64 --x64 --publish never && node scripts/verify-mac-signature.cjs && node scripts/checksums.cjs",
-    "dist:win": "electron-builder --win nsis --x64 --publish never && node scripts/checksums.cjs",
-    "legal:prepare": "node scripts/prepare-legal.cjs"
+    "pack": "node node_modules/electron/install.js && electron-builder --dir --publish never",
+    "dist:mac": "node node_modules/electron/install.js && electron-builder --mac dmg --arm64 --x64 --publish never && node scripts/verify-mac-signature.cjs && node scripts/checksums.cjs",
+    "dist:win": "node node_modules/electron/install.js && electron-builder --win nsis --x64 --publish never && node scripts/checksums.cjs",
+    "legal:prepare": "node node_modules/electron/install.js && node scripts/prepare-legal.cjs"
   },
   "dependencies": {
     "get-windows": "9.3.0"
@@ -103,7 +103,6 @@
     }
   },
   "allowScripts": {
-    "get-windows@9.3.0": true,
-    "electron@44.4.5": true
+    "get-windows@9.3.0": true
   }
 }
