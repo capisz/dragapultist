@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { prepareDesktopImport } from "@/lib/desktop-import"
-import type { DesktopSettings, DesktopStatus } from "@/types/desktop"
+import type { DesktopSettings, DesktopStatus, OverlaySettings } from "@/types/desktop"
 import { AuthDialog } from "./auth/auth-dialog"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
@@ -44,6 +44,9 @@ export function DesktopCompanion({ children }: { children: ReactNode }) {
   const [notice, setNotice] = useState("")
   const [saving, setSaving] = useState(false)
   const [reviewLog, setReviewLog] = useState("")
+  const [visibilityShortcut, setVisibilityShortcut] = useState("")
+  const [interactionShortcut, setInteractionShortcut] = useState("")
+  const [idleOpacity, setIdleOpacity] = useState(35)
   const usernameInput = useRef<HTMLInputElement>(null)
   const seenAccounts = useRef(new Set<string>())
   const currentAccount = useRef<string | null>(null)
@@ -91,15 +94,31 @@ export function DesktopCompanion({ children }: { children: ReactNode }) {
       }
     }
     void refresh()
+    const refreshOverlay = () => {
+      void api.refreshOverlay?.().catch(() => {
+        if (!disposed) setSyncError("Overlay statistics could not refresh. Your saved games are retained.")
+      })
+    }
+    const imported = (event: Event) => {
+      const value = (event as CustomEvent<{ id: string; duplicate: boolean }>).detail
+      const accountId = currentAccount.current
+      if (accountId && value) void api.reportImport?.({ accountId, id: value.id, duplicate: value.duplicate }).catch(() => {
+        if (!disposed) setSyncError("Game saved; overlay confirmation is unavailable.")
+      })
+    }
     const timer = setInterval(() => void drain(), 2000)
     window.addEventListener("dragapultist-auth-changed", refresh)
     window.addEventListener("online", refresh)
+    window.addEventListener("dragapultist-games-changed", refreshOverlay)
+    window.addEventListener("dragapultist-game-imported", imported)
     return () => {
       disposed = true
       clearInterval(timer)
       unsubscribe()
       window.removeEventListener("dragapultist-auth-changed", refresh)
       window.removeEventListener("online", refresh)
+      window.removeEventListener("dragapultist-games-changed", refreshOverlay)
+      window.removeEventListener("dragapultist-game-imported", imported)
     }
   }, [refresh])
 
@@ -112,6 +131,12 @@ export function DesktopCompanion({ children }: { children: ReactNode }) {
     setError("")
     setNotice("")
   }, [status?.accountId])
+
+  useEffect(() => {
+    setVisibilityShortcut(status?.overlay?.visibilityShortcut || "")
+    setInteractionShortcut(status?.overlay?.interactionShortcut || "")
+    setIdleOpacity(Math.round((status?.overlay?.idleOpacity ?? 0.35) * 100))
+  }, [status?.overlay?.visibilityShortcut, status?.overlay?.interactionShortcut, status?.overlay?.idleOpacity])
 
   useEffect(() => {
     if (!status?.signedIn || !status.accountId || status.state === "Starting" || authDialogOpen || signInOpen || open) return
@@ -160,6 +185,25 @@ export function DesktopCompanion({ children }: { children: ReactNode }) {
       setNotice(value.enabled === true ? "Capture is on. Copy a completed game log in Pokémon TCG Live to import it." : value.enabled === false ? "Capture paused." : "Preferences saved.")
     } catch (cause) {
       if (currentAccount.current === account) setError(cause instanceof Error ? cause.message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, "") : "Could not save capture settings. Please try again.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const configureOverlay = async (value: OverlaySettings) => {
+    const api = window.dragapultistDesktop
+    if (!api?.configureOverlay || saving) return
+    const account = currentAccount.current
+    setSaving(true)
+    setError("")
+    setNotice("")
+    try {
+      const overlay = await boundedRequest(api.configureOverlay(value))
+      if (currentAccount.current !== account) return
+      setStatus(current => current ? { ...current, overlay } : current)
+      setNotice("Overlay preferences saved.")
+    } catch (cause) {
+      if (currentAccount.current === account) setError(cause instanceof Error ? cause.message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, "") : "Could not save overlay settings. Please try again.")
     } finally {
       setSaving(false)
     }
@@ -217,6 +261,29 @@ export function DesktopCompanion({ children }: { children: ReactNode }) {
             </fieldset>
             <p className="desktop-hint">Copied game logs are stored securely on this computer. Other clipboard text is ignored. Closing the window keeps capture running; Quit stops it.</p>
           </details>
+
+          {status?.overlay && window.dragapultistDesktop?.configureOverlay && <fieldset className="overlay-settings" disabled={saving || unavailable}>
+            <legend>Game overlay</legend>
+            <label><input type="checkbox" checked={status.overlay.enabled} onChange={event => void configureOverlay({ enabled: event.target.checked })} /> Show stats over Pokémon TCG Live</label>
+            <p className="desktop-hint">Your deck record, last five results and today’s record appear when the game is focused. Clicks pass through in view mode. Today uses recorded game dates; copied desktop logs use the capture date.</p>
+            {typeof status.overlay.idleOpacity === "number" && <>
+              <label htmlFor="overlay-idle-opacity">Idle opacity · {idleOpacity}%</label>
+              <input id="overlay-idle-opacity" type="range" min={0} max={100} step={1} value={idleOpacity} aria-describedby="overlay-opacity-help" aria-valuetext={`${idleOpacity}% opacity`} onChange={event => setIdleOpacity(Number(event.target.value))} />
+              <p id="overlay-opacity-help" className="desktop-hint">0% hides the panel; 100% keeps it opaque. Hover, interaction, and import notices reveal it fully.</p>
+              <Button type="button" variant="outline" disabled={idleOpacity === Math.round(status.overlay.idleOpacity * 100)} onClick={() => void configureOverlay({ idleOpacity: idleOpacity / 100 })}>Save opacity</Button>
+            </>}
+            <label htmlFor="overlay-visibility-shortcut">Show / hide shortcut</label>
+            <Input id="overlay-visibility-shortcut" value={visibilityShortcut} maxLength={80} onChange={event => setVisibilityShortcut(event.target.value)} />
+            <label htmlFor="overlay-interaction-shortcut">Interact / return to game shortcut</label>
+            <Input id="overlay-interaction-shortcut" value={interactionShortcut} maxLength={80} onChange={event => setInteractionShortcut(event.target.value)} />
+            <div className="desktop-actions">
+              <Button type="button" variant="outline" onClick={() => void configureOverlay({ visibilityShortcut, interactionShortcut })}>Save shortcuts</Button>
+              <Button type="button" variant="outline" onClick={() => void configureOverlay({ position: null })}>Reset position</Button>
+              <Button type="button" variant="outline" disabled={!status.overlay.selectedDeckKey} onClick={() => void configureOverlay({ selectedDeckKey: null })}>Follow latest game</Button>
+            </div>
+            <p className="desktop-hint">Use the tray menu if a shortcut is unavailable. Press Escape while interacting to return control to the game.</p>
+            {[status.overlay.error, status.overlay.statsError, ...status.overlay.shortcutErrors].filter(Boolean).map(message => <p className="desktop-error" role="status" key={message}>{message}</p>)}
+          </fieldset>}
 
           {!!status?.review.length && <section className="desktop-review" aria-label="Logs needing review">
             <h3>Logs needing review</h3>

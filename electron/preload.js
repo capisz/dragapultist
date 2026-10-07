@@ -1,26 +1,21 @@
-// electron/preload.js
-const { contextBridge, ipcRenderer } = require("electron")
-
-contextBridge.exposeInMainWorld("dragapultist", {
-  /**
-   * Subscribe to logs detected by Electron.
-   * Usage in React:
-   *   window.dragapultist?.onLogDetected?.((logText) => { ... })
-   */
-  onLogDetected(callback) {
-    if (typeof callback !== "function") {
-      return () => {}
-    }
-
-    const listener = (_event, logText) => {
-      callback(logText)
-    }
-
-    ipcRenderer.on("log-detected", listener)
-
-    // allow React to unsubscribe on unmount
-    return () => {
-      ipcRenderer.removeListener("log-detected", listener)
-    }
+const { contextBridge, ipcRenderer } = require('electron')
+const invoke = (method, value) => ipcRenderer.invoke('desktop:request', { version: 1, method, value })
+contextBridge.exposeInMainWorld('dragapultistDesktop', {
+  version: 1,
+  status: () => invoke('status'),
+  configure: settings => invoke('configure', settings),
+  configureOverlay: settings => invoke('overlay:configure', settings),
+  refreshOverlay: () => invoke('overlay:refresh'),
+  reportImport: result => invoke('overlay:import', result),
+  inspect: id => invoke('inspect', { id }),
+  next: () => invoke('next'),
+  submit: (id, game) => invoke('submit', { id, game }),
+  needsReview: (id, reason) => invoke('review', { id, reason }),
+  retry: (id, username) => invoke('retry', { id, username }),
+  onStatus(callback) {
+    if (typeof callback !== 'function') return () => {}
+    const listener = (_event, value) => callback(value)
+    ipcRenderer.on('desktop:status', listener)
+    return () => ipcRenderer.removeListener('desktop:status', listener)
   },
 })

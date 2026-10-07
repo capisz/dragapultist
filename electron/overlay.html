@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'none'; img-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Dragapultist overlay</title>
+  <link rel="stylesheet" href="overlay.css">
+  <script src="overlay-renderer.js" defer></script>
+</head>
+<body>
+  <main aria-label="Dragapultist game overlay">
+    <header id="drag-handle"><strong>Dragapultist</strong><span id="mode">View mode</span></header>
+    <section aria-label="Current deck">
+      <h1 id="deck-name">Waiting for statistics</h1>
+      <div class="deck-stats"><span id="deck-record">—</span><span id="deck-rate">—</span><span id="deck-games">—</span></div>
+      <div class="edit-controls" hidden>
+        <label for="deck-select">Current deck</label>
+        <select id="deck-select"><option value="">Follow latest game</option></select>
+      </div>
+    </section>
+    <div class="today"><span>Today · all decks</span><strong id="today-record">—</strong></div>
+    <section class="recent-section" aria-label="Last five saved games">
+      <h2>Recent results</h2>
+      <ol id="recent"></ol>
+      <p id="empty">Sign in to load your saved games.</p>
+    </section>
+    <p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
+    <p id="warning" class="warning" role="status" hidden></p>
+    <footer>
+      <span id="capture">Sign-in required</span>
+      <span id="shortcut">Ctrl/Cmd+Shift+I to interact</span>
+      <div class="edit-controls actions" hidden><button id="lock" type="button">Return to game</button><button id="hide" type="button">Hide</button></div>
+    </footer>
+  </main>
+</body>
+</html>

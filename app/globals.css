@@ -246,3 +246,9 @@ button.danger-action:hover:not(:disabled), .studio button.danger-action:hover:no
 button.danger-action[data-confirm=true], .studio button.danger-action[data-confirm=true] {background:var(--ui-danger-solid);border-color:var(--ui-danger-solid);color:#fff;}
 button.danger-action[data-confirm=true]:hover:not(:disabled), .studio button.danger-action[data-confirm=true]:hover:not(:disabled) {background:var(--ui-danger-solid-hover);border-color:var(--ui-danger-solid-hover);}
 button.danger-action:focus-visible, .studio button.danger-action:focus-visible {outline:2px solid var(--ui-danger-ink);outline-offset:3px;}
+
+.overlay-settings {display:grid;gap:8px;border:1px solid var(--ui-border);border-radius:8px;padding:12px;min-width:0;}
+.overlay-settings legend {padding:0 4px;font-weight:600;}
+.overlay-settings p {margin:0;line-height:1.5;}
+.overlay-settings input[type="range"] {width:100%;min-height:24px;margin:0;accent-color:var(--ui-link);cursor:pointer;}
+.overlay-settings input[type="range"]:focus-visible {outline:2px solid var(--ui-link);outline-offset:3px;}
