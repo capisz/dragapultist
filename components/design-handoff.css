@@ -32,6 +32,8 @@
 .match-sort {order:2;display:flex;gap:2px;padding:2px;background:var(--ui-panel-header);border:1px solid var(--ui-border-soft);border-radius:9px;}
 .studio .match-sort button {height:30px;min-height:30px;padding:0 10px;font-size:11px;font-weight:400;color:var(--ui-ink-2);border-radius:7px;}
 .studio .match-sort button[data-state=on] {background:var(--ui-raised);color:var(--ui-ink);font-weight:600;box-shadow:var(--ui-shadow);}
+.dark .studio .match-sort button[data-state=on] {background:var(--ui-action);color:var(--ui-action-label);}
+.dark .studio .match-sort button[data-state=on]:hover {background:var(--ui-action-hover);}
 .games-intro {order:4;flex:1 1 100%;}
 .games-intro[hidden] {display:none;}
 .capture-tray {margin:0;border:0;}
@@ -62,6 +64,8 @@
 .games-actions {order:3;display:flex;align-items:center;justify-content:flex-end;flex:1 1 auto;flex-wrap:wrap;gap:8px;}
 .studio .games-actions button {height:36px;min-height:36px;font-size:13px;padding:0 12px;white-space:nowrap;}
 .quick-add {gap:7px;}.import-toggle {color:var(--ui-ink);background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:8px;}
+.dark .studio .import-toggle {background:color-mix(in srgb,var(--ui-action) 35%,var(--ui-action-label));border-color:var(--ui-action-hover);color:var(--ui-page);}
+.dark .studio .import-toggle:is(:hover,[aria-expanded=true]) {background:color-mix(in srgb,var(--ui-action) 50%,var(--ui-action-label));color:var(--ui-page);}
 .import-status {display:inline-flex;align-items:center;min-height:26px;padding:4px 10px;border-radius:999px;background:var(--ui-panel-header);color:var(--ui-ink-2);font-size:11.5px;font-weight:500;overflow-wrap:anywhere;}
 .import-status[data-tone=ok] {background:var(--result-win-bg);color:var(--result-win-fg);}.import-status[data-tone=warn] {background:var(--status-warn-bg);color:var(--status-warn-ink);}
 .ghost-scaffold {border:1px solid var(--ui-border);border-radius:14px;overflow:hidden;background:var(--ui-panel);animation:ghost-pulse 3.4s ease-in-out infinite;}
