@@ -19,4 +19,6 @@ The existing synthetic browser flow was rerun against the combined local product
 
 The local packaged arm64 app passed strict app/helper signatures and contained the bundled overlay, focus helper, first-run documents, and new icon. The local package used the already installed native runtime because the work Mac's build environment lacks usable system Python/Xcode tooling; clean CI builds still rebuild and verify native dependencies.
 
-Production release/download checks are recorded in the beta.3 manifest once the new public installers are built. Live signed-in cross-device mutations, actual PTCGL focus/fullscreen, and native first-launch acceptance remain acceptance checks. Mac apps remain ad-hoc signed and unnotarized, and work-device policies still apply.
+The final original-repository build and publication run `37609232530` passed both native platforms and the dependent release job. Source revision: `0541321c9a3bd5347a481fce6e49aebdbc5e0d8d`. All three public beta.3 URLs returned HTTP 200 anonymously with exact sizes and matching CI-manifest/server SHA-256 digests; the website now uses `desktop-0.3.0-beta.3.json`. The clean builds explicitly install the pinned Electron 44 runtime before preparing its notices, because that package no longer has an automatic postinstall download.
+
+Live signed-in cross-device mutations, actual PTCGL focus/fullscreen, and native first-launch acceptance remain acceptance checks. Mac apps remain ad-hoc signed and unnotarized, and work-device policies still apply.

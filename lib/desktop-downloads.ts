@@ -1,4 +1,4 @@
-import release from '@/docs/releases/desktop-0.3.0-beta.2.json'
+import release from '@/docs/releases/desktop-0.3.0-beta.3.json'
 
 // The checked-in release manifest keeps website downloads tied to verified assets.
 // Legacy deployment variables may still name an older installer and are no longer used.

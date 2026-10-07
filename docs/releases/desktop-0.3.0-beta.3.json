@@ -1,0 +1,52 @@
+{
+  "version": "0.3.0-beta.3",
+  "sourceCommit": "0541321c9a3bd5347a481fce6e49aebdbc5e0d8d",
+  "repository": "https://github.com/capisz/dragapultist",
+  "releaseUrl": "https://github.com/capisz/dragapultist/releases/tag/v0.3.0-beta.3",
+  "buildRun": "https://github.com/capisz/dragapultist/actions/runs/37609232530",
+  "developerIdSigned": false,
+  "macNotarized": false,
+  "appIconSha256": "37ed0b411f231dfb2b88d465917636d1e3f85fe31a52a8bb5685ec8dcb15c3d1",
+  "files": [
+    {
+      "target": "win-x64",
+      "name": "Dragapultist-0.3.0-beta.3-win-x64.exe",
+      "url": "https://github.com/capisz/dragapultist/releases/download/v0.3.0-beta.3/Dragapultist-0.3.0-beta.3-win-x64.exe",
+      "bytes": 115231647,
+      "sha256": "11cbe08586f21c1a8f85b76812a103a2e4e6c9b089bc8163c66a25b2286c6374",
+      "httpStatus": 200,
+      "anonymousDownload": true,
+      "contentDisposition": "attachment; filename=Dragapultist-0.3.0-beta.3-win-x64.exe",
+      "downloadVerifiedAt": "2026-10-07T10:48:37.439045+00:00"
+    },
+    {
+      "target": "mac-arm64",
+      "name": "Dragapultist-0.3.0-beta.3-mac-arm64.dmg",
+      "url": "https://github.com/capisz/dragapultist/releases/download/v0.3.0-beta.3/Dragapultist-0.3.0-beta.3-mac-arm64.dmg",
+      "bytes": 137958616,
+      "sha256": "b454c27cbc811364b0883967562fbe96cdc2b8f87ee272a51ff87d2400aa860d",
+      "httpStatus": 200,
+      "anonymousDownload": true,
+      "contentDisposition": "attachment; filename=Dragapultist-0.3.0-beta.3-mac-arm64.dmg",
+      "downloadVerifiedAt": "2026-10-07T10:48:35.404375+00:00"
+    },
+    {
+      "target": "mac-x64",
+      "name": "Dragapultist-0.3.0-beta.3-mac-x64.dmg",
+      "url": "https://github.com/capisz/dragapultist/releases/download/v0.3.0-beta.3/Dragapultist-0.3.0-beta.3-mac-x64.dmg",
+      "bytes": 144667410,
+      "sha256": "7cff8ea7e4013514649fecc66d8f5e528e85fc7021e17b1aec2d265a03880d1c",
+      "httpStatus": 200,
+      "anonymousDownload": true,
+      "contentDisposition": "attachment; filename=Dragapultist-0.3.0-beta.3-mac-x64.dmg",
+      "downloadVerifiedAt": "2026-10-07T10:48:31.994922+00:00"
+    }
+  ],
+  "validation": {
+    "installerChecksums": "All public installer downloads match the combined CI manifest and server asset digests.",
+    "automatedWebTests": 126,
+    "automatedDesktopTestsOnMac": 63,
+    "macBundleSignatures": "CI verifies both sealed apps and native helpers inside the finished DMGs.",
+    "nativeAcceptance": "Real PTCGL/fullscreen and native first-launch acceptance remain pending; work-device policies still apply."
+  }
+}
