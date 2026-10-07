@@ -146,7 +146,7 @@ Dark mode uses the same semantic CSS tokens with the `.dark` overrides in `app/g
 
 ## Typography
 
-Geist Sans is the body face; Montserrat is applied to header chrome. Search, the game-log import field, primary controls, and round evidence use compact body text. The import field shares the search field's raised surface and border tokens, and its submit button uses the same primary action treatment as Quick add. Review headings and metric figures use semibold emphasis; metrics and briefs use tabular numerals. Uppercase labels use the label role. Raw-log review text uses a monospace stack. These are observed roles, not a new global size scale.
+Geist Sans is the body face; Montserrat is applied to header chrome. Search, the game-log import field, primary controls, and round evidence use compact body text. The search and import fields share raised surfaces in light mode and Quick add's action background in dark mode, with white text, placeholders, and carets. The import submit button uses the same primary action treatment as Quick add. Review headings and metric figures use semibold emphasis; metrics and briefs use tabular numerals. Uppercase labels use the label role. Raw-log review text uses a monospace stack. These are observed roles, not a new global size scale.
 
 ## Layout
 
