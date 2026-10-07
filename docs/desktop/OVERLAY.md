@@ -33,6 +33,8 @@ Scoped overrides pin the focus package's transitive `tar` to 7.5.22 and `http-ca
 
 The CI dependency preflight verifies the executable Mac helper or loads the Windows native binding without querying any window. The after-pack hook refuses candidates missing the renderer/preloads/font or an unpacked platform helper/binding. A Mac-only local build can use `--config.npmRebuild=false` with the already-bundled executable helper; Windows CI still runs normal dependency installation/native preparation.
 
+`allowScripts` permits the install step for exactly `get-windows@9.3.0`; npm 12 otherwise skips that dependency's native installation. This is a package-specific, version-pinned approval, not a global enablement of dependency scripts. The Windows native preflight must still pass before distributing its installer.
+
 ## Required native acceptance before release
 
 On actual installed Mac and Windows candidates:

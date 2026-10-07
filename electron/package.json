@@ -14,20 +14,66 @@
     "dist:mac": "electron-builder --mac dmg --arm64 --x64 --publish never && node scripts/checksums.cjs",
     "dist:win": "electron-builder --win nsis --x64 --publish never && node scripts/checksums.cjs"
   },
-  "dependencies": { "get-windows": "9.3.0" },
-  "overrides": { "get-windows": { "tar": "7.5.22", "http-cache-semantics": "4.3.0" } },
-  "devDependencies": { "electron": "44.4.5", "electron-builder": "26.15.3" },
+  "dependencies": {
+    "get-windows": "9.3.0"
+  },
+  "overrides": {
+    "get-windows": {
+      "tar": "7.5.22",
+      "http-cache-semantics": "4.3.0"
+    }
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  },
   "build": {
     "appId": "com.dragapultist.desktop.beta",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "queue.cjs", "transport.cjs", "game-focus.cjs", "overlay.cjs", "overlay-model.cjs", "overlay-preload.js", "overlay.html", "overlay.css", "overlay-renderer.js", "assets/**/*", "offline.html", "package.json"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "queue.cjs",
+      "transport.cjs",
+      "game-focus.cjs",
+      "overlay.cjs",
+      "overlay-model.cjs",
+      "overlay-preload.js",
+      "overlay.html",
+      "overlay.css",
+      "overlay-renderer.js",
+      "assets/**/*",
+      "offline.html",
+      "package.json"
+    ],
     "asar": true,
     "afterPack": "scripts/verify-overlay-package.cjs",
-    "asarUnpack": ["node_modules/get-windows/main", "node_modules/get-windows/lib/binding/**/*"],
+    "asarUnpack": [
+      "node_modules/get-windows/main",
+      "node_modules/get-windows/lib/binding/**/*"
+    ],
     "artifactName": "Dragapultist-${version}-${os}-${arch}.${ext}",
-    "mac": { "target": "dmg", "category": "public.app-category.games", "identity": null, "icon": "assets/icon.png" },
-    "win": { "target": "nsis", "icon": "assets/icon.png" },
-    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "deleteAppDataOnUninstall": false },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.games",
+      "identity": null,
+      "icon": "assets/icon.png"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    },
     "publish": null
+  },
+  "allowScripts": {
+    "get-windows@9.3.0": true
   }
 }
