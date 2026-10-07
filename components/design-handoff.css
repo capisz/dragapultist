@@ -42,7 +42,7 @@
 .capture-composer {display:flex;align-items:flex-end;gap:10px;padding-top:10px;}
 .capture-composer textarea {flex:1;min-width:0;height:88px;padding:10px 12px;font-family:inherit;font-size:13px;line-height:1.5;border-radius:10px;box-shadow:none;}
 .studio .capture-composer textarea {background:var(--ui-raised);border:1px solid var(--ui-border);}
-.dark .studio :is(.games-search input,.capture-composer textarea) {background:var(--ui-action);border-color:var(--ui-action-hover);color:var(--ui-action-label);caret-color:var(--ui-action-label);}
+.dark .studio :is(.games-search input,.capture-composer textarea) {background:var(--ui-raised);border-color:var(--ui-border);color:var(--ui-action-label);caret-color:var(--ui-action-label);}
 .dark .studio :is(.games-search input,.capture-composer textarea)::placeholder {color:var(--ui-action-label);opacity:1;}
 .capture-composer>div {flex-wrap:wrap;max-width:35%;}
 .studio .player-search {max-width:720px;padding:12px;background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:14px;box-shadow:var(--ui-lift);}
