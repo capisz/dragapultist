@@ -1,5 +1,6 @@
 // components/game-detail.tsx
 "use client"
+import { MatchDeckAssignment } from "./deck-list-controls"
 import { ArchetypeSelector } from "./archetype-selector"
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react"
@@ -14,7 +15,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea"
 import { CheckIcon } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { GameSummary } from "@/types/game"
 import { type ReviewGame, matchupName } from "@/utils/match-presentation"
 import "./game-review.css"
@@ -23,10 +23,7 @@ import { ARCHETYPE_RULES, formatArchetypeLabel, isCustomArchetypeId } from "@/ut
 import { getPokemonSpriteCandidateSourcesForDisplayName } from "@/utils/pokeapi-sprites"
 import type { PersistenceState } from "@/lib/api-contract"
 
-interface DeckInfo {
-  name: string
-  list: string
-}
+
 
 interface GameDetailProps {
   game: ReviewGame
@@ -79,7 +76,6 @@ export function GameDetail({ game, onBack, onDelete, allGames, onUpdateGame: com
 
   const [isDeckButtonPressed, setIsDeckButtonPressed] = useState(false)
   const [isApplyPlayersPressed, setIsApplyPlayersPressed] = useState(false)
-  const [isSaveDeckPressed, setIsSaveDeckPressed] = useState(false)
 
   const [flippedTurns, setFlippedTurns] = useState<Set<number>>(new Set())
   const [turnStats, setTurnStats] = useState<{
@@ -98,25 +94,6 @@ export function GameDetail({ game, onBack, onDelete, allGames, onUpdateGame: com
   const [deckList, setDeckList] = useState<string>(game.deckList || "")
   const [deckName, setDeckName] = useState<string>(game.deckName || "")
   const [showDeckListDialog, setShowDeckListDialog] = useState(false)
-  const [deckListError, setDeckListError] = useState<string | null>(null)
-  const [_isDeckListValid, setIsDeckListValid] = useState(false)
-  const [deckListStats, setDeckListStats] = useState<{
-    pokemon: number
-    trainer: number
-    energy: number
-    total: number
-  }>({
-    pokemon: 0,
-    trainer: 0,
-    energy: 0,
-    total: 0,
-  })
-
-  const [existingDecks, setExistingDecks] = useState<DeckInfo[]>([])
-  const [isNewDeck, setIsNewDeck] = useState(true)
-  const [showNewDeckInput, setShowNewDeckInput] = useState(false)
-  const [newDeckName, setNewDeckName] = useState("")
-
   const [prizePopoverOpen, setPrizePopoverOpen] = useState(false)
 
   // --- Set Players dialog ---
@@ -156,49 +133,6 @@ export function GameDetail({ game, onBack, onDelete, allGames, onUpdateGame: com
     setOpponentMainAttacker(game.opponentMainAttacker ?? "")
   }, [showSetPlayersDialog, game.id])
 
-  // Load existing decks from localStorage
-  useEffect(() => {
-    const storedDecks = localStorage.getItem("pokemonDecks")
-    if (storedDecks) setExistingDecks(JSON.parse(storedDecks))
-  }, [])
-
-  useEffect(() => {
-    if (deckList && existingDecks.length > 0) {
-      const normalizedDeckList = deckList.replace(/\s+/g, " ").toLowerCase().trim()
-      const matchingDeck = existingDecks.find(
-        (deck) => deck.list.replace(/\s+/g, " ").toLowerCase().trim() === normalizedDeckList,
-      )
-
-      if (matchingDeck) {
-        setDeckName(matchingDeck.name)
-        setIsNewDeck(false)
-        setShowNewDeckInput(false)
-      } else {
-        setIsNewDeck(true)
-        if (!deckName) setShowNewDeckInput(true)
-      }
-    }
-  }, [deckList, existingDecks, deckName])
-
-  useEffect(() => {
-    if (showDeckListDialog && deckList) validateDeckList(deckList)
-  }, [showDeckListDialog, deckList])
-
-  useEffect(() => {
-    if (showDeckListDialog) {
-      const matchesExisting =
-        !!deckList &&
-        existingDecks.some(
-          (deck) =>
-            deck.list.replace(/\s+/g, " ").toLowerCase().trim() === deckList.replace(/\s+/g, " ").toLowerCase().trim(),
-        )
-
-      if (!matchesExisting) {
-        setIsNewDeck(true)
-        setShowNewDeckInput(true)
-      }
-    }
-  }, [showDeckListDialog, deckList, existingDecks])
 
   // -------- Prize map derivation (per-player) --------
   const players = useMemo(() => {
@@ -539,90 +473,6 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
     if (a.bottom > l.bottom) list.scrollTop += a.bottom - l.bottom
   }, [activeTurnIndex])
 
-  const validateDeckList = (list: string) => {
-    setDeckListError(null)
-
-    if (!list.trim()) {
-      setDeckListError("Deck list cannot be empty")
-      setIsDeckListValid(false)
-      setDeckListStats({ pokemon: 0, trainer: 0, energy: 0, total: 0 })
-      return
-    }
-
-    const lines = list.split("\n").filter((line) => line.trim() !== "")
-    let pokemonCount = 0
-    let trainerCount = 0
-    let energyCount = 0
-    let currentSection = ""
-
-    for (const line of lines) {
-      if (line.toLowerCase().includes("pokémon:") || line.toLowerCase().includes("pokemon:")) {
-        currentSection = "pokemon"
-        continue
-      } else if (line.toLowerCase().includes("trainer:")) {
-        currentSection = "trainer"
-        continue
-      } else if (line.toLowerCase().includes("energy:")) {
-        currentSection = "energy"
-        continue
-      }
-
-      const cardMatch = line.trim().match(/^(\d+)\s+(.+)/)
-      if (cardMatch) {
-        const count = Number.parseInt(cardMatch[1], 10)
-        if (!isNaN(count)) {
-          if (currentSection === "pokemon") pokemonCount += count
-          else if (currentSection === "trainer") trainerCount += count
-          else if (currentSection === "energy") energyCount += count
-        }
-      }
-    }
-
-    const totalCards = pokemonCount + trainerCount + energyCount
-
-    setDeckListStats({ pokemon: pokemonCount, trainer: trainerCount, energy: energyCount, total: totalCards })
-
-    if (totalCards !== 60) {
-      setDeckListError(`Deck must contain exactly 60 cards. Current count: ${totalCards}`)
-      setIsDeckListValid(false)
-    } else {
-      setIsDeckListValid(true)
-    }
-  }
-
-  const handleSaveDeckList = async () => {
-    const savedDeckName = isNewDeck ? newDeckName.trim() : deckName
-    const saved = await onUpdateGame({ ...game, deckList, deckName: savedDeckName })
-    if (!saved) return
-
-    if (isNewDeck && savedDeckName) {
-      const newDeck: DeckInfo = { name: savedDeckName, list: deckList }
-      const updatedDecks = [...existingDecks, newDeck]
-      setExistingDecks(updatedDecks)
-      localStorage.setItem("pokemonDecks", JSON.stringify(updatedDecks))
-      setDeckName(savedDeckName)
-    }
-    setShowDeckListDialog(false)
-  }
-
-  const handleDeckSelection = (value: string) => {
-    if (value === "new") {
-      setIsNewDeck(true)
-      setShowNewDeckInput(true)
-      return
-    }
-
-    setIsNewDeck(false)
-    setShowNewDeckInput(false)
-    setDeckName(value)
-
-    const selectedDeck = existingDecks.find((deck) => deck.name === value)
-    if (selectedDeck) {
-      setDeckList(selectedDeck.list)
-      validateDeckList(selectedDeck.list)
-    }
-  }
-
   const handleTurnClick = (turnNumber: number) => {
     setFlippedTurns((prev) => {
       const newSet = new Set(prev)
@@ -663,6 +513,7 @@ const formatPokemonList = (mainAttacker: string, otherPokemon: string[], isUser:
       notes: turnNotes,
       deckList,
       deckName,
+      deckId: swapPlayers ? null : game.deckId,
       revision: game.revision,
       userMainAttacker: userMainAttacker.trim() || game.userMainAttacker,
       opponentMainAttacker: opponentMainAttacker.trim() || game.opponentMainAttacker,
@@ -889,6 +740,7 @@ return (
         <Button onClick={handleBackClick} className={pillBtn(isBackButtonPressed)}>
           &larr; Back to list
         </Button>
+        <Button variant="outline" disabled={saveState === 'saving'} onClick={() => setShowDeckListDialog(true)}>Deck list</Button>
         {onDelete && (
           <div className="review-delete">
             <Button
@@ -1225,127 +1077,19 @@ className={cn(
         </DialogContent>
       </Dialog>
 
-      {/* DECK LIST DIALOG (your existing block stays) */}
-     {/* DECK LIST DIALOG */}
-<Dialog open={showDeckListDialog} onOpenChange={setShowDeckListDialog}>
-  <DialogContent
-    className={cn(
-      "sm:max-w-[560px] md:max-w-[600px]",           // smaller than 680
-      "rounded-2xl p-0 overflow-hidden",
-      "bg-white text-slate-900",
-      "dark:bg-slate-900 dark:text-slate-50",
-"border border-slate-200/70 dark:border-slate-700/70",
-      "shadow-[0_18px_60px_rgba(2,6,23,0.22)] dark:shadow-[0_18px_60px_rgba(0,0,0,0.55)]",
-    )}
-  >
-    {/* Header */}
-    <div className="px-5 pt-5 pb-3 border-b border-slate-200/70 dark:border-slate-700/70"
->
-      <DialogHeader className="space-y-1">
-        <DialogTitle className="text-lg font-semibold tracking-tight">
-          {game.deckList ? "View / Edit Deck List" : "Add Deck List"}
-        </DialogTitle>
-        <DialogDescription className="text-sm text-slate-600 dark:text-slate-300">
-          Paste your list, then save it to reuse later.
-        </DialogDescription>
-      </DialogHeader>
-    </div>
-
-    {/* Body */}
-    <div className="px-5 pb-5 pt-4 space-y-4">
-      <div>
-        <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300 mb-2">
-          Deck name
-        </label>
-
-        <div className="space-y-2">
-          <Select value={isNewDeck ? "new" : deckName} onValueChange={handleDeckSelection}>
-            <SelectTrigger
-              className={cn(
-                "w-full rounded-xl h-9",
-                "bg-white border-slate-200 text-slate-900",
-                "dark:bg-slate-800/70 dark:border-slate-700 dark:text-slate-50",
-              )}
-            >
-              <SelectValue placeholder="Select a deck or create new" />
-            </SelectTrigger>
-
-<SelectContent className="dark:bg-slate-800 dark:border-slate-700">
-              {existingDecks.map((deck) => (
-                <SelectItem key={deck.name} value={deck.name}>
-                  {deck.name}
-                </SelectItem>
-              ))}
-              <SelectItem value="new">+ Create New Deck</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {showNewDeckInput && (
-            <Input
-              type="text"
-              placeholder="Enter a name for your new deck"
-              value={newDeckName}
-              onChange={(e) => setNewDeckName(e.target.value)}
-              className={cn(
-                "rounded-xl h-9",
-                "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
-"dark:bg-slate-800/70 dark:border-slate-700 dark:text-slate-50 dark:placeholder:text-slate-400",
-              )}
-            />
-          )}
-        </div>
-      </div>
-
-      <Textarea
-        placeholder="Paste your deck list here..."
-        value={deckList}
-        onChange={(e) => {
-          setDeckList(e.target.value)
-          validateDeckList(e.target.value)
-        }}
-        className={cn(
-          "min-h-[240px] md:min-h-[260px]", // smaller textarea
-          "rounded-2xl font-mono text-sm leading-relaxed",
-          "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400",
-"dark:bg-slate-800/70 dark:border-slate-700 dark:text-slate-50 dark:placeholder:text-slate-400",
-          "focus-visible:ring-2 focus-visible:ring-sky-500/40",
-        )}
-      />
-
-      {deckListStats.total > 0 && (
-        <div className="flex flex-wrap justify-between gap-2 text-xs text-slate-600 dark:text-slate-300">
-          <span>Pokémon: {deckListStats.pokemon}</span>
-          <span>Trainer: {deckListStats.trainer}</span>
-          <span>Energy: {deckListStats.energy}</span>
-          <span className={cn("font-semibold", deckListStats.total === 60 ? "text-emerald-600" : "text-rose-600")}>
-            Total: {deckListStats.total}/60
-          </span>
-        </div>
-      )}
-
-      {deckListError && <p className="text-sm text-rose-600">{deckListError}</p>}
-
-      <div className="pt-2 flex items-center justify-end gap-2">
-        <Button variant="outline" onClick={() => setShowDeckListDialog(false)} className="rounded-xl">
-          Cancel
-        </Button>
-        <Button
-          onClick={() => {
-            setIsSaveDeckPressed(true)
-            setTimeout(() => {
-              setIsSaveDeckPressed(false)
-              handleSaveDeckList()
-            }, 150)
-          }}
-          disabled={isNewDeck && !newDeckName.trim()}
-          className={cn(pillBtn(isSaveDeckPressed), "rounded-xl")}
-        >
-          Save
-        </Button>
-      </div>
-    </div>
-  </DialogContent>
-</Dialog>
+      <Dialog open={showDeckListDialog} onOpenChange={setShowDeckListDialog}>
+        <DialogContent className="deck-library-dialog deck-review-dialog">
+          <DialogHeader className="deck-dialog-header">
+            <DialogTitle>Played decklist</DialogTitle>
+            <DialogDescription>Choose the list you played in this match.</DialogDescription>
+          </DialogHeader>
+          <MatchDeckAssignment game={game} onSave={async updated => {
+            const saved = await onUpdateGame({ ...updated, tags, notes: turnNotes })
+            if (saved) { setDeckList(updated.deckList ?? ''); setDeckName(updated.deckName ?? '') }
+            return saved
+          }} />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

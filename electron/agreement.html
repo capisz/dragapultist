@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+  <title>Dragapultist Beta — Terms & Privacy</title>
+  <link rel="stylesheet" href="agreement.css">
+  <script src="agreement-renderer.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="wordmark">Dragapultist</p>
+      <h1 id="heading">Before you start</h1>
+      <p id="introduction">This free beta is for invited testers aged 18 or older. Please review the terms and privacy notice.</p>
+      <p class="free">No donations, ads, subscriptions, or purchases.</p>
+      <p id="publisher" class="metadata">Loading the included documents…</p>
+    </header>
+    <section class="reader" aria-label="Included legal documents">
+      <nav aria-label="Choose a document">
+        <button type="button" id="terms" aria-pressed="true" aria-controls="document">Beta terms</button>
+        <button type="button" id="privacy" aria-pressed="false" aria-controls="document">Privacy notice</button>
+      </nav>
+      <article id="document" tabindex="0" aria-label="Beta Terms and Software License" aria-busy="true"></article>
+    </section>
+    <section id="choices" aria-label="Your choices">
+      <label><input type="checkbox" id="agree-terms" disabled> <span>I agree to the Beta Terms and Software License.</span></label>
+      <label><input type="checkbox" id="acknowledge-privacy" disabled> <span>I acknowledge that the Privacy Notice has been provided.</span></label>
+      <p class="hint">Capture stays off until you choose “Save username &amp; enable capture” in Desktop settings. That allows local clipboard checks and uploads of recognized game logs; other copied text is not saved or uploaded. Previously queued logs may sync after the app opens.</p>
+    </section>
+    <p id="error" class="error" role="alert" hidden></p>
+    <footer>
+      <p id="version" class="metadata"></p>
+      <div class="actions">
+        <button id="decline" type="button">Decline and quit</button>
+        <button id="accept" type="button" class="primary" disabled>Agree and continue</button>
+      </div>
+    </footer>
+  </main>
+</body>
+</html>

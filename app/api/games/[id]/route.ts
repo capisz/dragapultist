@@ -1,4 +1,7 @@
 // app/api/games/[id]/route.ts
+import { readDeckLibrary } from "@/lib/deck-store"
+import { mutationDeckFields } from "@/lib/deck-game"
+import { DeckError } from "@/lib/deck-contract"
 import { NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
 import { getRequestIdentity, userIdQueryValue } from "@/lib/request-user"
@@ -40,6 +43,9 @@ export async function DELETE(request: Request, { params }: RouteContext) {
   const userId = identity.userId
   if (!userId) return NextResponse.json(errorEnvelope(identity.status === "invalid" ? "SESSION_EXPIRED" : "UNAUTHORIZED", "Sign in to delete this game."), { status: 401 })
 
+  const expectedOwner = request.headers.get('x-expected-owner')
+  if (expectedOwner && expectedOwner !== userId) return NextResponse.json(errorEnvelope('SESSION_EXPIRED', 'Your account changed. Reload before saving.'), { status: 401 })
+
   const client = await clientPromise
   const db = client.db(APP_DATABASE_NAME)
 
@@ -73,7 +79,7 @@ export async function DELETE(request: Request, { params }: RouteContext) {
   return NextResponse.json({ ok: true, deleted: Boolean(result.deletedCount) })
 }
 
-export async function PUT(req: Request, { params }: RouteContext) {
+async function putGame(req: Request, { params }: RouteContext) {
   try {
     await assertMutationRequest(req)
   } catch {
@@ -92,9 +98,15 @@ export async function PUT(req: Request, { params }: RouteContext) {
     return NextResponse.json(errorEnvelope("VALIDATION_ERROR", "The game ID or revision is invalid."), { status: 400 })
   }
 
+  const expectedOwner = req.headers.get('x-expected-owner')
+  if (expectedOwner && expectedOwner !== userId) return NextResponse.json(errorEnvelope('SESSION_EXPIRED', 'Your account changed. Reload before saving.'), { status: 401 })
+
   const client = await clientPromise
   const db = client.db(APP_DATABASE_NAME)
   const now = new Date()
+  const previous = await db.collection("games").findOne({ userId: userIdQueryValue(userId), $or: [{ id }, { gameId: id }] })
+  if (!previous) return NextResponse.json(errorEnvelope("NOT_FOUND", "Game not found."), { status: 404 })
+  const deckFields = mutationDeckFields(await readDeckLibrary(db, userId), previous as Parameters<typeof mutationDeckFields>[1], { ...parsed.data, perspective: { username: parsed.data.username, userArchetype: parsed.data.userArchetype } })
   const authoritative = analyzeGameLog(
     parsed.data.rawLog,
     false,
@@ -125,6 +137,7 @@ export async function PUT(req: Request, { params }: RouteContext) {
         notes: parsed.data.notes ?? {},
         deckList: parsed.data.deckList ?? "",
         deckName: parsed.data.deckName ?? "",
+        ...deckFields,
         favorite: parsed.data.favorite ?? false,
         userId,
         updatedAt: now,
@@ -148,7 +161,7 @@ export async function PUT(req: Request, { params }: RouteContext) {
   return NextResponse.json({ game: detail, revision: detail.revision, saveState: "saved" })
 }
 
-export async function PATCH(req: Request, { params }: RouteContext) {
+async function patchGame(req: Request, { params }: RouteContext) {
   try {
     await assertMutationRequest(req)
   } catch {
@@ -167,11 +180,15 @@ export async function PATCH(req: Request, { params }: RouteContext) {
     return NextResponse.json(errorEnvelope("VALIDATION_ERROR", "Invalid game update."), { status: 400 })
   }
 
+  const expectedOwner = req.headers.get('x-expected-owner')
+  if (expectedOwner && expectedOwner !== userId) return NextResponse.json(errorEnvelope('SESSION_EXPIRED', 'Your account changed. Reload before saving.'), { status: 401 })
+
   const client = await clientPromise
   const db = client.db(APP_DATABASE_NAME)
   const ownerFilter = { userId: userIdQueryValue(userId), $or: [{ id }, { gameId: id }] }
   const currentForSearch = await db.collection("games").findOne(ownerFilter)
   if (!currentForSearch) return NextResponse.json(errorEnvelope("NOT_FOUND", "Game not found."), { status: 404 })
+  const deckFields = mutationDeckFields(await readDeckLibrary(db, userId), currentForSearch as Parameters<typeof mutationDeckFields>[1], changes.data)
   const { perspective, ...editableChanges } = changes.data
   const derivedMetadata = {
     ...(changes.data.notes ? { noteCount: Object.values(changes.data.notes).filter(note => note.trim()).length } : {}),
@@ -201,7 +218,7 @@ export async function PATCH(req: Request, { params }: RouteContext) {
     : { ...ownerFilter, revision: expectedRevision.data }
   const result = await db.collection("games").updateOne(
     updateFilter,
-    { $set: { ...authoritativeChanges, ...editableChanges, ...derivedMetadata, updatedAt: new Date() }, $inc: { revision: 1 } },
+    { $set: { ...authoritativeChanges, ...editableChanges, ...derivedMetadata, ...deckFields, ...( "deckList" in deckFields ? { hasDeck: Boolean(deckFields.deckList?.trim()) } : {}), updatedAt: new Date() }, $inc: { revision: 1 } },
   )
 
   if (!result.matchedCount) {
@@ -217,3 +234,13 @@ export async function PATCH(req: Request, { params }: RouteContext) {
   const detail = gameDocumentToDetail(game)
   return NextResponse.json({ game: detail, revision: detail.revision, saveState: "saved" })
 }
+
+async function protectedUpdate(action: () => Promise<NextResponse>) {
+  try { return await action() }
+  catch (error) {
+    if (error instanceof DeckError) return NextResponse.json(errorEnvelope(error.code, error.message), { status: error.code === 'NOT_FOUND' ? 404 : error.code === 'REVISION_CONFLICT' ? 409 : 400 })
+    return NextResponse.json(errorEnvelope('UNAVAILABLE', 'Could not update this game. Please retry.', true), { status: 503 })
+  }
+}
+export async function PATCH(req: Request, context: RouteContext) { return protectedUpdate(() => patchGame(req, context)) }
+export async function PUT(req: Request, context: RouteContext) { return protectedUpdate(() => putGame(req, context)) }

@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
 import "./globals.css"
+import { DeckLibraryProvider } from "@/components/deck-library"
 import { DesktopCompanion } from "@/components/desktop-companion"
 import { ThemeProvider } from "@/components/theme-provider"
 
@@ -31,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Main grows to fill remaining space */}
             <main className="flex-1">
-              <DesktopCompanion>{children}</DesktopCompanion>
+              <DeckLibraryProvider><DesktopCompanion>{children}</DesktopCompanion></DeckLibraryProvider>
             </main>
 
             {/* Footer is outside any max-width page container */}

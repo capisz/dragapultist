@@ -1,0 +1,103 @@
+/* Deck library shares the compact panel and control palette used by Games and Deck Lab. */
+.deck-library-dialog[role=dialog], .dark .deck-library-dialog[role=dialog] {
+  width: calc(100% - 32px); max-width: 560px; max-height: 88dvh; overflow-y: auto;
+  padding: 0; gap: 0; border-radius: 14px; background: var(--ui-panel); color: var(--ui-ink);
+  border-color: var(--ui-border); backdrop-filter: none; box-shadow: var(--ui-lift);
+  scrollbar-color: var(--ui-border) var(--ui-panel); scrollbar-width: thin; color-scheme: light;
+}
+.dark .deck-library-dialog { color-scheme: dark; }
+.deck-dialog-header { padding: 20px 48px 18px 20px; background: var(--ui-panel-header); border-bottom: 1px solid var(--ui-border); }
+.deck-dialog-heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.deck-dialog-heading > div { min-width: 0; }
+.deck-dialog-identity { flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--ui-ink-2); }
+.deck-dialog-header h2 { font-size: 17px; line-height: 1.4; font-weight: 600; letter-spacing: -.02em; }
+.deck-dialog-header p, .dark .deck-dialog-header p { margin: 3px 0 0; color: var(--ui-ink-2); font-size: 12px; line-height: 1.5; }
+.deck-dialog-body { display: grid; gap: 16px; padding: 20px; min-width: 0; }
+.deck-field, .deck-list-picker { display: grid; gap: 7px; font-size: 12px; font-weight: 500; min-width: 0; }
+.deck-field legend { margin-bottom: 7px; }
+.deck-editor-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 12px; align-items: start; }
+.deck-library-dialog :is(textarea, input:not([type=checkbox]), select), .deck-list-picker select, .saved-deck-picker select {
+  background: var(--ui-raised); color: var(--ui-ink); border: 1px solid var(--ui-border); border-radius: 8px;
+  padding: 9px 10px; width: 100%; min-width: 0; min-height: 40px; font-size: 13px; font-weight: 400; caret-color: var(--ui-ink);
+}
+.deck-library-dialog input::placeholder, .deck-library-dialog textarea::placeholder { color: var(--ui-ink-2); opacity: 1; }
+.deck-library-dialog .archetype-combobox { min-height: 40px; height: auto; padding: 6px 10px; width: 100%; gap: 6px; font-size: 12px; }
+.deck-library-dialog .archetype-combobox .archetype-sprite { width: 24px; height: 24px; }
+.deck-library-dialog .archetype-combobox .archetype-icons { gap: 3px; }
+.deck-library-dialog .archetype-combobox > span:not(.archetype-icons) { white-space: normal; line-height: 1.35; }
+.deck-cards-editor { min-width: 0; }
+.deck-cards-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 12px; font-weight: 500; }
+.deck-card-count { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.deck-card-count > span { color: var(--ui-ink-2); font-weight: 400; }
+.deck-card-count[data-ready=true] { color: var(--result-win-fg); }
+.deck-library-dialog textarea { resize: vertical; min-height: 144px; max-height: 300px; line-height: 1.65; font-size: 12px; }
+.deck-section-counts { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--ui-ink-2); }
+.deck-section-counts strong { margin-left: 3px; color: var(--ui-ink); font-variant-numeric: tabular-nums; font-weight: 600; }
+.deck-dialog-body .deck-validation { margin: -6px 0 0; color: var(--ui-ink-2); font-size: 12px; line-height: 1.5; }
+.deck-history-note { margin: 0; color: var(--ui-ink-2); font-size: 12px; line-height: 1.5; }
+.deck-checkbox { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
+.deck-checkbox input, .deck-assignment-options input { flex-shrink: 0; width: 16px; height: 16px; accent-color: var(--ui-action); }
+.deck-current-choice { padding-top: 14px; border-top: 1px solid var(--ui-border-soft); }
+.deck-current-choice small { display: block; margin-top: 2px; color: var(--ui-ink-2); font-size: 11px; line-height: 1.5; }
+.deck-list-state { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: var(--ui-ink-2); }
+.deck-dialog-footer { padding: 16px 20px; border-top: 1px solid var(--ui-border); background: var(--ui-panel-header); display: grid; gap: 12px; }
+.deck-library-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.deck-library-actions > button { flex: 1; }
+.deck-library-maintenance { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 10px; }
+.deck-library-maintenance button { height: 32px; padding: 4px 0; font-size: 11px; }
+.deck-library-dialog button:not(.archetype-combobox):not(.action) { color: var(--ui-ink-2); }
+.deck-library-dialog button[data-state], .deck-library-dialog button.border { border-color: var(--ui-border); background: var(--ui-raised); }
+.deck-library-dialog button:hover:not(:disabled):not(.action) { background: var(--ui-panel-header); color: var(--ui-ink); }
+.deck-library-dialog .action { background: var(--ui-action); color: var(--ui-action-label); font-size: 13px; border-radius: 8px; }
+.deck-library-dialog .action:hover { background: var(--ui-action-hover); }
+.deck-library-dialog :is(button, input, select, textarea):disabled { opacity: .55; cursor: not-allowed; }
+.deck-feedback { margin: 0; border-radius: 8px; background: var(--ui-panel-header); padding: 10px 12px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.deck-feedback[role=alert] { background: var(--ui-danger-bg); color: var(--ui-danger-ink); }
+button.current-deck-button { max-width: 300px; min-width: 0; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; }
+.current-deck-button > span:not(.archetype-icons) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.current-deck-button .archetype-icons { flex-shrink: 0; gap: 3px; }
+.deck-list-picker { max-width: 240px; color: var(--ui-ink-2); gap: 4px; font-size: 11px; }
+.deck-list-picker select { font-size: 12px; padding: 6px 8px; min-height: 34px; color-scheme: light; }
+.dark .deck-list-picker select { color-scheme: dark; }
+.match-list-deck .deck-list-picker { margin-top: 8px; }
+.deck-assignment { align-items: stretch; }
+.deck-assignment-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.deck-assignment-actions button { font-size: 12px; border-radius: 8px; }
+.deck-recorded-list { border-top: 1px solid var(--ui-border); padding-top: 14px; min-width: 0; }
+.deck-recorded-list summary { font-size: 12px; cursor: pointer; overflow-wrap: anywhere; }
+.deck-recorded-list pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--ui-raised); border: 1px solid var(--ui-border); border-radius: 8px; padding: 12px; margin-top: 10px; font-size: 12px; max-height: 300px; overflow: auto; }
+.deck-select-all { padding: 4px 0; font-size: 12px; }
+.deck-assignment-options { display: grid; max-height: 280px; overflow: auto; width: 100%; border: 1px solid var(--ui-border); border-radius: 8px; background: var(--ui-raised); }
+.deck-assignment-options label { display: flex; align-items: center; gap: 10px; padding: 10px 12px; min-height: 56px; cursor: pointer; border-bottom: 1px solid var(--ui-border-soft); }
+.deck-assignment-options label:last-child { border-bottom: 0; }
+.deck-assignment-options label:hover, .deck-assignment-options label[data-selected=true] { background: var(--ui-panel-header); }
+.deck-assignment-game { display: grid; gap: 2px; min-width: 0; flex: 1; font-size: 12px; overflow-wrap: anywhere; }
+.deck-assignment-game strong { font-weight: 500; }
+.deck-assignment-game small { font-size: 11px; color: var(--ui-ink-2); }
+.deck-game-result { font-size: 10px; font-weight: 600; border-radius: 5px; padding: 3px 7px; background: var(--result-loss-bg); color: var(--result-loss-fg); }
+.deck-game-result[data-win=true] { background: var(--result-win-bg); color: var(--result-win-fg); }
+.deck-bulk-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--ui-ink-2); font-variant-numeric: tabular-nums; }
+.deck-assignment-link { color: var(--ui-link); background: transparent; border: 0; padding: 4px 0; text-align: left; font-size: 12px; min-height: 36px; cursor: pointer; }
+.deck-assignment-link:hover { text-decoration: underline; }
+.deck-library-dialog :is(input, textarea, select, button, summary):focus-visible, .deck-list-picker select:focus-visible, .deck-assignment-link:focus-visible, .saved-deck-picker :is(select, button):focus-visible { outline: 2px solid var(--ui-action); outline-offset: 3px; box-shadow: none; }
+.studio .saved-deck-picker { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 12px; padding: 12px 0 16px; margin-bottom: 0; }
+.studio .saved-deck-picker label { grid-column: 1 / -1; font-size: 12px; font-weight: 500; }
+.studio .saved-deck-picker select { max-width: none; height: 40px; background: var(--ui-raised); color: var(--ui-ink); border-color: var(--ui-border); }
+.studio .saved-deck-picker button { height: 40px; border-radius: 8px; font-size: 12px; }
+@media (max-width: 719px) {
+  button.current-deck-button { max-width: 100%; }
+  .match-list-deck .deck-list-picker { width: 100%; }
+  .match-list-deck .deck-list-picker select { padding: 6px 2px; }
+}
+@media (max-width: 479px) {
+  .deck-dialog-header { padding: 16px 44px 16px 16px; }
+  .deck-dialog-body { padding: 16px; gap: 14px; }
+  .deck-editor-fields { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .deck-dialog-footer { padding: 14px 16px; }
+  .deck-library-actions { flex-direction: column; }
+  .deck-library-actions > button { flex: auto; width: 100%; }
+  .deck-library-dialog textarea { min-height: 112px; }
+  .studio .saved-deck-picker { grid-template-columns: minmax(0, 1fr); }
+  .deck-bulk-footer { flex-wrap: wrap; }
+  .deck-dialog-footer button { min-height: 44px; }
+}

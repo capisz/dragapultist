@@ -31,6 +31,8 @@ export interface GameSummary {
   favorite?: boolean
   turnCount?: number
   notes?: Record<number, string>
+  deckId?: string | null
+  deckAssignment?: import("@/lib/deck-contract").DeckAssignment
   deckList?: string
   deckName?: string
   revision?: number

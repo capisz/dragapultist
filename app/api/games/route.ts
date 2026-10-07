@@ -1,3 +1,6 @@
+import { readDeckLibrary } from "@/lib/deck-store"
+import { importDeckFields } from "@/lib/deck-game"
+import { DeckError } from "@/lib/deck-contract"
 import { NextRequest, NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
 import { getRequestIdentity, userIdQueryValue } from "@/lib/request-user"
@@ -108,6 +111,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(errorEnvelope(identity.status === "invalid" ? "SESSION_EXPIRED" : "UNAUTHORIZED", "Sign in to save this game."), { status: 401 })
     }
 
+    const expectedOwner = req.headers.get('x-expected-owner')
+    if (expectedOwner && expectedOwner !== userId) return NextResponse.json(errorEnvelope('SESSION_EXPIRED', 'Your account changed. Reload before saving.'), { status: 401 })
     const desktopOwner = req.headers.get("x-desktop-owner")
     if (desktopOwner && desktopOwner !== userId) {
       return NextResponse.json(errorEnvelope("SESSION_EXPIRED", "The desktop queue belongs to a different account."), { status: 401 })
@@ -125,6 +130,19 @@ export async function POST(req: NextRequest) {
     }
     const idempotencyKey = requestPayload.success ? requestPayload.data.idempotencyKey : undefined
 
+    const client = await clientPromise
+    const db = client.db(APP_DATABASE_NAME)
+    const collection = db.collection<AnyGame>("games")
+    const earlyDuplicate = await collection.findOne({ userId: userIdQueryValue(userId), $or: [
+      { importFingerprint: createHash("sha256").update(normalizeImportLog(gameSummary.rawLog)).digest("hex") },
+      { contentHash: createHash("sha256").update(`${userId}\0${gameSummary.rawLog.replace(/\r\n/g, "\n").trim()}`).digest("hex") },
+      ...(idempotencyKey ? [{ idempotencyKey }] : []),
+    ] })
+    if (earlyDuplicate) {
+      const game = gameDocumentToDetail(earlyDuplicate)
+      return NextResponse.json({ game, revision: game.revision, saveState: "saved", duplicate: true })
+    }
+    const deckFields = importDeckFields(await readDeckLibrary(db, userId), gameSummary)
     const now = new Date()
 
     const authoritative = analyzeGameLog(
@@ -132,7 +150,7 @@ export async function POST(req: NextRequest) {
       false,
       undefined,
       undefined,
-      gameSummary.userArchetype,
+      "userArchetype" in deckFields ? deckFields.userArchetype : gameSummary.userArchetype,
       gameSummary.opponentArchetype,
       gameSummary.username,
     )
@@ -146,11 +164,10 @@ export async function POST(req: NextRequest) {
       rawLog: gameSummary.rawLog,
       tags: gameSummary.tags ?? authoritative.tags,
       notes: gameSummary.notes ?? {},
-      deckList: gameSummary.deckList ?? "",
-      deckName: gameSummary.deckName ?? "",
+      ...deckFields,
       favorite: gameSummary.favorite ?? false,
       noteCount: Object.values(gameSummary.notes ?? {}).filter(note => note.trim()).length,
-      hasDeck: Boolean(gameSummary.deckList?.trim()),
+      hasDeck: Boolean(deckFields.deckList.trim()),
       privateSearchText: [
         gameSummary.username, gameSummary.opponent, gameSummary.userMainAttacker, gameSummary.opponentMainAttacker,
         ...gameSummary.userOtherPokemon, ...gameSummary.opponentOtherPokemon,
@@ -166,10 +183,6 @@ export async function POST(req: NextRequest) {
       createdAt: now,
       updatedAt: now,
     }
-
-    const client = await clientPromise
-    const db = client.db(APP_DATABASE_NAME)
-    const collection = db.collection<AnyGame>("games")
 
     const duplicate = await collection.findOne({
       userId: userIdQueryValue(userId),
@@ -201,6 +214,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ game, revision: game.revision, saveState: "saved", duplicate: !created }, { status: created ? 201 : 200 })
 
   } catch (err) {
+    if (err instanceof DeckError) return NextResponse.json(errorEnvelope(err.code, err.message), { status: err.code === "NOT_FOUND" ? 404 : 400 })
     console.error("POST /api/games error:", err)
     return NextResponse.json(errorEnvelope("UNAVAILABLE", "The game could not be saved. Your local draft is unchanged.", true), { status: 503 })
   }

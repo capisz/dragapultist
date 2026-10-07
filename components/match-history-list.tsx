@@ -1,13 +1,19 @@
 "use client"
 
 import { useRef, useState } from 'react'
+import { DeckListPicker } from './deck-list-controls'
+import { ALL_LISTS } from '@/lib/deck-filters'
 import { MatchPreview } from './match-preview'
 import type { GameSummary } from '@/types/game'
 import { ArchetypeIconPair } from './archetype-icon-pair'
 import { matchArchetype, matchOutcome } from '@/utils/match-presentation'
 
-export function MatchHistoryList({ games, side, freshId, onSelectGame }: {
+export function MatchHistoryList({ games, groupGames = games, listSelections = {}, onChooseList, onAssign, side, freshId, onSelectGame }: {
   games: GameSummary[]
+  groupGames?: GameSummary[]
+  listSelections?: Record<string, string>
+  onChooseList?: (id: string | null, value: string) => void
+  onAssign?: (id: string | null) => void
   side: 'user' | 'opponent'
   freshId?: string | null
   onSelectGame: (game: GameSummary) => void
@@ -18,10 +24,11 @@ export function MatchHistoryList({ games, side, freshId, onSelectGame }: {
   const suppressFocusPreview = useRef(false)
   const preview = games.find(game => game.id === (hoverId ?? pinnedId))
   const groups = new Map<string | null, { id: string | null; label: string; matches: GameSummary[] }>()
-  for (const game of games) {
+  const visibleIds = new Set(games.map(game => game.id))
+  for (const game of groupGames) {
     const archetype = matchArchetype(game, side === 'opponent')
     const group = groups.get(archetype.id) ?? { ...archetype, matches: [] }
-    group.matches.push(game)
+    if (visibleIds.has(game.id)) group.matches.push(game)
     groups.set(archetype.id, group)
   }
   function clearPreview() {
@@ -48,10 +55,12 @@ export function MatchHistoryList({ games, side, freshId, onSelectGame }: {
             <ArchetypeIconPair archetypeId={group.id} size={48} localSprites />
             <h3>{group.label}</h3>
             <p>{group.matches.length} {group.matches.length === 1 ? 'match' : 'matches'}</p>
+            {side === 'user' && onChooseList && <DeckListPicker ariaLabel={`${group.label} list`} games={groupGames.filter(game => matchArchetype(game).id === group.id)} archetypeId={group.id} value={listSelections[group.id ?? '__unknown__'] ?? ALL_LISTS} onChange={value => onChooseList(group.id, value)} />}
+            {side === 'user' && onAssign && <button type="button" className="deck-assignment-link" onClick={() => onAssign(group.id)}>Assign decklist</button>}
             <p><span className="match-win-text">{wins}W</span> · <span className="match-loss-text">{group.matches.length - wins}L</span></p>
           </div>
           <div className="match-list-record">
-            <div className="match-list-record-label"><span>Match history</span><span>{Math.round(wins / group.matches.length * 100)}% win rate</span></div>
+            <div className="match-list-record-label"><span>Match history</span><span>{group.matches.length ? `${Math.round(wins / group.matches.length * 100)}% win rate` : 'No matches for this list'}</span></div>
             <div className="match-dot-grid" role="group" aria-label={`${group.label} match dots`}>
               {group.matches.map(game => <button key={game.id} type="button" className="match-dot" data-match-id={game.id} data-outcome={matchOutcome(game).code} data-active={preview?.id === game.id} data-fresh={freshId === game.id}
                 ref={node => { if (node) matchButtons.current.set(game.id, node); else matchButtons.current.delete(game.id) }}

@@ -44,6 +44,7 @@ type MutableMatchup = {
 }
 
 type MutableDeck = {
+  deckId: string | null
   key: string
   archetypeId: string | null
   label: string
@@ -229,6 +230,7 @@ function normalizeGame(raw: RawGame): NormalizedGame | null {
 
   return {
     id,
+    deckId: asString(summary?.deckId ?? raw.deckId) || null,
     dateLabel: formatDateLabel(parsedDate),
     timestamp: parsedDate?.getTime() ?? 0,
     recordedDate: asString(summary?.date) || asString(raw.date),
@@ -248,7 +250,7 @@ function normalizeGame(raw: RawGame): NormalizedGame | null {
   }
 }
 
-export function buildStatistics(rawGames: unknown[]): StatisticsModel {
+export function buildStatistics(rawGames: unknown[], options: { groupByList?: boolean } = {}): StatisticsModel {
   const games = rawGames
     .filter((item): item is RawGame => typeof item === "object" && item !== null)
     .map(normalizeGame)
@@ -282,11 +284,12 @@ export function buildStatistics(rawGames: unknown[]): StatisticsModel {
       if (game.userWon) firstTurnWins += 1
     }
 
-    const deckKey = toDeckKey(game.userArchetypeId)
+    const deckKey = options.groupByList ? `${toDeckKey(game.userArchetypeId)}:${game.deckId ?? '__uncategorized__'}` : toDeckKey(game.userArchetypeId)
     let deck = deckMap.get(deckKey)
     if (!deck) {
       deck = {
         key: deckKey,
+        deckId: options.groupByList ? game.deckId ?? null : null,
         archetypeId: game.userArchetypeId,
         label: formatArchetypeLabel(game.userArchetypeId),
         games: 0,
@@ -423,6 +426,7 @@ export function buildStatistics(rawGames: unknown[]): StatisticsModel {
       const losses = deck.games - deck.wins
       return {
         key: deck.key,
+        ...(options.groupByList ? { deckId: deck.deckId } : {}),
         archetypeId: deck.archetypeId,
         label: deck.label,
         games: deck.games,

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { sortMatchesByDate, matchArchetype, matchesSearch } from "@/utils/match-presentation"
-import { GameList } from "@/components/game-list"
+import { CurrentDeckButton, useDeckLibrary } from "@/components/deck-library"
+import { GameList, type MatchFilters } from "@/components/game-list"
 import { GameDetail } from "@/components/game-detail"
 import { ImportConfirmationDialog } from "@/components/import-confirmation-dialog"
 import { analyzeGameLog, getGameDataForConfirmation } from "@/utils/game-analyzer"
@@ -20,6 +21,7 @@ import { DeckLab } from "@/components/deck-lab"
 import "./tool-workspace.css"
 import "./design-handoff.css"
 import {
+  ownerGamePersistence,
   guestGamePersistence,
   PersistenceError,
   remoteGamePersistence,
@@ -38,6 +40,7 @@ declare global {
 }
 
 export function PokemonTCGAnalyzer() {
+  const deckLibrary = useDeckLibrary()
   const [activeTab, setActiveTab] = useState<"games" | "players" | "prizeMapper" | "topDeckCalc">(
     "games",
   )
@@ -80,8 +83,10 @@ export function PokemonTCGAnalyzer() {
   const buttonTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const [ptcglUsername, setPtcglUsername] = useState<string>("")
+  const matchFilters = useRef<{ owner: string; filters: MatchFilters } | null>(null)
   const remoteHistory = !!user && user.username !== "Guest"
   const historyOwner = remoteHistory ? `account:${user.id}` : "guest"
+  const rememberFilters = useCallback((filters: MatchFilters) => { matchFilters.current = { owner: historyOwner, filters } }, [historyOwner])
   const { games, setGames, loading: gamesLoading, error: gamesError, setError: setGamesError,
     revision: loadRevision, refresh: refreshHistory, cancelRefresh: cancelHistoryRefresh } = useGameHistory({
     owner: historyOwner,
@@ -203,7 +208,7 @@ export function PokemonTCGAnalyzer() {
 
   useEffect(() => {
     if (activeTab !== "topDeckCalc") return
-    const persistence = !user || user.username === "Guest" ? guestGamePersistence : remoteGamePersistence
+    const persistence = ownerGamePersistence(!user || user.username === "Guest" ? "guest" : `account:${user.id}`)
     const controller = new AbortController()
     const targets = games.filter(game => game.hasDeck && !game.deckList)
     void (async () => {
@@ -249,7 +254,7 @@ export function PokemonTCGAnalyzer() {
   }, [])
 
   const saveImportedGame = useCallback(async (game: GameSummary, idempotencyKey: string) => {
-    const persistence = !user || user.username === "Guest" ? guestGamePersistence : remoteGamePersistence
+    const persistence = ownerGamePersistence(!user || user.username === "Guest" ? "guest" : `account:${user.id}`)
     cancelHistoryRefresh()
     setSaveState("saving")
     try {
@@ -296,6 +301,7 @@ export function PokemonTCGAnalyzer() {
         swapPlayers?: boolean
         userArchetypeId?: string | null
         opponentArchetypeId?: string | null
+        deckId?: string | null
       },
     ) => {
       if (importLock.current) return
@@ -304,6 +310,7 @@ export function PokemonTCGAnalyzer() {
       const run = async () => {
         const gameSummary = analyzeGameLog(log, options?.swapPlayers ?? false, undefined, undefined,
           options?.userArchetypeId ?? null, options?.opponentArchetypeId ?? null, ptcglUsername || undefined)
+        gameSummary.deckAssignment = options ? (options.deckId ? { mode: 'explicit', deckId: options.deckId } : { mode: 'none' }) : { mode: 'current', capturedAt: new Date().toISOString() }
         await saveImportedGame(gameSummary, crypto.randomUUID())
       }
       void run().catch(() => undefined).finally(() => { importLock.current = false; setQuickBusy(false) })
@@ -399,9 +406,9 @@ export function PokemonTCGAnalyzer() {
   }, [addGame, validateGameLog])
 
   const handleConfirmImport = useCallback(
-    (swapPlayers: boolean, userArchetypeId?: string | null, opponentArchetypeId?: string | null) => {
+    (swapPlayers: boolean, userArchetypeId?: string | null, opponentArchetypeId?: string | null, deckId?: string | null) => {
       setShowConfirmationDialog(false)
-      addGame(pendingGameLog, { swapPlayers, userArchetypeId, opponentArchetypeId })
+      addGame(pendingGameLog, { swapPlayers, userArchetypeId, opponentArchetypeId, deckId })
     },
     [addGame, pendingGameLog],
   )
@@ -414,7 +421,7 @@ export function PokemonTCGAnalyzer() {
 
   const handleDeleteGame = useCallback(
     async (id: string) => {
-      const persistence = !user || user.username === "Guest" ? guestGamePersistence : remoteGamePersistence
+      const persistence = ownerGamePersistence(!user || user.username === "Guest" ? "guest" : `account:${user.id}`)
       const current = games.find(game => game.id === id)
       cancelHistoryRefresh()
       setSaveState("saving")
@@ -439,7 +446,7 @@ export function PokemonTCGAnalyzer() {
       const newGames = games.map((game) => game.id === updatedGame.id ? updatedGame : game)
       setGames(newGames)
       setSelectedGame((previous) => previous?.id === updatedGame.id ? updatedGame : previous)
-      const persistence = !user || user.username === "Guest" ? guestGamePersistence : remoteGamePersistence
+      const persistence = ownerGamePersistence(!user || user.username === "Guest" ? "guest" : `account:${user.id}`)
       cancelHistoryRefresh()
       setSaveState("saving")
       try {
@@ -451,6 +458,7 @@ export function PokemonTCGAnalyzer() {
           tags: updatedGame.tags,
           deckList: updatedGame.deckList ?? "",
           deckName: updatedGame.deckName ?? "",
+          deckId: updatedGame.deckId,
           perspective: {
             username: updatedGame.username,
             userArchetype: updatedGame.userArchetype,
@@ -512,7 +520,7 @@ export function PokemonTCGAnalyzer() {
       if (!games.some(current => current.id === game.id)) return
       returnState.current = { id: game.id, scrollY: window.scrollY }
       try {
-        const persistence = !user || user.username === "Guest" ? guestGamePersistence : remoteGamePersistence
+        const persistence = ownerGamePersistence(!user || user.username === "Guest" ? "guest" : `account:${user.id}`)
         const detail = await persistence.get(game.id)
         setSelectedGame(detail as unknown as GameSummary)
         requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }))
@@ -651,6 +659,8 @@ export function PokemonTCGAnalyzer() {
                   {(gamesError || searchError) && <div role="alert" className="studio-state"><p>{gamesError || searchError}</p><Button onClick={() => refreshHistory()}>Retry</Button></div>}
                   {(
                     <GameList
+                      initialFilters={matchFilters.current?.owner === historyOwner ? matchFilters.current.filters : undefined}
+                      onFiltersChange={rememberFilters}
                       toolbar={<>                  <div className="games-search mb-4 relative">
                     <Input
                       type="text"
@@ -671,7 +681,8 @@ export function PokemonTCGAnalyzer() {
                     />
                   </div><div className="games-actions">
                     {quickStatus && <span role="status" className="import-status" data-tone={quickStatus.tone}>{quickStatus.text}</span>}
-                    <Button className="action quick-add" onClick={handleQuickAdd} disabled={quickBusy || saveState === "saving"}><ClipboardPlus size={14} />{quickBusy ? "Adding…" : "Quick add"}</Button>
+                    <CurrentDeckButton />
+                    <Button className="action quick-add" onClick={handleQuickAdd} disabled={quickBusy || saveState === "saving" || deckLibrary.loading}><ClipboardPlus size={14} />{quickBusy ? "Adding…" : "Quick add"}</Button>
                     <Button className="import-toggle" variant="outline" aria-expanded={importOpen} aria-controls="import-composer" onClick={() => setImportOpen(value => !value)}>{importOpen ? "Hide import" : "Import a game"}</Button>
                   </div></>}
                   importComposer={<div className="games-intro" id="import-composer" hidden={!importOpen}>
@@ -703,7 +714,7 @@ export function PokemonTCGAnalyzer() {
                     <div className="custom-button-container">
                       <Button
                         onClick={handleManualSubmit}
-                        disabled={quickBusy || saveState === "saving"}
+                        disabled={quickBusy || saveState === "saving" || deckLibrary.loading}
                         className="action px-5 h-9"
                         style={buttonStyles}
                       >

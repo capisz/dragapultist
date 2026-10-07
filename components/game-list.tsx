@@ -6,6 +6,9 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { ArchetypeIconPair } from './archetype-icon-pair'
 import { matchArchetype, matchOutcome } from '@/utils/match-presentation'
 import { GhostScaffold } from './ghost-scaffold'
+import { DeckListPicker, BulkDeckAssignment } from './deck-list-controls'
+import { ALL_LISTS, matchesDeckList } from '@/lib/deck-filters'
+import { useDeckLibrary } from './deck-library'
 import { MatchHistoryList } from './match-history-list'
 import { MatchConstellation } from './match-constellation'
 import './game-list.css'
@@ -19,7 +22,10 @@ const SORT_OPTIONS = [
   { key: 'turns', label: 'Rounds' },
 ] as const
 
+export type MatchFilters = { side: 'user' | 'opponent'; archetype: { id: string | null } | null; lists: Record<string, string> }
 interface GameListProps {
+  initialFilters?: MatchFilters
+  onFiltersChange?: (filters: MatchFilters) => void
   toolbar?: ReactNode
   importComposer?: ReactNode
   loading?: boolean
@@ -39,28 +45,41 @@ interface GameListProps {
   onImport?: () => void
 }
 
-export function GameList({ toolbar, importComposer, loading = false, freshId, filterRevision = 0, games, onSelectGame, sortConfig, onSort, restoreMatchId, hasHistory, searchQuery = '', onClearSearch, onImport }: GameListProps) {
+export function GameList({ initialFilters, onFiltersChange, toolbar, importComposer, loading = false, freshId, filterRevision = 0, games, onSelectGame, sortConfig, onSort, restoreMatchId, hasHistory, searchQuery = '', onClearSearch, onImport }: GameListProps) {
+  const library = useDeckLibrary()
+  const [listSelections, setListSelections] = useState<Record<string, string>>(initialFilters?.lists ?? {})
+  const [assigning, setAssigning] = useState(false)
   const [view, setView] = useState<'constellation' | 'list'>('constellation')
   useEffect(() => { try { if (localStorage.getItem('dragapultist-match-view') === 'list') setView('list') } catch {} }, [])
-  const [filterSide, setFilterSide] = useState<'user' | 'opponent'>('user')
-  const [archetypeFilter, setArchetypeFilter] = useState<{ id: string | null } | null>(null)
+  const [filterSide, setFilterSide] = useState<'user' | 'opponent'>(initialFilters?.side ?? 'user')
+  const [archetypeFilter, setArchetypeFilter] = useState<{ id: string | null } | null>(initialFilters?.archetype ?? null)
   const field = useRef<HTMLDivElement>(null)
   const pendingRestoreId = useRef(restoreMatchId)
-  useEffect(() => { setArchetypeFilter(null) }, [filterRevision])
+  const lastReset = useRef({ filterRevision, owner: library.owner })
+  useEffect(() => {
+    if (lastReset.current.filterRevision !== filterRevision || lastReset.current.owner !== library.owner) {
+      setArchetypeFilter(null); setListSelections({}); setAssigning(false)
+      lastReset.current = { filterRevision, owner: library.owner }
+    }
+  }, [filterRevision, library.owner])
+  useEffect(() => { onFiltersChange?.({ side: filterSide, archetype: archetypeFilter, lists: listSelections }) }, [filterSide, archetypeFilter, listSelections, onFiltersChange])
   const archetypeFilters = Array.from(new Map(games.map(game => {
     const archetype = matchArchetype(game, filterSide === 'opponent')
     return [archetype.id, archetype] as const
   })).values())
-  const visibleGames = archetypeFilter
+  const archetypeGames = archetypeFilter
     ? games.filter(game => matchArchetype(game, filterSide === 'opponent').id === archetypeFilter.id)
     : games
+  const selectionKey = (id: string | null) => id ?? '__unknown__'
+  const visibleGames = filterSide === 'user' ? archetypeGames.filter(game => matchesDeckList(game, listSelections[selectionKey(matchArchetype(game).id)] ?? ALL_LISTS)) : archetypeGames
+  const chooseList = (id: string | null, listId: string) => setListSelections(previous => ({ ...previous, [selectionKey(id)]: listId }))
   useEffect(() => {
     if (view === 'list' && restoreMatchId) field.current?.querySelector<HTMLButtonElement>(`[data-match-id="${CSS.escape(restoreMatchId)}"]`)?.focus({ preventScroll: true })
   }, [restoreMatchId, view])
   const wins = visibleGames.filter(game => matchOutcome(game).code === 'W').length
   const losses = visibleGames.length - wins
-  const hasFilter = Boolean(searchQuery.trim() || archetypeFilter)
-  function clearFilters() { setArchetypeFilter(null); onClearSearch?.() }
+  const hasFilter = Boolean(searchQuery.trim() || archetypeFilter || (filterSide === "user" && Object.values(listSelections).some(value => value !== ALL_LISTS)))
+  function clearFilters() { setArchetypeFilter(null); setListSelections({}); onClearSearch?.() }
   return <section className="match-history" aria-label="Match history" aria-busy={loading}>
     <div className="games-working-band">{toolbar}<div className="match-metrics" aria-live="polite" aria-atomic="true">
       <div><strong>{loading ? "—" : visibleGames.length}</strong><span>Matches</span></div>
@@ -100,11 +119,13 @@ export function GameList({ toolbar, importComposer, loading = false, freshId, fi
           <ToggleGroupItem value="list">List</ToggleGroupItem>
         </ToggleGroup>
       </div>
+      {view === 'constellation' && filterSide === 'user' && archetypeFilter && <div className="deck-assignment"><DeckListPicker games={archetypeGames} archetypeId={archetypeFilter.id} value={listSelections[selectionKey(archetypeFilter.id)] ?? ALL_LISTS} onChange={value => chooseList(archetypeFilter.id, value)} /><Button variant="outline" onClick={() => setAssigning(true)}>Assign decklist</Button></div>}
       <div ref={field}>
-      {view === 'list' ? <MatchHistoryList key={`${filterSide}-${archetypeFilter?.id ?? 'all'}-${filterRevision}-${searchQuery}`} games={visibleGames} side={filterSide} freshId={freshId} onSelectGame={onSelectGame} /> :
-      <MatchConstellation key={`${filterSide}-${archetypeFilter?.id ?? 'all'}-${filterRevision}-${searchQuery}-${sortConfig.key}-${sortConfig.direction}`} games={visibleGames} freshId={freshId} restoreMatchId={pendingRestoreId.current} onRestoreComplete={() => { pendingRestoreId.current = null }} onSelectGame={onSelectGame} />}
+      {view === 'list' ? <MatchHistoryList key={`${filterSide}-${archetypeFilter?.id ?? 'all'}-${filterRevision}-${searchQuery}`} games={visibleGames} groupGames={archetypeGames} listSelections={listSelections} onChooseList={chooseList} onAssign={id => { setArchetypeFilter({ id }); setAssigning(true) }} side={filterSide} freshId={freshId} onSelectGame={onSelectGame} /> :
+      <MatchConstellation key={`${filterSide}-${archetypeFilter?.id ?? 'all'}-${filterRevision}-${searchQuery}-${JSON.stringify(listSelections)}-${sortConfig.key}-${sortConfig.direction}`} games={visibleGames} freshId={freshId} restoreMatchId={pendingRestoreId.current} onRestoreComplete={() => { pendingRestoreId.current = null }} onSelectGame={onSelectGame} />}
       </div>
     </div> : null}
+    {assigning && filterSide === 'user' && archetypeFilter && <BulkDeckAssignment key={`${library.owner}:${archetypeFilter.id}`} games={visibleGames} archetypeId={archetypeFilter.id} onClose={() => setAssigning(false)} />}
     {!loading && !visibleGames.length && <div className="match-empty" role="status"><div><h3>{hasFilter || hasHistory ? 'No matches found.' : 'Import a game to begin.'}</h3><p>{hasFilter ? (searchQuery.trim() ? `Nothing recorded matches “${searchQuery.trim()}”.` : 'No matches for that archetype.') : 'Each match becomes one point in this field.'}</p></div><Button className="action" onClick={hasFilter || hasHistory ? clearFilters : onImport}>{hasFilter || hasHistory ? 'Clear search' : 'Import a game'}</Button></div>}
   </section>
 }

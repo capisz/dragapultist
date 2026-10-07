@@ -21,6 +21,8 @@ const output = ts.transpileModule(readFileSync(new URL('../components/match-hist
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
 }).outputText
 new Function('module', 'exports', 'require', output)(compiled, compiled.exports, (name: string) => {
+  if (name === './deck-list-controls') return { DeckListPicker: () => null }
+  if (name === '@/lib/deck-filters') return { ALL_LISTS: '__all__' }
   if (name === './archetype-icon-pair') return { ArchetypeIconPair: () => null }
   if (name === './match-preview') return previewModule
   if (name === '@/utils/match-presentation') return { matchArchetype, matchOutcome }

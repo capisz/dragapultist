@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { deckIdSchema, deckAssignmentSchema } from "@/lib/deck-contract"
 
 export const GAME_SCHEMA_VERSION = 2
 export const GAME_PARSER_VERSION = 1
@@ -50,6 +51,7 @@ const gameCoreShape = {
   userArchetype: optionalArchetype,
   opponentArchetype: optionalArchetype,
   favorite: z.boolean().optional(),
+  deckId: deckIdSchema.nullable().optional(),
 }
 
 export const gameSummarySchema = z.object({
@@ -65,6 +67,7 @@ export const gameSummarySchema = z.object({
 
 export const gameDraftSchema = z.object({
   ...gameCoreShape,
+  deckAssignment: deckAssignmentSchema.optional(),
   rawLog: z.string().min(10).refine(value => utf8Bytes(value) <= MAX_GAME_LOG_BYTES, "Game log is too large."),
   notes: gameNotesSchema.optional().default({}),
   deckList: z.string().max(50_000).optional().default(""),
@@ -76,6 +79,7 @@ export const gameInputSchema = gameDraftSchema
 
 export const gameMetadataSchema = z.object({
   favorite: z.boolean().optional(),
+  deckId: deckIdSchema.nullable().optional(),
   userMainAttacker: boundedName.optional(),
   opponentMainAttacker: boundedName.optional(),
   notes: gameNotesSchema.optional(),
@@ -102,6 +106,7 @@ export const gameDetailSchema = gameDraftSchema.extend({
 
 export const gameMutationSchema = z.object({
   favorite: z.boolean().optional(),
+  deckId: deckIdSchema.nullable().optional(),
   userMainAttacker: boundedName.optional(),
   opponentMainAttacker: boundedName.optional(),
   notes: gameNotesSchema.optional(),

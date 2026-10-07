@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { useDeckLibrary } from "./deck-library"
 import { ArchetypeSelector } from "./archetype-selector"
 import { Input } from "@/components/ui/input"
 import { ArrowLeftRight, Check } from "lucide-react"
@@ -24,6 +25,7 @@ interface ImportConfirmationDialogProps {
     swapPlayers: boolean,
     userArchetypeId?: string | null,
     opponentArchetypeId?: string | null,
+    deckId?: string | null,
   ) => void
   onCancel: () => void
   gameData: {
@@ -234,6 +236,8 @@ export function ImportConfirmationDialog({
   confirmLabel = "Import game",
   description = "We detected the players below from the log. If needed, you can swap them and assign deck archetypes for this game.",
 }: ImportConfirmationDialogProps) {
+  const library = useDeckLibrary()
+  const [deckId, setDeckId] = useState("")
   const [swapPlayers, setSwapPlayers] = useState(false)
   const [userArchetypeId, setUserArchetypeId] = useState<string>(UNKNOWN_ARCHETYPE)
   const [opponentArchetypeId, setOpponentArchetypeId] = useState<string>(UNKNOWN_ARCHETYPE)
@@ -245,6 +249,7 @@ export function ImportConfirmationDialog({
   useEffect(() => {
     if (!open) return
     setSwapPlayers(false)
+    setDeckId("")
     const nextUserArchetypeId = gameData.suggestedUserArchetype ?? UNKNOWN_ARCHETYPE
     const nextOpponentArchetypeId = gameData.suggestedOpponentArchetype ?? UNKNOWN_ARCHETYPE
 
@@ -263,6 +268,7 @@ export function ImportConfirmationDialog({
       swapPlayers,
       userArchetypeId === UNKNOWN_ARCHETYPE ? null : userArchetypeId,
       opponentArchetypeId === UNKNOWN_ARCHETYPE ? null : opponentArchetypeId,
+      deckId || null,
     )
     setSwapPlayers(false)
   }
@@ -276,6 +282,7 @@ export function ImportConfirmationDialog({
   const displayOpponentName = swapPlayers ? gameData.username : gameData.opponent
 
   const handleSwapPlayers = () => {
+    setDeckId("")
     setSwapPlayers((prev) => !prev)
     // swap current dropdown selections (do NOT reset to suggestions)
     const a = userArchetypeId
@@ -291,7 +298,7 @@ export function ImportConfirmationDialog({
   const archetypeValueForSide = (side: Side): string => (side === "user" ? userArchetypeId : opponentArchetypeId)
 
   const setArchetypeValueForSide = (side: Side, value: string) => {
-    if (side === "user") setUserArchetypeId(value)
+    if (side === "user") { setUserArchetypeId(value); setDeckId("") }
     else setOpponentArchetypeId(value)
   }
 
@@ -527,6 +534,7 @@ export function ImportConfirmationDialog({
           )}
         </div>
 
+        <label className="deck-list-picker">Played decklist<select aria-label="Played decklist" value={deckId} onChange={event => { setDeckId(event.target.value); const deck = library.decks.find(deck => deck.id === event.target.value); if (deck) setUserArchetypeId(deck.archetypeId) }}><option value="">Uncategorized</option>{library.decks.filter(deck => !deck.archivedAt).map(deck => <option key={deck.id} value={deck.id}>{deck.name}</option>)}</select></label>
         <DialogFooter>
           <Button
             type="button"

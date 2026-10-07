@@ -207,3 +207,47 @@ describe("game routes", () => {
     expect(state.cleanupCalls).toEqual(["imports", "prizeMaps"])
   })
 })
+
+describe('saved deck assignment through game routes', () => {
+  const deckId = '00000000-0000-4000-8000-000000000001'
+  const createdAt = new Date(Date.now() - 60_000).toISOString()
+  function seedLibrary() {
+    const library = { _id: 'user-a', decks: [{ id: deckId, name: 'League', archetypeId: 'dragapult-dusknoir', deckList: '4 Dragapult ex\n56 Psychic Energy', revision: 1, createdAt, archivedAt: null }], currentDeckId: deckId, revision: 2, history: [{ at: createdAt, deckId }] }
+    state.docs.push(library)
+    return library
+  }
+  it('resolves current assignment on the server and does not retag a repeated import', async () => {
+    const library = seedLibrary()
+    const response = await POST(mutation('/api/games', 'POST', { game: { ...validGame, deckAssignment: { mode: 'current', capturedAt: new Date(Date.now() - 10_000).toISOString() } }, idempotencyKey: 'saved-deck-test-key' }) as any)
+    expect(response.status).toBe(201)
+    expect((await response.json()).game).toMatchObject({ deckId, deckName: 'League', deckList: library.decks[0].deckList, userArchetype: 'dragapult-dusknoir' })
+    library.currentDeckId = null as any
+    library.history.push({ at: new Date().toISOString(), deckId: null as any })
+    const duplicate = await POST(mutation('/api/games', 'POST', { game: { ...validGame, deckAssignment: { mode: 'none' } }, idempotencyKey: 'saved-deck-test-key' }) as any)
+    const payload = await duplicate.json()
+    expect(payload.duplicate).toBe(true)
+    expect(payload.game.deckId).toBe(deckId)
+  })
+  it('rejects another account’s deck ID and binds mutations to the initiating account', async () => {
+    seedLibrary()
+    state.uid = 'user-b'
+    expect((await POST(mutation('/api/games', 'POST', { game: { ...validGame, deckAssignment: { mode: 'explicit', deckId } } }) as any)).status).toBe(404)
+    const request = mutation('/api/games', 'POST', { game: validGame })
+    request.headers.set('x-expected-owner', 'user-a')
+    expect((await POST(request as any)).status).toBe(401)
+    expect(state.docs.filter(doc => doc.userId)).toHaveLength(0)
+  })
+  it('assigns and clears a list without losing notes, result, or the game’s archetype', async () => {
+    seedLibrary()
+    await POST(mutation('/api/games', 'POST', { game: { ...validGame, notes: { 1: 'Keep this' } } }) as any)
+    const assigned = await PATCH(mutation('/api/games/game-1', 'PATCH', { changes: { deckId }, expectedRevision: 1 }), context())
+    expect((await assigned.json()).game).toMatchObject({ deckId, userArchetype: 'dragapult-dusknoir', notes: { 1: 'Keep this' }, userWon: true })
+    const cleared = await PATCH(mutation('/api/games/game-1', 'PATCH', { changes: { deckId: null }, expectedRevision: 2 }), context())
+    expect((await cleared.json()).game).toMatchObject({ deckId: null, deckList: '', userArchetype: 'dragapult-dusknoir', notes: { 1: 'Keep this' } })
+  })
+  it('preserves legacy deck text during a regular edit with no list association', async () => {
+    await POST(mutation('/api/games', 'POST', { game: { ...validGame, deckList: 'Legacy deck text', deckName: 'Legacy name' } }) as any)
+    const response = await PATCH(mutation('/api/games/game-1', 'PATCH', { changes: { deckId: null, notes: { 1: 'Edited' } }, expectedRevision: 1 }), context())
+    expect((await response.json()).game).toMatchObject({ deckId: null, deckList: 'Legacy deck text', deckName: 'Legacy name', notes: { 1: 'Edited' } })
+  })
+})

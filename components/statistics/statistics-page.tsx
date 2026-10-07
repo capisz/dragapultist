@@ -1,4 +1,10 @@
 "use client"
+import { useDeckLibrary } from '../deck-library'
+import { DeckListPicker } from '../deck-list-controls'
+import { ownerGamePersistence } from '@/lib/game-persistence'
+import { ALL_LISTS, UNCATEGORIZED } from '@/lib/deck-filters'
+import type { DeckStat } from './types'
+
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -145,6 +151,7 @@ function toHistoryGame(rawGame: unknown): HistoryGame | null {
     favorite: readBoolean(summary?.favorite ?? rawGame.favorite),
     revision: readNumber(summary?.revision ?? rawGame.revision) || undefined,
     notes: isRecord(summary?.notes ?? rawGame.notes) ? (summary?.notes ?? rawGame.notes) as Record<number, string> : undefined,
+    deckId: readString(summary?.deckId, rawGame.deckId) || null,
     deckList: readString(summary?.deckList, rawGame.deckList),
     deckName: readString(summary?.deckName, rawGame.deckName),
     __createdAtMs: parsedDate?.getTime() ?? 0,
@@ -182,6 +189,10 @@ const EMPTY_MODEL: StatisticsModel = {
 }
 
 export function StatisticsPage({ user }: StatisticsPageProps) {
+  const library = useDeckLibrary()
+  const [listDecks, setListDecks] = useState<DeckStat[]>([])
+  const [listSelection, setListSelection] = useState(ALL_LISTS)
+  const [truncated, setTruncated] = useState(false)
   const router = useRouter()
   const [model, setModel] = useState<StatisticsModel>(EMPTY_MODEL)
   const [selectedDeckKey, setSelectedDeckKey] = useState<string | null>(null)
@@ -222,6 +233,8 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
       if (!response.ok) throw new Error(`Failed to load games (${response.status})`)
 
       const payload = (await response.json()) as {
+        listDecks?: DeckStat[]
+        truncated?: boolean
         model?: StatisticsModel
         historyGames?: unknown[]
         historyNextCursor?: string | null
@@ -233,11 +246,14 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
         .filter((game): game is HistoryGame => game !== null)
         .sort((a, b) => b.__createdAtMs - a.__createdAtMs || b.id.localeCompare(a.id))
       setModel(parsed)
+      setListDecks(payload.listDecks ?? [])
+      setTruncated(payload.truncated === true)
       setHistoryGames(parsedHistoryGames)
       setHistoryNextCursor(typeof payload.historyNextCursor === "string" ? payload.historyNextCursor : null)
     } catch (err) {
       console.error("Failed to load statistics", err)
       setModel(EMPTY_MODEL)
+      setListDecks([])
       setHistoryGames([])
       setHistoryNextCursor(null)
       setError("Could not load your statistics right now.")
@@ -280,10 +296,20 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
     }
   }, [model.decks, selectedDeckKey])
 
-  const selectedDeck = useMemo(
+  const selectedArchetype = useMemo(
     () => model.decks.find((deck) => deck.key === selectedDeckKey) ?? null,
     [model.decks, selectedDeckKey],
   )
+
+  useEffect(() => { setListSelection(ALL_LISTS) }, [selectedDeckKey, library.owner])
+  useEffect(() => {
+    const refresh = () => { void loadStats() }
+    window.addEventListener('dragapultist-games-changed', refresh)
+    return () => window.removeEventListener('dragapultist-games-changed', refresh)
+  }, [loadStats])
+  const selectedDeck = !selectedArchetype || listSelection === ALL_LISTS ? selectedArchetype :
+    listDecks.find(deck => deck.archetypeId === selectedArchetype.archetypeId && (listSelection === UNCATEGORIZED ? !deck.deckId : deck.deckId === listSelection)) ??
+    { ...selectedArchetype, games: 0, wins: 0, losses: 0, winRate: 0, firstTurnWinRate: 0, avgTurns: 0, matchupStats: [], pokemonStats: [] }
 
   const filteredGlobalPokemon = useMemo(
     () =>
@@ -327,19 +353,20 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
   }, [historyGames, historySearch])
 
   const persistHistoryGame = useCallback(async (game: HistoryGame) => {
-    return remoteGamePersistence.update(game.id, {
+    return ownerGamePersistence(library.owner ?? 'guest').update(game.id, {
       favorite: Boolean(game.favorite),
       notes: game.notes ?? {},
       tags: game.tags,
       deckList: game.deckList ?? "",
       deckName: game.deckName ?? "",
+      deckId: game.deckId,
       perspective: {
         username: game.username,
         userArchetype: game.userArchetype,
         opponentArchetype: game.opponentArchetype,
       },
     }, game.revision ?? 1)
-  }, [])
+  }, [library.owner])
 
   const handleHistoryUpdate = useCallback(async (updatedGame: GameSummary) => {
     try {
@@ -574,6 +601,8 @@ export function StatisticsPage({ user }: StatisticsPageProps) {
                   <Card className={subPanelClass}>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base text-slate-700/85 dark:text-sky-100">Deck Details</CardTitle>
+                      {selectedArchetype && <DeckListPicker archetypeId={selectedArchetype.archetypeId} games={model.games.filter(game => game.userArchetypeId === selectedArchetype.archetypeId)} value={listSelection} onChange={setListSelection} />}
+                      {truncated && <p role="status">Statistics include the latest 5,000 games.</p>}
                     </CardHeader>
                     <CardContent className="pt-0">
                       {selectedDeck ? (

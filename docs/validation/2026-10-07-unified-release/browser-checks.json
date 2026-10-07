@@ -1,0 +1,58 @@
+{
+  "syntheticFixtures": true,
+  "checks": [
+    "new list creation",
+    "immutable card changes",
+    "rename",
+    "archive",
+    "clear current",
+    "manual import default",
+    "manual explicit override",
+    "current selection",
+    "quick add",
+    "per-list filtering",
+    "review assignment",
+    "review-return filter",
+    "uncategorized",
+    "bulk assignment",
+    "randomized seven-card hand",
+    "current selection independent of sampling",
+    "reload",
+    "mobile + desktop",
+    "light + dark",
+    "keyboard focus"
+  ],
+  "geometry": [
+    {
+      "width": 1440,
+      "theme": "light",
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "theme": "light",
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

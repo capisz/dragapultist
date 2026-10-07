@@ -98,6 +98,12 @@ export function useGameHistory({ owner, persistence, remote, paused }: Options) 
     }
   }, [remote, refresh])
 
+  useEffect(() => {
+    if (remote) return
+    window.addEventListener("dragapultist-games-changed", refresh)
+    return () => window.removeEventListener("dragapultist-games-changed", refresh)
+  }, [remote, refresh])
+
   const setGames = useCallback((value: SetStateAction<GameSummary[]>) => {
     setHistory(previous => {
       const games = previous.owner === owner ? previous.games : []

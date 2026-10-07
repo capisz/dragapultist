@@ -32,6 +32,7 @@ export async function GET() {
 
     return NextResponse.json({
       model: buildStatistics(sourceGames),
+      listDecks: buildStatistics(sourceGames, { groupByList: true }).decks,
       historyGames: historyGames.map(game => gameDocumentToSummary(game)),
       historyNextCursor: sourceGames.length > HISTORY_PAGE_SIZE && lastCreatedAt instanceof Date && historyGames.at(-1)?.id
         ? `${lastCreatedAt.toISOString()}|${historyGames.at(-1)?.id}`

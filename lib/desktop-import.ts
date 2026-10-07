@@ -10,5 +10,5 @@ export function prepareDesktopImport(entry: DesktopQueuedLog) {
   // Require the chosen identity to occur as an actual player, not just a preferred-name fallback.
   const escaped = entry.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   if (!new RegExp(`(?:^|\\n)${escaped} (?:drew|chose|played|won|lost|took|attached|used)\\b`, 'i').test(entry.rawLog)) throw Error('Your PTCGL username was not found as a player in this log.')
-  return gameDraftSchema.parse({ ...game, id: entry.id, date: new Date(entry.capturedAt).toLocaleDateString('en-US') })
+  return gameDraftSchema.parse({ ...game, deckAssignment: { mode: 'current', capturedAt: entry.capturedAt }, id: entry.id, date: new Date(entry.capturedAt).toLocaleDateString('en-US') })
 }

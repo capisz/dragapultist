@@ -1,10 +1,12 @@
 {
   "name": "dragapultist-desktop",
   "productName": "Dragapultist Beta",
-  "version": "0.3.0-beta.2",
+  "version": "0.3.0-beta.3",
   "private": true,
   "description": "Dragapultist desktop clipboard companion",
-  "author": "Dragapultist",
+  "author": {
+    "name": "Christopher Capizzuto"
+  },
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -12,7 +14,8 @@
     "verify:focus": "node scripts/verify-focus-dependency.cjs",
     "pack": "electron-builder --dir --publish never",
     "dist:mac": "electron-builder --mac dmg --arm64 --x64 --publish never && node scripts/verify-mac-signature.cjs && node scripts/checksums.cjs",
-    "dist:win": "electron-builder --win nsis --x64 --publish never && node scripts/checksums.cjs"
+    "dist:win": "electron-builder --win nsis --x64 --publish never && node scripts/checksums.cjs",
+    "legal:prepare": "node scripts/prepare-legal.cjs"
   },
   "dependencies": {
     "get-windows": "9.3.0"
@@ -46,7 +49,14 @@
       "overlay-renderer.js",
       "assets/**/*",
       "offline.html",
-      "package.json"
+      "package.json",
+      "startup.cjs",
+      "agreement.cjs",
+      "agreement-preload.js",
+      "agreement-renderer.js",
+      "agreement.html",
+      "agreement.css",
+      "legal/generated/manifest.json"
     ],
     "asar": true,
     "afterPack": "scripts/verify-overlay-package.cjs",
@@ -60,7 +70,9 @@
       "target": "dmg",
       "category": "public.app-category.games",
       "identity": "-",
-      "binaries": ["Contents/Resources/app.asar.unpacked/node_modules/get-windows/main"],
+      "binaries": [
+        "Contents/Resources/app.asar.unpacked/node_modules/get-windows/main"
+      ],
       "icon": "assets/icon.png"
     },
     "win": {
@@ -71,9 +83,24 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "license": "legal/generated/installer-license.txt"
     },
-    "publish": null
+    "publish": null,
+    "beforePack": "scripts/prepare-legal.cjs",
+    "extraResources": [
+      {
+        "from": "legal/generated",
+        "to": "Legal",
+        "filter": [
+          "*.txt",
+          "*.html"
+        ]
+      }
+    ],
+    "dmg": {
+      "license": "legal/generated/installer-license.txt"
+    }
   },
   "allowScripts": {
     "get-windows@9.3.0": true

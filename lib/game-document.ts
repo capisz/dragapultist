@@ -46,6 +46,7 @@ function base(document: UnknownRecord) {
     userArchetype: document.userArchetype,
     opponentArchetype: document.opponentArchetype,
     favorite: document.favorite,
+    deckId: document.deckId ?? null,
     revision: typeof document.revision === "number" ? document.revision : 1,
     schemaVersion: typeof document.schemaVersion === "number" ? document.schemaVersion : GAME_SCHEMA_VERSION,
     parserVersion: typeof document.parserVersion === "number" ? document.parserVersion : GAME_PARSER_VERSION,

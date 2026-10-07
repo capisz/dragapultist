@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-07",
+  "repository": "/Users/admin/Desktop/projects/dragapultist",
+  "automated_tests": {
+    "vitest": 92,
+    "node_unit": 28,
+    "total": 120,
+    "passed": true,
+    "storage": "MongoDB route mocks and isolated browser-local storage"
+  },
+  "typecheck": "passed",
+  "production_build": "passed",
+  "browser_evidence": "browser-checks.json",
+  "fixtures": "Synthetic match logs and decklists in an isolated browser context. The clipboard API was stubbed; the system clipboard was not used.",
+  "statistics": "Three lists and uncategorized games under one archetype verified against the same per-list grouping used by the statistics endpoint.",
+  "compatibility": {
+    "legacy_snapshots": "preserved",
+    "unscoped_pokemonDecks_cache": "explicit import only",
+    "archived_lists": "history retained",
+    "duplicate_imports": "existing assignment retained",
+    "desktop_queue": "capture timestamps resolved through current-deck history"
+  },
+  "pending": [
+    "Live signed-in cross-device sync",
+    "Native Windows/Mac capture acceptance",
+    "Production deployment and installer releases"
+  ]
+}

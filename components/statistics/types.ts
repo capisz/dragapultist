@@ -19,6 +19,7 @@ export interface PokemonStat {
 }
 
 export interface DeckStat {
+  deckId?: string | null
   key: string
   archetypeId: string | null
   label: string
@@ -57,6 +58,7 @@ export interface OverallStatsModel {
 }
 
 export interface NormalizedGame {
+  deckId?: string | null
   id: string
   dateLabel: string
   timestamp: number

@@ -12,6 +12,8 @@ import {
   type GameDetailContract,
 } from "@/lib/game-contract"
 import { normalizeImportLog } from "@/lib/import-identity"
+import { readGuestDeckLibrary } from "@/lib/deck-persistence"
+import { importDeckFields, mutationDeckFields } from "@/lib/deck-game"
 import { analyzeGameLog } from "@/utils/game-analyzer"
 
 export type GamePage = { games: GameSummaryContract[]; nextCursor: string | null }
@@ -60,7 +62,7 @@ async function csrfToken(signal?: AbortSignal) {
   return payload.csrfToken as string
 }
 
-async function checkedJson(response: Response) {
+export async function checkedJson(response: Response) {
   const payload = await response.json().catch(() => null)
   if (response.ok) return payload
   const parsed = apiErrorSchema.safeParse(payload)
@@ -70,12 +72,12 @@ async function checkedJson(response: Response) {
   throw new PersistenceError("The request could not be completed.", "INTERNAL_ERROR", response.status >= 500, response.status >= 500 ? "retryable_failure" : "validation_error")
 }
 
-async function mutation(path: string, method: "POST" | "PATCH" | "DELETE", body: unknown, signal?: AbortSignal) {
+export async function mutation(path: string, method: "POST" | "PATCH" | "DELETE", body: unknown, signal?: AbortSignal, expectedOwner?: string) {
   const token = await csrfToken(signal)
   return fetch(path, {
     method,
     signal,
-    headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+    headers: { "Content-Type": "application/json", "X-CSRF-Token": token, ...(expectedOwner ? { "X-Expected-Owner": expectedOwner } : {}) },
     body: JSON.stringify(body),
   })
 }
@@ -167,7 +169,8 @@ export const guestGamePersistence: GamePersistence = {
     const games = guestGames()
     const duplicate = games.find(value => value.id === game.id || normalizeImportLog(value.rawLog) === normalizeImportLog(game.rawLog))
     if (duplicate) return { game: duplicate, revision: duplicate.revision, saveState: "saved", duplicate: true }
-    const saved = gameDetailSchema.parse({ ...game, revision: 1, schemaVersion: 2, parserVersion: 1 })
+    const { deckAssignment: _assignment, ...draft } = game
+    const saved = gameDetailSchema.parse({ ...draft, ...importDeckFields(readGuestDeckLibrary(), game), revision: 1, schemaVersion: 2, parserVersion: 1 })
     saveGuestGames([...games, saved])
     return { game: saved, revision: saved.revision, saveState: "saved", duplicate: false }
   },
@@ -178,6 +181,7 @@ export const guestGamePersistence: GamePersistence = {
     if (games[index].revision !== expectedRevision) {
       throw new PersistenceError("This game changed. Reload before saving again.", "REVISION_CONFLICT", false, "conflict")
     }
+    const deckFields = mutationDeckFields(readGuestDeckLibrary(), games[index], changes)
     const { perspective, ...editableChanges } = changes
     const recalculated: Partial<ReturnType<typeof analyzeGameLog>> = perspective
       ? analyzeGameLog(
@@ -210,6 +214,7 @@ export const guestGamePersistence: GamePersistence = {
       schemaVersion: games[index].schemaVersion,
       parserVersion: games[index].parserVersion,
       updatedAt: new Date().toISOString(),
+      ...deckFields,
     })
     games[index] = saved
     saveGuestGames(games)
@@ -223,4 +228,22 @@ export const guestGamePersistence: GamePersistence = {
     }
     saveGuestGames(games.filter(value => value.id !== id))
   },
+}
+
+// Bind mutations to the account that initiated them, even if cookies change while waiting.
+export function ownerGamePersistence(owner: string): GamePersistence {
+  if (owner === 'guest') return guestGamePersistence
+  const uid = owner.slice('account:'.length)
+  return {
+    ...remoteGamePersistence,
+    async create(game, idempotencyKey, signal) {
+      return gameMutationResponseSchema.parse(await checkedJson(await mutation('/api/games', 'POST', { game, idempotencyKey }, signal, uid)))
+    },
+    async update(id, changes, expectedRevision, signal) {
+      return gameMutationResponseSchema.parse(await checkedJson(await mutation(`/api/games/${encodeURIComponent(id)}`, 'PATCH', { changes, expectedRevision }, signal, uid)))
+    },
+    async remove(id, expectedRevision, signal) {
+      await checkedJson(await mutation(`/api/games/${encodeURIComponent(id)}`, 'DELETE', { expectedRevision }, signal, uid))
+    },
+  }
 }

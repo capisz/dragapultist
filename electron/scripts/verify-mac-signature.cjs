@@ -27,7 +27,9 @@ if (require.main === module) {
     const mount = fs.mkdtempSync(path.join(os.tmpdir(), 'dragapultist-signature-'))
     let mounted = false
     try {
-      execFileSync('/usr/bin/hdiutil', ['attach', '-readonly', '-nobrowse', '-noautoopen', '-mountpoint', mount, image], { stdio: 'inherit' })
+      // The installer retains its published license. Accept it for this read-only
+      // packaging check so CI can verify the exact app without changing OS policy.
+      execFileSync('/usr/bin/hdiutil', ['attach', '-readonly', '-nobrowse', '-noautoopen', '-mountpoint', mount, image], { input: 'Y\n', stdio: ['pipe', 'inherit', 'inherit'] })
       mounted = true
       verifyApp(path.join(mount, `${config.productName}.app`))
       console.log(`Verified the distributed ${arch} DMG, not just its staging app.`)
