@@ -21,20 +21,25 @@
 .studio-nav::after {content:'';position:absolute;bottom:0;left:0;width:100%;height:1px;background:var(--ui-border-chrome);pointer-events:none;}
 .studio .action,.studio .review-notes button,.capture-composer button {background:var(--ui-action);border:1px solid var(--ui-action-hover);color:var(--ui-action-label);border-radius:8px;min-height:36px;font-size:13px;}
 .studio .action:hover,.studio .review-notes button:hover,.capture-composer button:hover {background:var(--ui-action-hover);}
-.games-working-band {display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--ui-panel);border:1px solid var(--ui-border);padding:12px;border-radius:14px;margin-bottom:12px;box-shadow:var(--ui-lift);}
-.games-search {flex:1 1 240px;min-width:0;order:0;margin:0;}
+.match-history {container:games-toolbar / inline-size;min-width:0;}
+.games-working-band {display:grid;gap:12px;background:var(--ui-panel);border:1px solid var(--ui-border);padding:12px;border-radius:14px;margin-bottom:12px;box-shadow:var(--ui-lift);}
+.games-toolbar-primary {display:grid;grid-template-columns:minmax(240px,1fr) auto;align-items:center;gap:8px;min-width:0;}
+.games-toolbar-secondary {display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;}
+.games-toolbar-status {min-width:0;}
+.games-toolbar-status .import-status {max-width:100%;}
+.games-search {min-width:0;max-width:none;margin:0;}
 .studio .games-search input {height:36px;min-height:36px;background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:8px;padding:0 12px;box-shadow:none;font-size:13px;}
-.studio .match-metrics {order:1;display:flex;flex:0 1 auto;align-items:stretch;border:1px solid var(--ui-border-soft);border-radius:10px;overflow:hidden;background:var(--ui-panel-header);font-variant-numeric:tabular-nums;}
-.match-metrics>div {display:flex;flex-direction:column;gap:5px;padding:8px 14px;}
-.match-metrics>div+div {border-left:1px solid var(--ui-border-soft);}
-.match-metrics strong {font-size:15px;font-weight:600;line-height:1.1;}
-.match-metrics span {font-size:10px;color:var(--ui-ink-3);white-space:nowrap;}
-.match-sort {order:2;display:flex;gap:2px;padding:2px;background:var(--ui-panel-header);border:1px solid var(--ui-border-soft);border-radius:9px;}
+.studio .games-working-band .match-metrics {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));flex:0 0 auto;width:400px;max-width:100%;min-width:0;min-height:44px;gap:0;margin:0;border:1px solid var(--ui-border-soft);border-radius:10px;background:var(--ui-panel-header);font-variant-numeric:tabular-nums;}
+.studio .games-working-band .match-metrics>div {display:flex;flex-direction:column;justify-content:center;min-width:0;gap:2px;padding:6px 8px;border:0;background:transparent;border-radius:0;}
+.studio .games-working-band .match-metrics>div+div {border-left:1px solid var(--ui-border-soft);}
+.games-working-band .match-metrics strong {font-size:15px;font-weight:600;line-height:16px;overflow-wrap:anywhere;}
+.games-working-band .match-metrics span {font-size:10px;line-height:12px;color:var(--ui-ink-3);white-space:nowrap;}
+.match-sort {display:flex;gap:2px;padding:2px;min-width:0;background:var(--ui-panel-header);border:1px solid var(--ui-border-soft);border-radius:9px;}
 .studio .match-sort button {height:30px;min-height:30px;padding:0 10px;font-size:11px;font-weight:400;color:var(--ui-ink-2);border-radius:7px;}
 .studio .match-sort button[data-state=on] {background:var(--ui-raised);color:var(--ui-ink);font-weight:600;box-shadow:var(--ui-shadow);}
 .dark .studio .match-sort button[data-state=on] {background:var(--ui-action);color:var(--ui-action-label);}
 .dark .studio .match-sort button[data-state=on]:hover {background:var(--ui-action-hover);}
-.games-intro {order:4;flex:1 1 100%;}
+.games-intro {min-width:0;}
 .games-intro[hidden] {display:none;}
 .capture-tray {margin:0;border:0;}
 .capture-tray summary {display:flex;align-items:center;width:fit-content;min-height:36px;padding:0 12px;background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:8px;font-size:13px;color:var(--ui-ink);list-style:none;}
@@ -53,8 +58,7 @@
 .studio :is(input,textarea)::placeholder {color:var(--ui-ink-3);}
 @media(max-width:719px) {
   .studio .studio-nav {padding-inline:0;}.studio-nav::after {left:0;}
-  .games-search {flex-basis:100%;}.studio .match-metrics {flex:1 1 100%;min-width:0;}.match-metrics>div {flex:1;padding:8px 10px;}
-  .match-sort {flex-wrap:wrap;}.capture-composer {flex-wrap:wrap;}.capture-composer textarea {flex-basis:100%;}.capture-composer>div {max-width:100%;}
+  .capture-composer {flex-wrap:wrap;}.capture-composer textarea {flex-basis:100%;}.capture-composer>div {max-width:100%;}
 }
 @media(prefers-reduced-motion:reduce) {.studio *, .mascot-bob {animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
 .studio .prize-picker {padding:14px;background:var(--ui-panel);}
@@ -63,8 +67,39 @@
 .studio .review-panel-heading h3, .review-turn-controls {color:var(--ui-ink);}
 .review-evidence article>div.grid>div {border:0;}
 
-.games-actions {order:3;display:flex;align-items:center;justify-content:flex-end;flex:1 1 auto;flex-wrap:wrap;gap:8px;}
+.games-actions {display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;}
 .studio .games-actions button {height:36px;min-height:36px;font-size:13px;padding:0 12px;white-space:nowrap;}
+.games-actions .current-deck-button {max-width:300px;min-width:0;}
+@container games-toolbar (max-width:999px) {
+ .games-toolbar-primary {grid-template-columns:minmax(0,1fr);gap:12px;}
+ .games-actions {display:grid;grid-template-columns:minmax(0,1fr) auto auto;}
+ .games-actions .current-deck-button {justify-self:start;max-width:min(300px,100%);}
+ .games-toolbar-secondary {flex-direction:column;align-items:stretch;}
+ .studio .games-working-band .match-metrics {width:100%;}
+ .match-sort {justify-content:flex-start;}
+}
+@container games-toolbar (max-width:719px) {
+ .games-actions {grid-template-columns:repeat(2,minmax(0,1fr));}
+ .games-actions .current-deck-button {grid-column:1 / -1;justify-self:stretch;max-width:100%;justify-content:flex-start;}
+ .studio .games-working-band .games-search input,.studio .games-working-band .games-actions button {height:44px;min-height:44px;}
+ .studio .games-working-band .match-metrics>div {padding:6px 4px;}
+ .games-working-band .match-metrics strong {font-size:14px;}
+ .games-working-band .match-metrics>div:nth-child(3) strong {font-size:13px;}
+ .match-sort {flex-wrap:wrap;}
+ .studio .games-working-band .match-sort button {height:auto;min-height:44px;}
+ .games-working-band .capture-composer {flex-wrap:wrap;}
+ .games-working-band .capture-composer textarea {flex-basis:100%;}
+ .games-working-band .capture-composer>div {max-width:100%;}
+ .games-working-band .capture-composer button {min-height:44px;}
+}
+@container games-toolbar (max-width:479px) {
+ .match-sort {display:grid;grid-template-columns:repeat(6,minmax(0,1fr));}
+ .studio .games-working-band .match-sort button {grid-column:span 2;padding-inline:6px;white-space:normal;}
+ .studio .games-working-band .match-sort button:nth-child(n+4) {grid-column:span 3;}
+}
+@container games-toolbar (max-width:359px) {
+ .games-working-band .match-metrics>div:nth-child(3) strong {font-size:11px;}
+}
 .quick-add {gap:7px;}.import-toggle {color:var(--ui-ink);background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:8px;}
 .dark .studio .import-toggle {background:color-mix(in srgb,var(--ui-action) 35%,var(--ui-action-label));border-color:var(--ui-action-hover);color:var(--ui-page);}
 .dark .studio .import-toggle:is(:hover,[aria-expanded=true]) {background:color-mix(in srgb,var(--ui-action) 50%,var(--ui-action-label));color:var(--ui-page);}
@@ -82,7 +117,6 @@
 }
 @media(min-width:720px) and (max-width:1023px) {.studio .sample-lab {grid-template-columns:minmax(0,1fr);}}
 @media(max-width:719px) {
- .games-actions {flex-basis:100%;}.studio .match-metrics {flex:0 1 auto;width:100%;}.match-metrics>div {padding:8px 10px;}.match-metrics strong {white-space:nowrap;font-size:14px;}
  .studio .player-workspace,.studio .odds-lab,.studio .sample-lab,.studio .prize-lanes {grid-template-columns:minmax(0,1fr);}
  .studio .odds-settings {grid-column:1;grid-row:1;}.studio .odds-canvas {grid-column:1;grid-row:2;}.studio .sample-hand {grid-template-columns:repeat(4,minmax(0,1fr));}
 }

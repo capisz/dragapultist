@@ -108,7 +108,8 @@ export function DeckLibraryProvider({ children }: { children: ReactNode }) {
 
 export function CurrentDeckButton() {
   const library = useDeckLibrary()
-  return <Button className="action current-deck-button" onClick={() => library.openManager()} disabled={library.loading && !library.error}>{library.currentDeck ? <ArchetypeIconPair archetypeId={library.currentDeck.archetypeId} size={22} localSprites /> : <Layers3 aria-hidden />}<span>Current deck · {library.loading ? 'Loading…' : library.currentDeck?.name ?? 'Not set'}</span></Button>
+  const label = `Current deck · ${library.loading ? 'Loading…' : library.currentDeck?.name ?? 'Not set'}`
+  return <Button className="action current-deck-button" aria-label={label} title={label} onClick={() => library.openManager()} disabled={library.loading && !library.error}>{library.currentDeck ? <ArchetypeIconPair archetypeId={library.currentDeck.archetypeId} size={22} localSprites /> : <Layers3 aria-hidden />}<span>{label}</span></Button>
 }
 
 function DeckManager({ seed, onClose }: { seed: Seed; onClose: () => void }) {

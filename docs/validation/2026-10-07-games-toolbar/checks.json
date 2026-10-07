@@ -1,0 +1,528 @@
+{
+  "fixture": "Synthetic records in isolated browser contexts; no account or user-browser changes.",
+  "layouts": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "containerWidth": 1280,
+      "overflow": false,
+      "search": {
+        "x": 93,
+        "y": 135,
+        "width": 723.203125,
+        "height": 36
+      },
+      "deck": {
+        "x": 824.203125,
+        "y": 135,
+        "width": 280.921875,
+        "height": 36
+      },
+      "quick": {
+        "x": 1113.125,
+        "y": 135,
+        "width": 111.078125,
+        "height": 36
+      },
+      "import": {
+        "x": 1232.203125,
+        "y": 135,
+        "width": 114.796875,
+        "height": 36
+      },
+      "stats": {
+        "x": 93,
+        "y": 183,
+        "width": 400,
+        "height": 44
+      },
+      "sort": {
+        "x": 967.53125,
+        "y": 187,
+        "width": 379.46875,
+        "height": 36
+      },
+      "band": {
+        "x": 80,
+        "y": 122,
+        "width": 1280,
+        "height": 118
+      },
+      "metricsMargin": "0px",
+      "inputHeight": 36,
+      "sortTargets": [
+        30,
+        30,
+        30,
+        30,
+        30
+      ],
+      "actionBg": "rgb(69, 109, 151)",
+      "quickBg": "rgb(69, 109, 151)"
+    },
+    {
+      "theme": "light",
+      "width": 900,
+      "containerWidth": 868,
+      "overflow": false,
+      "search": {
+        "x": 29,
+        "y": 135,
+        "width": 842,
+        "height": 36
+      },
+      "deck": {
+        "x": 29,
+        "y": 183,
+        "width": 280.921875,
+        "height": 36
+      },
+      "quick": {
+        "x": 637.125,
+        "y": 183,
+        "width": 111.078125,
+        "height": 36
+      },
+      "import": {
+        "x": 756.203125,
+        "y": 183,
+        "width": 114.796875,
+        "height": 36
+      },
+      "stats": {
+        "x": 29,
+        "y": 231,
+        "width": 842,
+        "height": 44
+      },
+      "sort": {
+        "x": 29,
+        "y": 287,
+        "width": 842,
+        "height": 36
+      },
+      "band": {
+        "x": 16,
+        "y": 122,
+        "width": 868,
+        "height": 214
+      },
+      "metricsMargin": "0px",
+      "inputHeight": 36,
+      "sortTargets": [
+        30,
+        30,
+        30,
+        30,
+        30
+      ],
+      "actionBg": "rgb(69, 109, 151)",
+      "quickBg": "rgb(69, 109, 151)"
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "containerWidth": 358,
+      "overflow": false,
+      "search": {
+        "x": 29,
+        "y": 137,
+        "width": 332,
+        "height": 44
+      },
+      "deck": {
+        "x": 29,
+        "y": 193,
+        "width": 332,
+        "height": 44
+      },
+      "quick": {
+        "x": 29,
+        "y": 245,
+        "width": 162,
+        "height": 44
+      },
+      "import": {
+        "x": 199,
+        "y": 245,
+        "width": 162,
+        "height": 44
+      },
+      "stats": {
+        "x": 29,
+        "y": 301,
+        "width": 332,
+        "height": 44
+      },
+      "sort": {
+        "x": 29,
+        "y": 357,
+        "width": 332,
+        "height": 96
+      },
+      "band": {
+        "x": 16,
+        "y": 124,
+        "width": 358,
+        "height": 342
+      },
+      "metricsMargin": "0px",
+      "inputHeight": 44,
+      "sortTargets": [
+        44,
+        44,
+        44,
+        44,
+        44
+      ],
+      "actionBg": "rgb(69, 109, 151)",
+      "quickBg": "rgb(69, 109, 151)"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "containerWidth": 288,
+      "overflow": false,
+      "search": {
+        "x": 29,
+        "y": 137,
+        "width": 262,
+        "height": 44
+      },
+      "deck": {
+        "x": 29,
+        "y": 193,
+        "width": 262,
+        "height": 44
+      },
+      "quick": {
+        "x": 29,
+        "y": 245,
+        "width": 127,
+        "height": 44
+      },
+      "import": {
+        "x": 164,
+        "y": 245,
+        "width": 127,
+        "height": 44
+      },
+      "stats": {
+        "x": 29,
+        "y": 301,
+        "width": 262,
+        "height": 44
+      },
+      "sort": {
+        "x": 29,
+        "y": 357,
+        "width": 262,
+        "height": 96
+      },
+      "band": {
+        "x": 16,
+        "y": 124,
+        "width": 288,
+        "height": 342
+      },
+      "metricsMargin": "0px",
+      "inputHeight": 44,
+      "sortTargets": [
+        44,
+        44,
+        44,
+        44,
+        44
+      ],
+      "actionBg": "rgb(69, 109, 151)",
+      "quickBg": "rgb(69, 109, 151)"
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "containerWidth": 1280,
+      "overflow": false,
+      "search": {
+        "x": 93,
+        "y": 135,
+        "width": 723.203125,
+        "height": 36
+      },
+      "deck": {
+        "x": 824.203125,
+        "y": 135,
+        "width": 280.921875,
+        "height": 36
+      },
+      "quick": {
+        "x": 1113.125,
+        "y": 135,
+        "width": 111.078125,
+        "height": 36
+      },
+      "import": {
+        "x": 1232.203125,
+        "y": 135,
+        "width": 114.796875,
+        "height": 36
+      },
+      "stats": {
+        "x": 93,
+        "y": 183,
+        "width": 400,
+        "height": 44
+      },
+      "sort": {
+        "x": 967.53125,
+        "y": 187,
+        "width": 379.46875,
+        "height": 36
+      },
+      "band": {
+        "x": 80,
+        "y": 122,
+        "width": 1280,
+        "height": 118
+      },
+      "metricsMargin": "0px",
+      "inputHeight": 36,
+      "sortTargets": [
+        30,
+        30,
+        30,
+        30,
+        30
+      ],
+      "actionBg": "rgb(76, 102, 127)",
+      "quickBg": "rgb(76, 102, 127)"
+    },
+    {
+      "theme": "dark",
+      "width": 900,
+      "containerWidth": 868,
+      "overflow": false,
+      "search": {
+        "x": 29,
+        "y": 135,
+        "width": 842,
+        "height": 36
+      },
+      "deck": {
+        "x": 29,
+        "y": 183,
+        "width": 280.921875,
+        "height": 36
+      },
+      "quick": {
+        "x": 637.125,
+        "y": 183,
+        "width": 111.078125,
+        "height": 36
+      },
+      "import": {
+        "x": 756.203125,
+        "y": 183,
+        "width": 114.796875,
+        "height": 36
+      },
+      "stats": {
+        "x": 29,
+        "y": 231,
+        "width": 842,
+        "height": 44
+      },
+      "sort": {
+        "x": 29,
+        "y": 287,
+        "width": 842,
+        "height": 36
+      },
+      "band": {
+        "x": 16,
+        "y": 122,
+        "width": 868,
+        "height": 214
+      },
+      "metricsMargin": "0px",
+      "inputHeight": 36,
+      "sortTargets": [
+        30,
+        30,
+        30,
+        30,
+        30
+      ],
+      "actionBg": "rgb(76, 102, 127)",
+      "quickBg": "rgb(76, 102, 127)"
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "containerWidth": 358,
+      "overflow": false,
+      "search": {
+        "x": 29,
+        "y": 137,
+        "width": 332,
+        "height": 44
+      },
+      "deck": {
+        "x": 29,
+        "y": 193,
+        "width": 332,
+        "height": 44
+      },
+      "quick": {
+        "x": 29,
+        "y": 245,
+        "width": 162,
+        "height": 44
+      },
+      "import": {
+        "x": 199,
+        "y": 245,
+        "width": 162,
+        "height": 44
+      },
+      "stats": {
+        "x": 29,
+        "y": 301,
+        "width": 332,
+        "height": 44
+      },
+      "sort": {
+        "x": 29,
+        "y": 357,
+        "width": 332,
+        "height": 96
+      },
+      "band": {
+        "x": 16,
+        "y": 124,
+        "width": 358,
+        "height": 342
+      },
+      "metricsMargin": "0px",
+      "inputHeight": 44,
+      "sortTargets": [
+        44,
+        44,
+        44,
+        44,
+        44
+      ],
+      "actionBg": "rgb(76, 102, 127)",
+      "quickBg": "rgb(76, 102, 127)"
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "containerWidth": 288,
+      "overflow": false,
+      "search": {
+        "x": 29,
+        "y": 137,
+        "width": 262,
+        "height": 44
+      },
+      "deck": {
+        "x": 29,
+        "y": 193,
+        "width": 262,
+        "height": 44
+      },
+      "quick": {
+        "x": 29,
+        "y": 245,
+        "width": 127,
+        "height": 44
+      },
+      "import": {
+        "x": 164,
+        "y": 245,
+        "width": 127,
+        "height": 44
+      },
+      "stats": {
+        "x": 29,
+        "y": 301,
+        "width": 262,
+        "height": 44
+      },
+      "sort": {
+        "x": 29,
+        "y": 357,
+        "width": 262,
+        "height": 96
+      },
+      "band": {
+        "x": 16,
+        "y": 124,
+        "width": 288,
+        "height": 342
+      },
+      "metricsMargin": "0px",
+      "inputHeight": 44,
+      "sortTargets": [
+        44,
+        44,
+        44,
+        44,
+        44
+      ],
+      "actionBg": "rgb(76, 102, 127)",
+      "quickBg": "rgb(76, 102, 127)"
+    }
+  ],
+  "interactions": [
+    {
+      "theme": "light",
+      "search": "passed",
+      "emptySearch": "passed",
+      "sortDirection": "passed",
+      "deckManager": "passed",
+      "focusOrder": [
+        "Current deck · Drick-Hammers",
+        "Quick add",
+        "Import a game",
+        "Sort matches"
+      ],
+      "manualImport": "passed",
+      "quickAddDeniedClipboard": "passed",
+      "longDeck": "passed",
+      "zoom": {
+        "method": "200% document CSS zoom for reflow",
+        "overflow": false,
+        "containerWidth": 688
+      },
+      "emptyHistory": "passed",
+      "quickAddInvalidClipboard": "passed",
+      "quickAddSuccessWithCurrentDeck": "passed"
+    },
+    {
+      "theme": "dark",
+      "search": "passed",
+      "emptySearch": "passed",
+      "sortDirection": "passed",
+      "deckManager": "passed",
+      "focusOrder": [
+        "Current deck · Drick-Hammers",
+        "Quick add",
+        "Import a game",
+        "Sort matches"
+      ],
+      "manualImport": "passed",
+      "quickAddDeniedClipboard": "passed",
+      "longDeck": "passed",
+      "zoom": {
+        "method": "200% document CSS zoom for reflow",
+        "overflow": false,
+        "containerWidth": 688
+      },
+      "emptyHistory": "passed",
+      "quickAddInvalidClipboard": "passed",
+      "quickAddSuccessWithCurrentDeck": "passed"
+    }
+  ],
+  "pageErrors": []
+}

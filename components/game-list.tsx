@@ -27,6 +27,7 @@ interface GameListProps {
   initialFilters?: MatchFilters
   onFiltersChange?: (filters: MatchFilters) => void
   toolbar?: ReactNode
+  toolbarStatus?: ReactNode
   importComposer?: ReactNode
   loading?: boolean
   freshId?: string | null
@@ -45,7 +46,7 @@ interface GameListProps {
   onImport?: () => void
 }
 
-export function GameList({ initialFilters, onFiltersChange, toolbar, importComposer, loading = false, freshId, filterRevision = 0, games, onSelectGame, sortConfig, onSort, restoreMatchId, hasHistory, searchQuery = '', onClearSearch, onImport }: GameListProps) {
+export function GameList({ initialFilters, onFiltersChange, toolbar, toolbarStatus, importComposer, loading = false, freshId, filterRevision = 0, games, onSelectGame, sortConfig, onSort, restoreMatchId, hasHistory, searchQuery = '', onClearSearch, onImport }: GameListProps) {
   const library = useDeckLibrary()
   const [listSelections, setListSelections] = useState<Record<string, string>>(initialFilters?.lists ?? {})
   const [assigning, setAssigning] = useState(false)
@@ -81,15 +82,20 @@ export function GameList({ initialFilters, onFiltersChange, toolbar, importCompo
   const hasFilter = Boolean(searchQuery.trim() || archetypeFilter || (filterSide === "user" && Object.values(listSelections).some(value => value !== ALL_LISTS)))
   function clearFilters() { setArchetypeFilter(null); setListSelections({}); onClearSearch?.() }
   return <section className="match-history" aria-label="Match history" aria-busy={loading}>
-    <div className="games-working-band">{toolbar}<div className="match-metrics" aria-live="polite" aria-atomic="true">
-      <div><strong>{loading ? "—" : visibleGames.length}</strong><span>Matches</span></div>
-      <div><strong>{!loading && visibleGames.length ? `${Math.round(wins / visibleGames.length * 100)}%` : '—'}</strong><span>Win rate</span></div>
-      <div><strong>{loading ? "—" : `${wins}W · ${losses}L`}</strong><span>Results</span></div>
-      <div><strong>{!loading && visibleGames.length ? (visibleGames.reduce((sum, game) => sum + game.turns, 0) / visibleGames.length).toFixed(1) : '—'}</strong><span>Avg rounds</span></div>
-    </div>
-      <ToggleGroup type="single" value={sortConfig.key} className="match-sort" aria-label="Sort matches">
-        {SORT_OPTIONS.map(({ key, label }) => <ToggleGroupItem key={key} value={key} onClick={() => onSort(key)}>{label}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</ToggleGroupItem>)}
-      </ToggleGroup>
+    <div className="games-working-band">
+      {toolbar && <div className="games-toolbar-primary">{toolbar}</div>}
+      <div className="games-toolbar-secondary">
+        <div className="match-metrics" aria-live="polite" aria-atomic="true">
+          <div><strong>{loading ? "—" : visibleGames.length}</strong><span>Matches</span></div>
+          <div><strong>{!loading && visibleGames.length ? `${Math.round(wins / visibleGames.length * 100)}%` : '—'}</strong><span>Win rate</span></div>
+          <div><strong>{loading ? "—" : `${wins}W · ${losses}L`}</strong><span>Results</span></div>
+          <div><strong>{!loading && visibleGames.length ? (visibleGames.reduce((sum, game) => sum + game.turns, 0) / visibleGames.length).toFixed(1) : '—'}</strong><span>Avg rounds</span></div>
+        </div>
+        <ToggleGroup type="single" value={sortConfig.key} className="match-sort" aria-label="Sort matches">
+          {SORT_OPTIONS.map(({ key, label }) => <ToggleGroupItem key={key} value={key} onClick={() => onSort(key)}>{label}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</ToggleGroupItem>)}
+        </ToggleGroup>
+      </div>
+      {toolbarStatus && <div className="games-toolbar-status">{toolbarStatus}</div>}
       {importComposer}
     </div>
     {loading || (!hasHistory && !hasFilter) ? <><span className="sr-only" role="status">{loading ? "Loading matches…" : ""}</span><GhostScaffold /></> : games.length > 0 || archetypeFilter ? <div className="constellation-panel">

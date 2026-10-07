@@ -661,7 +661,7 @@ export function PokemonTCGAnalyzer() {
                     <GameList
                       initialFilters={matchFilters.current?.owner === historyOwner ? matchFilters.current.filters : undefined}
                       onFiltersChange={rememberFilters}
-                      toolbar={<>                  <div className="games-search mb-4 relative">
+                      toolbar={<>                  <div className="games-search relative">
                     <Input
                       type="text"
                       aria-label="Search matches by opponent, Pokémon, result, date, tag, or note"
@@ -669,7 +669,7 @@ export function PokemonTCGAnalyzer() {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className={cn(
-                        "w-full min-h-12",
+                        "w-full",
                         "bg-slate-100/90 text-gray-900 placeholder:text-slate-400",
                         "border border-slate-300 shadow-[0_0_22px_rgba(42,81,128,0.15)]",
                         "focus-visible:outline-none",
@@ -680,11 +680,11 @@ export function PokemonTCGAnalyzer() {
                       )}
                     />
                   </div><div className="games-actions">
-                    {quickStatus && <span role="status" className="import-status" data-tone={quickStatus.tone}>{quickStatus.text}</span>}
                     <CurrentDeckButton />
                     <Button className="action quick-add" onClick={handleQuickAdd} disabled={quickBusy || saveState === "saving" || deckLibrary.loading}><ClipboardPlus size={14} />{quickBusy ? "Adding…" : "Quick add"}</Button>
                     <Button className="import-toggle" variant="outline" aria-expanded={importOpen} aria-controls="import-composer" onClick={() => setImportOpen(value => !value)}>{importOpen ? "Hide import" : "Import a game"}</Button>
                   </div></>}
+                  toolbarStatus={quickStatus && <span role="status" className="import-status" data-tone={quickStatus.tone}>{quickStatus.text}</span>}
                   importComposer={<div className="games-intro" id="import-composer" hidden={!importOpen}>
 
 
