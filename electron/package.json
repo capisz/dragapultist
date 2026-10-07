@@ -1,7 +1,7 @@
 {
   "name": "dragapultist-desktop",
   "productName": "Dragapultist Beta",
-  "version": "0.3.0-beta.1",
+  "version": "0.3.0-beta.2",
   "private": true,
   "description": "Dragapultist desktop clipboard companion",
   "author": "Dragapultist",
@@ -11,7 +11,7 @@
     "test": "node --test test/*.test.cjs",
     "verify:focus": "node scripts/verify-focus-dependency.cjs",
     "pack": "electron-builder --dir --publish never",
-    "dist:mac": "electron-builder --mac dmg --arm64 --x64 --publish never && node scripts/checksums.cjs",
+    "dist:mac": "electron-builder --mac dmg --arm64 --x64 --publish never && node scripts/verify-mac-signature.cjs && node scripts/checksums.cjs",
     "dist:win": "electron-builder --win nsis --x64 --publish never && node scripts/checksums.cjs"
   },
   "dependencies": {
@@ -50,6 +50,7 @@
     ],
     "asar": true,
     "afterPack": "scripts/verify-overlay-package.cjs",
+    "afterSign": "scripts/verify-mac-signature.cjs",
     "asarUnpack": [
       "node_modules/get-windows/main",
       "node_modules/get-windows/lib/binding/**/*"
@@ -58,7 +59,8 @@
     "mac": {
       "target": "dmg",
       "category": "public.app-category.games",
-      "identity": null,
+      "identity": "-",
+      "binaries": ["Contents/Resources/app.asar.unpacked/node_modules/get-windows/main"],
       "icon": "assets/icon.png"
     },
     "win": {
