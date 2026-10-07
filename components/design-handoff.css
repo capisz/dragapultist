@@ -11,6 +11,8 @@
 .header-utilities>button:first-child {width:36px;min-width:36px;height:36px;min-height:36px;padding:8px;border:1px solid var(--ui-border-chrome);border-radius:8px;background:var(--ui-chrome);color:var(--ui-ink);transform:none;}
 .header-utilities>button:first-child svg {width:18px;height:18px;}
 .header-utilities>button {min-height:36px;border-radius:8px;font-size:13px;}
+.header-utilities .header-account-action {background:var(--ui-action);border:1px solid var(--ui-action-hover);color:var(--ui-action-label);box-shadow:var(--ui-shadow);}
+.header-utilities .header-account-action:is(:hover,:active) {background:var(--ui-action-hover);}
 .studio>main {padding:0 16px 40px;}
 .studio .studio-nav {padding:6px 12px 0;gap:2px;margin-bottom:16px!important;min-height:44px;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;}
 .studio-nav::before {background:var(--ui-chrome);box-shadow:0 0 0 100vmax var(--ui-chrome);}

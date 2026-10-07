@@ -39,13 +39,7 @@ type HeaderUser =
   | { id: string; email?: string | null; username?: string | null; name?: string | null }
   | null
 
-// Brand button colors:
-// Light mode: darker blue
-// Dark mode: lighter blue
-const BRAND_BTN =
-  "bg-[#5e82ab] text-slate-50 hover:bg-[#4f739d] active:bg-[#44678f] " +
-  "dark:bg-[#b1cce8] dark:text-[#0b1220] dark:hover:bg-[#a1c2e4] dark:active:bg-[#93b7df] " +
-  "border-none shadow-md hover:shadow-lg transition-all"
+const BRAND_BTN = "header-account-action transition-colors"
 
 export function AuthHeader() {
   const router = useRouter()

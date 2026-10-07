@@ -7,6 +7,8 @@
 .constellation-filter-bar :is(.constellation-filter-toggle,.match-view-toggle) button {flex:0 0 auto;width:auto;height:32px;min-height:32px;padding:0 9px;border-radius:6px;background:transparent;color:var(--ui-ink-3);font-size:11px;font-weight:600;white-space:nowrap;}
 .constellation-filter-bar :is(.constellation-filter-toggle,.match-view-toggle) button:hover {background:var(--ui-panel);color:var(--ui-ink);}
 .constellation-filter-bar :is(.constellation-filter-toggle,.match-view-toggle) button[data-state=on] {background:var(--ui-raised);color:var(--ui-ink);box-shadow:var(--ui-shadow);}
+.dark .constellation-filter-bar :is(.constellation-filter-toggle,.match-view-toggle) button[data-state=on] {background:var(--ui-action);color:var(--ui-action-label);}
+.dark .constellation-filter-bar :is(.constellation-filter-toggle,.match-view-toggle) button[data-state=on]:hover {background:var(--ui-action-hover);}
 .constellation-filter-bar :is(.constellation-filter-toggle,.match-view-toggle) button:focus-visible {outline:2px solid var(--ui-link);outline-offset:2px;box-shadow:none;}
 .constellation-filter-options {display:flex;align-items:center;flex:0 0 auto;}
 .constellation-filter-options button {position:relative;flex:0 0 52px;display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;background:transparent;color:var(--ui-ink);font-size:11px;}
