@@ -50,16 +50,16 @@ export function MatchHistoryList({ games, groupGames = games, listSelections = {
       <div className="match-list-legend"><span><i data-outcome="W" />Win</span><span><i data-outcome="L" />Loss</span></div>
       {Array.from(groups.values()).map(group => {
         const wins = group.matches.filter(game => game.userWon).length
-        return <section key={JSON.stringify(group.id)} className="match-list-group" aria-label={`${group.label} match history`}>
+        return <section key={JSON.stringify(group.id)} className={`match-list-group${side === 'user' && onChooseList ? ' match-list-group--filtered' : ''}`} aria-label={`${group.label} match history`}>
           <div className="match-list-deck">
             <ArchetypeIconPair archetypeId={group.id} size={48} localSprites />
             <h3>{group.label}</h3>
             <p>{group.matches.length} {group.matches.length === 1 ? 'match' : 'matches'}</p>
-            {side === 'user' && onChooseList && <DeckListPicker ariaLabel={`${group.label} list`} games={groupGames.filter(game => matchArchetype(game).id === group.id)} archetypeId={group.id} value={listSelections[group.id ?? '__unknown__'] ?? ALL_LISTS} onChange={value => onChooseList(group.id, value)} />}
             {side === 'user' && onAssign && <button type="button" className="deck-assignment-link" onClick={() => onAssign(group.id)}>Assign decklist</button>}
             <p><span className="match-win-text">{wins}W</span> · <span className="match-loss-text">{group.matches.length - wins}L</span></p>
           </div>
           <div className="match-list-record">
+            {side === 'user' && onChooseList && <div className="match-list-filter"><DeckListPicker label="" ariaLabel={`${group.label} list`} games={groupGames.filter(game => matchArchetype(game).id === group.id)} archetypeId={group.id} value={listSelections[group.id ?? '__unknown__'] ?? ALL_LISTS} onChange={value => onChooseList(group.id, value)} /></div>}
             <div className="match-list-record-label"><span>Match history</span><span>{group.matches.length ? `${Math.round(wins / group.matches.length * 100)}% win rate` : 'No matches for this list'}</span></div>
             <div className="match-dot-grid" role="group" aria-label={`${group.label} match dots`}>
               {group.matches.map(game => <button key={game.id} type="button" className="match-dot" data-match-id={game.id} data-outcome={matchOutcome(game).code} data-active={preview?.id === game.id} data-fresh={freshId === game.id}

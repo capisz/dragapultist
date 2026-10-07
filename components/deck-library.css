@@ -58,7 +58,14 @@ button.current-deck-button { max-width: 300px; min-width: 0; display: inline-fle
 .current-deck-button .archetype-icons { flex-shrink: 0; gap: 3px; }
 .deck-list-picker { max-width: 240px; color: var(--ui-ink-2); gap: 4px; font-size: 11px; }
 .deck-list-picker .deck-list-combobox { font-size: 12px; padding: 6px 8px; min-height: 36px; }
-.match-list-deck .deck-list-picker { margin-top: 8px; }
+.match-list-group.match-list-group--filtered { align-items: start; }
+.match-list-filter { display: flex; align-items: center; min-height: 48px; margin-bottom: 12px; }
+.match-list-filter .deck-list-picker { width: 180px; max-width: 100%; }
+.studio .match-list-filter .deck-list-combobox {
+  height: 28px; min-height: 28px; padding: 4px 8px; border-width: 1px;
+  border-radius: 6px; font-size: 11px; line-height: 18px; box-shadow: none;
+}
+.match-list-filter .deck-list-combobox > svg { display: none; }
 .deck-assignment { align-items: stretch; }
 .deck-assignment-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .deck-assignment-actions button { font-size: 12px; border-radius: 8px; }
@@ -85,7 +92,6 @@ button.current-deck-button { max-width: 300px; min-width: 0; display: inline-fle
 .studio .saved-deck-picker button { height: 40px; border-radius: 8px; font-size: 12px; }
 @media (max-width: 719px) {
   button.current-deck-button { max-width: 100%; }
-  .match-list-deck .deck-list-picker { width: 100%; }
 }
 @media (max-width: 479px) {
   .deck-dialog-header { padding: 16px 44px 16px 16px; }
