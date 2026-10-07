@@ -201,3 +201,8 @@ input,textarea {caret-color:var(--ui-link);}
 .desktop-settings {display:grid;gap:12px;padding:16px;max-width:720px;}
 .desktop-actions {display:flex;gap:8px;flex-wrap:wrap;}
 .desktop-settings textarea {width:100%;resize:vertical;padding:10px;background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:8px;}
+.overlay-settings {display:grid;gap:8px;border:1px solid var(--ui-border);border-radius:8px;padding:12px;min-width:0;}
+.overlay-settings legend {padding:0 4px;font-weight:600;}
+.overlay-settings p {margin:0;line-height:1.5;}
+.overlay-settings input[type="range"] {width:100%;min-height:24px;margin:0;accent-color:var(--ui-link);cursor:pointer;}
+.overlay-settings input[type="range"]:focus-visible {outline:2px solid var(--ui-link);outline-offset:3px;}

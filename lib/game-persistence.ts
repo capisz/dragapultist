@@ -36,6 +36,12 @@ export interface GamePersistence {
   remove(id: string, expectedRevision?: number, signal?: AbortSignal): Promise<void>
 }
 
+function announceGamesChanged(imported?: { id: string; duplicate: boolean }) {
+  if (typeof window === 'undefined') return
+  if (imported) window.dispatchEvent(new CustomEvent('dragapultist-game-imported', { detail: imported }))
+  window.dispatchEvent(new Event('dragapultist-games-changed'))
+}
+
 function stateFor(code: ApiErrorCode): PersistenceState {
   if (code === "VALIDATION_ERROR") return "validation_error"
   if (code === "UNAUTHORIZED") return "unauthorized"
@@ -88,13 +94,18 @@ export const remoteGamePersistence: GamePersistence = {
     return gameDetailResponseSchema.parse(await checkedJson(response)).game
   },
   async create(game, idempotencyKey, signal) {
-    return gameMutationResponseSchema.parse(await checkedJson(await mutation("/api/games", "POST", { game, idempotencyKey }, signal)))
+    const saved = gameMutationResponseSchema.parse(await checkedJson(await mutation("/api/games", "POST", { game, idempotencyKey }, signal)))
+    announceGamesChanged({ id: saved.game.id, duplicate: !!saved.duplicate })
+    return saved
   },
   async update(id, changes, expectedRevision, signal) {
-    return gameMutationResponseSchema.parse(await checkedJson(await mutation(`/api/games/${encodeURIComponent(id)}`, "PATCH", { changes, expectedRevision }, signal)))
+    const saved = gameMutationResponseSchema.parse(await checkedJson(await mutation(`/api/games/${encodeURIComponent(id)}`, "PATCH", { changes, expectedRevision }, signal)))
+    announceGamesChanged()
+    return saved
   },
   async remove(id, expectedRevision, signal) {
     await checkedJson(await mutation(`/api/games/${encodeURIComponent(id)}`, "DELETE", { expectedRevision }, signal))
+    announceGamesChanged()
   },
 }
 

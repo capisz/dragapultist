@@ -231,6 +231,7 @@ function normalizeGame(raw: RawGame): NormalizedGame | null {
     id,
     dateLabel: formatDateLabel(parsedDate),
     timestamp: parsedDate?.getTime() ?? 0,
+    recordedDate: asString(summary?.date) || asString(raw.date),
     opponent: asString(summary?.opponent) || asString(raw.opponent) || "Unknown Opponent",
     userWon: asBoolean(summary?.userWon ?? raw.userWon),
     wentFirst: asBoolean(summary?.wentFirst ?? raw.wentFirst),

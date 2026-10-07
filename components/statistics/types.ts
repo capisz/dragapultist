@@ -60,6 +60,8 @@ export interface NormalizedGame {
   id: string
   dateLabel: string
   timestamp: number
+  /** Recorded game date, separate from the save timestamp used for history order. */
+  recordedDate?: string
   opponent: string
   userWon: boolean
   wentFirst: boolean

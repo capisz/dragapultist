@@ -1,0 +1,5 @@
+The bundled overlay-font.woff2 is Geist Variable from the existing geist package.
+Source: https://github.com/vercel/geist-font
+Copyright (c) 2023 Vercel, in collaboration with basement.studio.
+Licensed under the SIL Open Font License, Version 1.1.
+The full license is included in OVERLAY-FONT-OFL.txt.
