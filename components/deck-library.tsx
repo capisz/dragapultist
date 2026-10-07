@@ -1,4 +1,5 @@
 'use client'
+import { DeckListSelect } from './deck-list-select'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { getUser } from '@/app/actions'
 import { deckPersistence } from '@/lib/deck-persistence'
@@ -164,7 +165,7 @@ function DeckManager({ seed, onClose }: { seed: Seed; onClose: () => void }) {
     <DialogHeader className="deck-dialog-header"><div className="deck-dialog-heading"><span className="deck-dialog-identity">{archetype ? <ArchetypeIconPair archetypeId={archetype} size={30} localSprites /> : <Layers3 size={24} aria-hidden />}</span><div><DialogTitle>Current deck</DialogTitle><DialogDescription>{library.owner === 'guest' ? 'Saved on this browser.' : 'Synced with your account.'}</DialogDescription></div></div></DialogHeader>
     <div className="deck-dialog-body">
       {library.error && <div className="deck-feedback" role="alert">{library.error} <Button variant="outline" onClick={library.refresh}>Retry</Button></div>}
-      <label className="deck-field">Saved decklist<select aria-label="Saved decklist" value={selected} onChange={event => choose(event.target.value)} disabled={busy}><option value="">New decklist</option>{library.decks.map(deck => <option key={deck.id} value={deck.id}>{deck.name}{deck.archivedAt ? ' (archived)' : ''}{library.currentDeckId === deck.id ? ' · Current' : ''}</option>)}</select></label>
+      <label className="deck-field">Saved decklist<DeckListSelect label="Saved decklist" value={selected} onValueChange={choose} disabled={busy} options={[{ value: '', label: 'New decklist' }, ...library.decks.map(deck => ({ value: deck.id, label: deck.name + (deck.archivedAt ? ' (archived)' : '') + (library.currentDeckId === deck.id ? ' · Current' : ''), archetypeId: deck.archetypeId }))]} /></label>
       <div className="deck-editor-fields"><label className="deck-field">Deck name<Input aria-label="Deck name" placeholder="Name this list…" value={name} onChange={event => setName(event.target.value)} maxLength={80} disabled={busy} /></label>
         <fieldset disabled={busy} className="deck-field"><legend>Deck archetype</legend><ArchetypeSelector value={archetype} onValueChange={setArchetype} label="Deck archetype" /></fieldset></div>
       <div className="deck-cards-editor"><div className="deck-cards-heading"><label htmlFor="library-deck-text">Decklist</label><span className="deck-card-count" data-ready={parsed.valid}>{parsed.valid && <Check size={13} aria-hidden />}{parsed.total}<span>/60 cards</span></span></div>
@@ -184,7 +185,7 @@ function DeckManager({ seed, onClose }: { seed: Seed; onClose: () => void }) {
       {library.currentDeckId && <Button variant="ghost" disabled={busy} onClick={() => void run(async () => { await library.setCurrent(null); setMessage('Current deck cleared.') })}>Clear current deck</Button>}
       {deck && !deck.archivedAt && <Button variant="ghost" disabled={busy} onClick={() => void run(async () => { await library.update({ ...deck, revision: editingRevision }, { archived: true }); setMessage('List archived. Its match history is preserved.') })}><Archive aria-hidden />Archive list</Button>}
     </div>
-    {!!legacy.length && <label className="deck-field">Old browser lists<select aria-label="Old browser lists" value="" onChange={event => { const old = legacy[Number(event.target.value)]; if (old) { choose(''); setName(old.name); setText(old.list) } }}><option value="">Choose an old list…</option>{legacy.map((deck, index) => <option key={index} value={index}>{deck.name}</option>)}</select></label>}
+    {!!legacy.length && <label className="deck-field">Old browser lists<DeckListSelect label="Old browser lists" value="" onValueChange={value => { if (!value) return; const old = legacy[Number(value)]; if (old) { choose(''); setName(old.name); setText(old.list) } }} options={[{ value: '', label: 'Choose an old list…' }, ...legacy.map((deck, index) => ({ value: String(index), label: deck.name }))]} /></label>}
     </div>
   </DialogContent></Dialog>
 }

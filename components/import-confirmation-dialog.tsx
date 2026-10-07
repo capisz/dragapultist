@@ -1,6 +1,7 @@
 // components/import-confirmation-dialog.tsx
 "use client"
 
+import { DeckListSelect } from './deck-list-select'
 import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -534,7 +535,7 @@ export function ImportConfirmationDialog({
           )}
         </div>
 
-        <label className="deck-list-picker">Played decklist<select aria-label="Played decklist" value={deckId} onChange={event => { setDeckId(event.target.value); const deck = library.decks.find(deck => deck.id === event.target.value); if (deck) setUserArchetypeId(deck.archetypeId) }}><option value="">Uncategorized</option>{library.decks.filter(deck => !deck.archivedAt).map(deck => <option key={deck.id} value={deck.id}>{deck.name}</option>)}</select></label>
+        <label className="deck-list-picker">Played decklist<DeckListSelect label="Played decklist" value={deckId} onValueChange={id => { setDeckId(id); const deck = library.decks.find(deck => deck.id === id); if (deck) setUserArchetypeId(deck.archetypeId) }} options={[{ value: '', label: 'Uncategorized' }, ...library.decks.filter(deck => !deck.archivedAt).map(deck => ({ value: deck.id, label: deck.name, archetypeId: deck.archetypeId }))]} /></label>
         <DialogFooter>
           <Button
             type="button"

@@ -16,7 +16,7 @@
 .deck-field, .deck-list-picker { display: grid; gap: 7px; font-size: 12px; font-weight: 500; min-width: 0; }
 .deck-field legend { margin-bottom: 7px; }
 .deck-editor-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 12px; align-items: start; }
-.deck-library-dialog :is(textarea, input:not([type=checkbox]), select), .deck-list-picker select, .saved-deck-picker select {
+.deck-library-dialog :is(textarea, input:not([type=checkbox])) {
   background: var(--ui-raised); color: var(--ui-ink); border: 1px solid var(--ui-border); border-radius: 8px;
   padding: 9px 10px; width: 100%; min-width: 0; min-height: 40px; font-size: 13px; font-weight: 400; caret-color: var(--ui-ink);
 }
@@ -57,8 +57,7 @@ button.current-deck-button { max-width: 300px; min-width: 0; display: inline-fle
 .current-deck-button > span:not(.archetype-icons) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .current-deck-button .archetype-icons { flex-shrink: 0; gap: 3px; }
 .deck-list-picker { max-width: 240px; color: var(--ui-ink-2); gap: 4px; font-size: 11px; }
-.deck-list-picker select { font-size: 12px; padding: 6px 8px; min-height: 34px; color-scheme: light; }
-.dark .deck-list-picker select { color-scheme: dark; }
+.deck-list-picker .deck-list-combobox { font-size: 12px; padding: 6px 8px; min-height: 36px; }
 .match-list-deck .deck-list-picker { margin-top: 8px; }
 .deck-assignment { align-items: stretch; }
 .deck-assignment-actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -82,12 +81,11 @@ button.current-deck-button { max-width: 300px; min-width: 0; display: inline-fle
 .deck-library-dialog :is(input, textarea, select, button, summary):focus-visible, .deck-list-picker select:focus-visible, .deck-assignment-link:focus-visible, .saved-deck-picker :is(select, button):focus-visible { outline: 2px solid var(--ui-action); outline-offset: 3px; box-shadow: none; }
 .studio .saved-deck-picker { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 12px; padding: 12px 0 16px; margin-bottom: 0; }
 .studio .saved-deck-picker label { grid-column: 1 / -1; font-size: 12px; font-weight: 500; }
-.studio .saved-deck-picker select { max-width: none; height: 40px; background: var(--ui-raised); color: var(--ui-ink); border-color: var(--ui-border); }
+.studio .saved-deck-picker .deck-list-combobox { max-width: none; height: 40px; background: var(--ui-raised); color: var(--ui-ink); border-color: var(--ui-border); }
 .studio .saved-deck-picker button { height: 40px; border-radius: 8px; font-size: 12px; }
 @media (max-width: 719px) {
   button.current-deck-button { max-width: 100%; }
   .match-list-deck .deck-list-picker { width: 100%; }
-  .match-list-deck .deck-list-picker select { padding: 6px 2px; }
 }
 @media (max-width: 479px) {
   .deck-dialog-header { padding: 16px 44px 16px 16px; }
@@ -100,4 +98,28 @@ button.current-deck-button { max-width: 300px; min-width: 0; display: inline-fle
   .studio .saved-deck-picker { grid-template-columns: minmax(0, 1fr); }
   .deck-bulk-footer { flex-wrap: wrap; }
   .deck-dialog-footer button { min-height: 44px; }
+}
+
+/* Share Prize Mapper's searchable popover, while keeping list controls compact. */
+.archetype-combobox.deck-list-combobox {
+  max-width: none; min-width: 0; min-height: 40px; gap: 8px; padding: 8px 10px;
+  border-color: var(--ui-border) !important; border-radius: 8px;
+  background: var(--ui-raised); color: var(--ui-ink); font-size: 13px; font-weight: 400;
+}
+.deck-list-combobox > svg { flex-shrink: 0; color: var(--ui-ink-2); }
+.deck-list-combobox:hover:not(:disabled), .deck-list-combobox[data-state=open] { background: var(--ui-panel-header); }
+.deck-list-combobox:disabled { opacity: .55; cursor: not-allowed; }
+.deck-list-combobox:focus-visible { outline: 2px solid var(--ui-action); outline-offset: 3px; }
+.archetype-popover.deck-list-popover {
+  width: min(430px, max(280px, var(--radix-popover-trigger-width)), calc(100vw - 24px)) !important;
+  color: var(--ui-ink) !important; border-color: var(--ui-border) !important;
+  scrollbar-color: var(--ui-border) var(--ui-panel); scrollbar-width: thin;
+}
+.deck-list-popover [cmdk-input-wrapper] { border-color: var(--ui-border); color: var(--ui-ink-2); }
+.deck-list-popover [cmdk-input] { caret-color: var(--ui-ink); }
+.deck-list-popover [cmdk-input]::placeholder { color: var(--ui-ink-2); opacity: 1; }
+.deck-list-popover [cmdk-item][data-selected=true] { background: var(--ui-panel-header); }
+.deck-list-popover [cmdk-item] > svg { color: var(--ui-link); }
+@media (max-width: 719px) {
+  .deck-list-picker .deck-list-combobox { min-height: 44px; }
 }

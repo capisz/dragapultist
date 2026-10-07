@@ -1,4 +1,5 @@
 "use client"
+import { DeckListSelect } from './deck-list-select'
 import { useDeckLibrary } from './deck-library'
 import { useEffect, useMemo, useState } from 'react'
 import type { ReviewGame } from '@/utils/match-presentation'
@@ -13,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 
 export function SampleHandLab({ games, currentGameId }: { games: ReviewGame[]; currentGameId?: string }) {
   const [text, setText] = useState('')
+  const [savedDeckId, setSavedDeckId] = useState('')
   const parsed = useMemo(() => parseLabDeck(text), [text])
   const samplingCards = useMemo(() => parsed.cards.map(card => ({ name: card.id, count: card.count })), [parsed])
   const [hand, setHand] = useState<string[]>([])
@@ -61,7 +63,7 @@ export function SampleHandLab({ games, currentGameId }: { games: ReviewGame[]; c
     <CardSearch onAdd={addCard} />
     <details className="sample-deck-panel" open={editorOpen} onToggle={event => setEditorOpen(event.currentTarget.open)}><summary><span>Deck list</span><span>{parsed.total}/60 cards</span></summary>
       <div className="deck-composer"><div><label htmlFor="sample-deck">Your 60-card list</label><p>Use “4 Charmander PAF 7” for exact cards, or count and name for text-only cards.</p></div></div>
-      <div className="saved-deck-picker"><label htmlFor="saved-sample-deck">Saved decklist for randomized hands</label><select aria-label="Saved decklist for randomized hands" id="saved-sample-deck" defaultValue="" disabled={library.loading} onChange={event => { const deck = saved.find(deck => deck.id === event.target.value); if (deck) updateDeck(deck.deckList) }}><option value="">Choose a saved deck…</option>{saved.map(deck => <option key={deck.id} value={deck.id}>{deck.name}{library.currentDeckId === deck.id ? ' · Current' : ''}</option>)}</select><button type="button" className="secondary" onClick={() => library.openManager()}>Manage decklists</button></div>
+      <div className="saved-deck-picker"><label htmlFor="saved-sample-deck">Saved decklist for randomized hands</label><DeckListSelect label="Saved decklist for randomized hands" id="saved-sample-deck" value={savedDeckId} disabled={library.loading} onValueChange={id => { setSavedDeckId(id); const deck = saved.find(deck => deck.id === id); if (deck) updateDeck(deck.deckList) }} options={[{ value: '', label: 'Choose a saved deck…' }, ...saved.map(deck => ({ value: deck.id, label: deck.name + (library.currentDeckId === deck.id ? ' · Current' : ''), archetypeId: deck.archetypeId }))]} /><button type="button" className="secondary" onClick={() => library.openManager()}>Manage decklists</button></div>
       <textarea id="sample-deck" className="sample-deck-input" value={text} onChange={event => updateDeck(event.target.value)} placeholder="Paste a 60-card deck list…" maxLength={36001} spellCheck={false} />
       {!text && <button type="button" className="secondary" onClick={() => updateDeck(EXAMPLE_DECK)}>Load example deck</button>}
       <div className="deck-validation" aria-live="polite">{parsed.valid ? <p>60 cards ready · {parsed.exactIds.length} exact printings.</p> : <p>{text ? parsed.errors.slice(0, 3).join(' ') : 'Exactly 60 cards are required.'}</p>}</div>

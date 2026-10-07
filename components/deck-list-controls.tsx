@@ -1,4 +1,5 @@
 'use client'
+import { DeckListSelect } from './deck-list-select'
 import { Plus, Library } from 'lucide-react'
 import { ArchetypeIconPair } from './archetype-icon-pair'
 import { useState } from 'react'
@@ -13,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 export function DeckListPicker({ games, archetypeId, value, onChange, label = 'Decklist', ariaLabel = label }: { games: Array<{ deckId?: string | null; deckName?: string }>; archetypeId: string | null; value: string; onChange: (id: string) => void; label?: string; ariaLabel?: string }) {
   const library = useDeckLibrary()
   const options = deckListOptions(library.decks, games, archetypeId)
-  return <label className="deck-list-picker">{label}<select aria-label={ariaLabel} value={value} onChange={event => onChange(event.target.value)}><option value={ALL_LISTS}>All lists</option>{options.map(deck => <option key={deck.id} value={deck.id}>{deck.name}</option>)}<option value={UNCATEGORIZED}>Uncategorized</option></select></label>
+  return <label className="deck-list-picker">{label}<DeckListSelect label={ariaLabel} value={value} onValueChange={onChange} options={[{ value: ALL_LISTS, label: 'All lists' }, ...options.map(deck => ({ value: deck.id, label: deck.name, archetypeId })), { value: UNCATEGORIZED, label: 'Uncategorized' }]} /></label>
 }
 export function MatchDeckAssignment({ game, onSave }: { game: GameSummary; onSave: (game: GameSummary) => Promise<boolean> }) {
   const library = useDeckLibrary()
@@ -28,7 +29,7 @@ export function MatchDeckAssignment({ game, onSave }: { game: GameSummary; onSav
     } catch (error) { setError(error instanceof Error ? error.message : 'Could not assign this list.') }
     finally { setBusy(false) }
   }
-  return <div className="deck-assignment deck-dialog-body"><label className="deck-field">Played decklist<select aria-label="Played decklist" value={game.deckId ?? ''} disabled={busy || library.loading} onChange={event => void choose(event.target.value)}><option value="">Uncategorized</option>{library.decks.filter(deck => !deck.archivedAt || deck.id === game.deckId).map(deck => <option key={deck.id} value={deck.id}>{deck.name}{deck.archivedAt ? ' (archived)' : ''}</option>)}</select></label>
+  return <div className="deck-assignment deck-dialog-body"><label className="deck-field">Played decklist<DeckListSelect label="Played decklist" value={game.deckId ?? ''} disabled={busy || library.loading} onValueChange={id => void choose(id)} options={[{ value: '', label: 'Uncategorized' }, ...library.decks.filter(deck => !deck.archivedAt || deck.id === game.deckId).map(deck => ({ value: deck.id, label: deck.name + (deck.archivedAt ? ' (archived)' : ''), archetypeId: deck.archetypeId }))]} /></label>
     <div className="deck-assignment-actions"><Button variant="outline" disabled={busy} onClick={() => library.openManager({ archetypeId: game.userArchetype })}><Plus aria-hidden />Create decklist</Button>
     {game.deckList && <Button variant="outline" onClick={() => library.openManager({ name: game.deckName, deckList: game.deckList, archetypeId: game.userArchetype })}><Library aria-hidden />Save to library</Button>}</div>
     {game.deckList && <details className="deck-recorded-list"><summary>Recorded decklist{game.deckName ? ` · ${game.deckName}` : ''}</summary><pre>{game.deckList}</pre></details>}
@@ -51,7 +52,7 @@ export function BulkDeckAssignment({ games, archetypeId, onClose }: { games: Gam
     window.dispatchEvent(new Event('dragapultist-games-changed')); library.refresh(); setBusy(false)
   }
   return <Dialog open onOpenChange={open => { if (!open && !busy) onClose() }}><DialogContent className="deck-library-dialog"><DialogHeader className="deck-dialog-header"><div className="deck-dialog-heading"><span className="deck-dialog-identity"><ArchetypeIconPair archetypeId={archetypeId} size={30} localSprites /></span><div><DialogTitle>Assign decklist</DialogTitle><DialogDescription>Choose games from this archetype to update.</DialogDescription></div></div></DialogHeader>
-    <div className="deck-dialog-body"><label className="deck-field">Decklist<select aria-label="Decklist" value={deckId} onChange={event => setDeckId(event.target.value)} disabled={busy}><option value="">Uncategorized</option>{library.decks.filter(deck => !deck.archivedAt && deck.archetypeId === archetypeId).map(deck => <option key={deck.id} value={deck.id}>{deck.name}</option>)}</select></label>
+    <div className="deck-dialog-body"><label className="deck-field">Decklist<DeckListSelect label="Decklist" value={deckId} onValueChange={setDeckId} disabled={busy} options={[{ value: '', label: 'Uncategorized' }, ...library.decks.filter(deck => !deck.archivedAt && deck.archetypeId === archetypeId).map(deck => ({ value: deck.id, label: deck.name, archetypeId: deck.archetypeId }))]} /></label>
     <label className="deck-checkbox deck-select-all"><input type="checkbox" checked={!!games.length && selected.size === games.length} disabled={busy} onChange={event => setSelected(event.target.checked ? new Set(games.map(game => game.id)) : new Set())} />Select all matching games ({games.length})</label>
     <div className="deck-assignment-options">{games.map(game => <label key={game.id} data-selected={selected.has(game.id)}><input type="checkbox" checked={selected.has(game.id)} disabled={busy} onChange={event => setSelected(previous => { const next = new Set(previous); if (event.target.checked) next.add(game.id); else next.delete(game.id); return next })} /><span className="deck-assignment-game"><strong>{game.opponent}</strong><small>{game.date}</small></span><span className="deck-game-result" data-win={game.userWon}>{game.userWon ? 'Win' : 'Loss'}</span></label>)}</div>
     {report && <p className="deck-feedback" role="status">{report}</p>}</div>
