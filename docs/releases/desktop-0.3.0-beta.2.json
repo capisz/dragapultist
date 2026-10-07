@@ -1,0 +1,48 @@
+{
+  "version": "0.3.0-beta.2",
+  "sourceCommit": "e3b199754fa3d54359bc78b43c185d63bf8a8071",
+  "repository": "https://github.com/capisz/dragapultist",
+  "releaseUrl": "https://github.com/capisz/dragapultist/releases/tag/v0.3.0-beta.2",
+  "developerIdSigned": false,
+  "macNotarized": false,
+  "files": [
+    {
+      "target": "win-x64",
+      "name": "Dragapultist-0.3.0-beta.2-win-x64.exe",
+      "url": "https://github.com/capisz/dragapultist/releases/download/v0.3.0-beta.2/Dragapultist-0.3.0-beta.2-win-x64.exe",
+      "bytes": 112812768,
+      "sha256": "6bc24e806dd8c8ecece106858adbbfa4f092c64738dc77717273d866cfe00923",
+      "httpStatus": 200,
+      "anonymousDownload": true,
+      "contentDisposition": "attachment; filename=Dragapultist-0.3.0-beta.2-win-x64.exe",
+      "downloadVerifiedAt": "2026-10-07T10:12:32.315932+00:00"
+    },
+    {
+      "target": "mac-arm64",
+      "name": "Dragapultist-0.3.0-beta.2-mac-arm64.dmg",
+      "url": "https://github.com/capisz/dragapultist/releases/download/v0.3.0-beta.2/Dragapultist-0.3.0-beta.2-mac-arm64.dmg",
+      "bytes": 130572455,
+      "sha256": "bec6ed63b20b94b6d93c5c17546d343cbd5a0a2e5410d4588dda1cc90a7ac37a",
+      "httpStatus": 200,
+      "anonymousDownload": true,
+      "contentDisposition": "attachment; filename=Dragapultist-0.3.0-beta.2-mac-arm64.dmg",
+      "downloadVerifiedAt": "2026-10-07T10:12:32.316175+00:00"
+    },
+    {
+      "target": "mac-x64",
+      "name": "Dragapultist-0.3.0-beta.2-mac-x64.dmg",
+      "url": "https://github.com/capisz/dragapultist/releases/download/v0.3.0-beta.2/Dragapultist-0.3.0-beta.2-mac-x64.dmg",
+      "bytes": 137304920,
+      "sha256": "de59fb10ec37028ad50366312fe0208bf3f911fb64b5fda4b5bc55c521e00377",
+      "httpStatus": 200,
+      "anonymousDownload": true,
+      "contentDisposition": "attachment; filename=Dragapultist-0.3.0-beta.2-mac-x64.dmg",
+      "downloadVerifiedAt": "2026-10-07T10:12:32.316180+00:00"
+    }
+  ],
+  "validation": {
+    "installerChecksums": "Verified against both platform CI manifests before migration; assets are unchanged.",
+    "macBundleSignatures": "Both distributed apps and native helpers pass strict signature verification. Ad-hoc signing is not Developer ID signing or notarization.",
+    "nativeGameAcceptance": "Real PTCGL and fullscreen acceptance remains pending. Work-managed Macs may prohibit approval of these unnotarized builds."
+  }
+}

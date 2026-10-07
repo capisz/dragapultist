@@ -1,5 +1,7 @@
 # Overlay production integration and private testing
 
+Update: installer distribution was consolidated into the original `capisz/dragapultist` repository at the user's request. Version `0.3.0-beta.2` is available through the existing Vercel Settings download buttons without GitHub sign-in. See `../releases/2026-10-07-desktop-download-consolidation.md`. The private distribution notes below describe the earlier rollout; the new public release supersedes them.
+
 The user authorized production deployment and private installer distribution on 2026-10-07 to perform their own Windows/Mac acceptance testing. This authorizes a test prerelease; actual PTCGL/fullscreen/native installation acceptance is still outstanding.
 
 The release checkout starts from production commit `14ac277`, then integrates the desktop overlay. It preserves the current ThemeProvider/layout, account-menu desktop settings, `useGameHistory` refresh behavior, stable CSRF cookie polling fix, and the existing session-route tests. Overlay preferences were added inside the existing settings dialog rather than replacing its provider or capture setup. Unrelated unfinished work in the canonical checkout was excluded.

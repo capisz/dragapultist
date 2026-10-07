@@ -7,14 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog'
 import { useDesktopSettings } from '@/components/desktop-companion'
 import { HeaderPokemonIcon } from './header-pokemon-icon'
+import { DESKTOP_INSTALLERS } from '@/lib/desktop-downloads'
 import './appearance-settings.css'
 
-// Add verified public installer URLs when the beta is ready for distribution.
-const INSTALLERS = [
-  { label: 'Windows', format: '.exe', url: process.env.NEXT_PUBLIC_DESKTOP_WINDOWS_URL },
-  { label: 'Mac · Apple Silicon', format: '.dmg', url: process.env.NEXT_PUBLIC_DESKTOP_MAC_ARM64_URL },
-  { label: 'Mac · Intel', format: '.dmg', url: process.env.NEXT_PUBLIC_DESKTOP_MAC_X64_URL },
-]
 function publicInstallerUrl(value?: string) {
   if (!value) return null
   try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : null } catch { return null }
@@ -48,8 +43,8 @@ export function AppearanceSettings() {
       </section>
       {mounted && !desktop.available && <section className="beta-downloads" aria-labelledby="beta-download-heading">
         <h3 id="beta-download-heading">Desktop app beta</h3>
-        <p className="appearance-hint">{INSTALLERS.some(item => publicInstallerUrl(item.url)) ? 'Choose the installer for your computer.' : 'Public downloads are coming soon.'}</p>
-        <div className="beta-download-options">{INSTALLERS.map(item => {
+        <p className="appearance-hint">{DESKTOP_INSTALLERS.some(item => publicInstallerUrl(item.url)) ? 'Choose the installer for your computer.' : 'Public downloads are coming soon.'}</p>
+        <div className="beta-download-options">{DESKTOP_INSTALLERS.map(item => {
           const url = publicInstallerUrl(item.url)
           const content = <><Download aria-hidden="true" size={16} /><span>{item.label}<small>{item.format}{!url ? ' · Coming soon' : ''}</small></span></>
           return url ? <a key={item.label} className="beta-download" href={url} download>{content}</a> : <button key={item.label} type="button" className="beta-download" disabled>{content}</button>

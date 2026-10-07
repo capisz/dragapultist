@@ -1,4 +1,6 @@
-# Dragapultist desktop beta — candidate, not released
+# Dragapultist desktop beta
+
+Current distribution: the original `capisz/dragapultist` repository owns desktop source, installer builds, and public beta releases. Download through Settings on `https://dragapultist.vercel.app`. See `../releases/2026-10-07-desktop-download-consolidation.md` for the migration and unchanged native acceptance limits.
 
 ## Behavior
 
@@ -20,9 +22,9 @@ Development: start the web app on a separate port, then `DRAGAPULTIST_URL=http:/
 
 Unsigned beta builds may be blocked or display publisher warnings. They are not signed/notarized public releases. Do not disable system-wide OS protections to install them. Updates are manual installer replacement; no update feed is configured.
 
-## Private CI
+## Installer CI
 
-`.github/workflows/desktop-beta.yml` runs only by manual dispatch and only in a **private** repository. Both Windows and macOS runners run desktop tests and build installers. Artifacts expire after 14 days. It deliberately refuses to run in the public source repository: public Actions artifacts are not an appropriate private-beta distribution channel. A private build repository must be created through an authenticated GitHub account before dispatch. Never put Firebase Admin, Mongo, signing or personal credentials in the build repository.
+`.github/workflows/desktop-beta.yml` runs by manual dispatch in the original repository. Both Windows and macOS runners run desktop tests, verify the native detection dependency, and build installers. Mac builds verify the sealed app and exact app inside each generated DMG. Artifacts expire after 14 days. The `publish` input defaults to false; explicitly enable it to publish a public prerelease after both builds and checksums pass. A previously published version cannot be overwritten. Never put Firebase Admin, Mongo, signing or personal credentials in the repository or artifacts.
 
 ## Web compatibility and release gates
 
@@ -35,7 +37,7 @@ Do not publish beta downloads until:
 3. The compatible web coordinator is deployed and both signed-out/session identity contracts are verified.
 4. Actual Windows and Mac users complete the checklist below. Installer compilation, mocked transport tests, emulator tests and launching a process are not substitutes.
 
-No public release, signing purchase, provider provisioning, data migration or beta installer publication is authorized by this candidate build alone.
+The user authorized public beta installer distribution and consolidation on 2026-10-07. That authorization does not establish native acceptance or authorize signing purchases, provider provisioning, or data migration.
 
 ## Native acceptance checklist
 

@@ -1,12 +1,15 @@
-name: Build private desktop beta candidates
+name: Build desktop beta installers
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish a public beta release after both platform builds pass
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
   installers:
-    # Candidate artifacts must stay private until native acceptance passes.
-    if: github.event.repository.private == true
     strategy:
       fail-fast: false
       matrix:
@@ -41,3 +44,37 @@ jobs:
             electron/dist/*.exe
             electron/dist/*.dmg
             electron/dist/SHA256SUMS.txt
+  publish:
+    if: inputs.publish
+    needs: installers
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-beta-candidate-macos-latest
+          path: downloaded/mac
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-beta-candidate-windows-latest
+          path: downloaded/windows
+      - name: Verify and publish installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./electron/package.json').version")
+          tag="v$version"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists. Bump the desktop version before publishing."
+            exit 1
+          fi
+          mkdir release
+          cp downloaded/mac/*.dmg downloaded/windows/*.exe release/
+          cat downloaded/mac/SHA256SUMS.txt downloaded/windows/SHA256SUMS.txt > release/SHA256SUMS.txt
+          (cd release && sha256sum --check SHA256SUMS.txt)
+          gh release create "$tag" release/* --target "$GITHUB_SHA" --prerelease \
+            --title "Dragapultist desktop beta $version" --notes-file docs/desktop/RELEASE-NOTES.md
