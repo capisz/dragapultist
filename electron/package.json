@@ -103,6 +103,7 @@
     }
   },
   "allowScripts": {
-    "get-windows@9.3.0": true
+    "get-windows@9.3.0": true,
+    "electron@44.4.5": true
   }
 }
